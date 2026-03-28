@@ -5,7 +5,7 @@ App::App(): window(sf::VideoMode({1600, 900}), "Visualizer", sf::Style::Default 
             context{window, font, ScreenState::None} 
 {
     window.setFramerateLimit(60);
-    currentScreen = std::make_unique<MenuScreen>(context);
+    currentScreen = std::make_unique<TestScreen>(context);
 };
 
 void App::run(){
