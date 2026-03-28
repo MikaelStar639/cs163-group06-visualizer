@@ -18,6 +18,11 @@ namespace Config {
         inline constexpr float BUTTON_OUTLINE       = 2.f;
         inline constexpr float BUTTON_CORNER_RADIUS = 12.f;
         
+        //Nodes
+        inline constexpr float NODE_RADIUS = 30.f;
+        inline constexpr float NODE_OUTLINE_THICKNESS = 3.f;
+        inline constexpr std::size_t NODE_POINT_COUNT = 30;
+
         namespace Colors {
             //Buttons
             const sf::Color ButtonIdle         = sf::Color(60, 60, 60);  
@@ -26,6 +31,14 @@ namespace Config {
             const sf::Color ButtonText         = sf::Color::White;
             const sf::Color ButtonOutline      = sf::Color(100, 100, 100); 
             const sf::Color ButtonOutlineHover = sf::Color(173, 216, 230);
+        
+            //Nodes
+            const sf::Color NodeFill    = sf::Color(45, 45, 45); 
+            const sf::Color NodeOutline = sf::Color(100, 100, 100); 
+            const sf::Color NodeText    = sf::Color::White;
+            
+            //UI States
+            const sf::Color NodeHover   = sf::Color(173, 216, 230);
         }
     }
 
