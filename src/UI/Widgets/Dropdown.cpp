@@ -44,7 +44,7 @@ Dropdown::Dropdown(AppContext& context, const std::string& label, sf::Vector2f p
 
     // Setup Options
     for (size_t i = 0; i < options.size(); ++i) {
-        sf::RectangleShape box;
+        RoundedRectangleShape box;
         box.setPosition(sf::Vector2f(position.x, position.y + size.y * (i + 1)));
         box.setSize(size);
         box.setFillColor(sf::Color(50, 50, 50));

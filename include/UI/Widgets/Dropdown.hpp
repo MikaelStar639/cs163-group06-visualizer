@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Event.hpp>
 #include <Core/AppContext.hpp>
+#include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <vector>
 #include <string>
 
@@ -26,12 +27,12 @@ private:
     bool isDropped;
     int selectedIndex;
 
-    sf::RectangleShape mainBox;
-    sf::RectangleShape arrowBox;
+    RoundedRectangleShape mainBox;
+    RoundedRectangleShape arrowBox;
     sf::ConvexShape arrowTriangle;
     sf::Text mainText;
 
-    std::vector<sf::RectangleShape> itemBoxes;
+    std::vector<RoundedRectangleShape> itemBoxes;
     std::vector<sf::Text> itemTexts;
 };
 
