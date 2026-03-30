@@ -7,7 +7,7 @@
 class TestScreen : public Screen {
 private:
     AppContext& ctx;
-    Button btnInsert;
+    UI::Widgets::Button btnInsert;
     std::vector<UI::DSA::Node> nodes;
     std::vector<int> drawOrder;
 
