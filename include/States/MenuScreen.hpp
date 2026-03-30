@@ -13,11 +13,11 @@ private:
     sf::Text title;
     
     //Buttons
-    Button btnLinkedList;
-    Button btnHeap;
-    Button btnTrie;
-    Button btnMST;
-    Button btnExit;
+    UI::Widgets::Button btnLinkedList;
+    UI::Widgets::Button btnHeap;
+    UI::Widgets::Button btnTrie;
+    UI::Widgets::Button btnMST;
+    UI::Widgets::Button btnExit;
 
     //used in construction
     void initTitle();
