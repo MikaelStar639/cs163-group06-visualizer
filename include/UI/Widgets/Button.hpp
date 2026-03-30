@@ -5,6 +5,7 @@
 #include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <string>
 
+namespace UI::Widgets{
 class Button {
 private:
     AppContext&           ctx;
@@ -40,3 +41,4 @@ public:
 private:
     void centerText();
 };
+}
