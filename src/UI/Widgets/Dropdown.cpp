@@ -1,141 +1,205 @@
 #include "UI/Widgets/Dropdown.hpp"
 
-namespace UI {
-namespace Widgets {
-
-Dropdown::Dropdown(AppContext& context, const std::string& label, sf::Vector2f position, sf::Vector2f size, const std::vector<std::string>& options) 
-    : ctx(context), isDropped(false), selectedIndex(-1), mainText(context.font)
+Dropdown::Dropdown(AppContext& context, const std::string& label, 
+    sf::Vector2f pos, sf::Vector2f size):
+    ctx(context), 
+    mainBox(size, Config::UI::BUTTON_CORNER_RADIUS),
+    arrowBox(sf::Vector2f(size.y, size.y), Config::UI::BUTTON_CORNER_RADIUS),
+    mainText(ctx.font, label, Config::UI::FONT_SIZE_BUTTON),
+    idleColor(Config::UI::Colors::ButtonIdle),
+    hoverColor(Config::UI::Colors::ButtonHover),
+    textColor(Config::UI::Colors::ButtonText),
+    pressedColor(Config::UI::Colors::ButtonPressed),
+    outlineColor(Config::UI::Colors::ButtonOutline),
+    hoverOutlineColor(Config::UI::Colors::ButtonOutlineHover)
 {
-    // Setup Main Box
-    mainBox.setPosition(position);
-    mainBox.setSize(size);
-    mainBox.setFillColor(sf::Color(50, 50, 50));
-    mainBox.setOutlineColor(sf::Color::White);
-    mainBox.setOutlineThickness(1.f);
+    mainBox.setPosition        (pos);
+    mainBox.setOutlineThickness(Config::UI::BUTTON_OUTLINE);
+    mainBox.setFillColor       (idleColor);
+    mainBox.setOutlineColor    (outlineColor);
+    
+    // Config arrowBox similar to button outline
+    arrowBox.setOutlineThickness(Config::UI::BUTTON_OUTLINE);
+    arrowBox.setFillColor       (hoverColor); 
+    arrowBox.setOutlineColor    (outlineColor);
 
-    // Setup Arrow Box
-    float arrowAreaWidth = size.y; 
-    arrowBox.setSize(sf::Vector2f(arrowAreaWidth, size.y));
-    arrowBox.setPosition(sf::Vector2f(position.x + size.x - arrowAreaWidth, position.y));
-    arrowBox.setFillColor(sf::Color(70, 70, 70)); // Dark Gray
-    arrowBox.setOutlineColor(sf::Color::White);
-    arrowBox.setOutlineThickness(1.f);
-
-    // Setup Triangle
     arrowTriangle.setPointCount(3);
+    arrowTriangle.setFillColor(textColor);
+    
+    mainText.setFillColor      (textColor);
+
+    updateLayout();
+}
+
+void Dropdown::setColors(sf::Color idle, sf::Color hover, sf::Color pressed, sf::Color textCol) {
+    idleColor = idle;
+    hoverColor = hover;
+    pressedColor = pressed;
+    textColor = textCol;
+    
+    mainBox.setFillColor(idleColor);
+    mainText.setFillColor(textColor);
+    arrowBox.setFillColor(hoverColor);
+    arrowTriangle.setFillColor(textColor);
+}
+
+void Dropdown::setSize(sf::Vector2f size) {
+    mainBox.setSize(size);
+    arrowBox.setSize({size.y, size.y});
+    updateLayout(); 
+}
+
+void Dropdown::setPosition(sf::Vector2f pos) {
+    mainBox.setPosition(pos);
+    updateLayout(); 
+}
+
+void Dropdown::setLabel(const std::string& label) {
+    mainText.setString(label);
+    updateLayout();
+}
+
+void Dropdown::setOptions(const std::vector<std::string>& opts) {
+    options = opts;
+    itemBoxes.clear();
+    itemTexts.clear();
+    
+    sf::Vector2f pos = mainBox.getPosition();
+    sf::Vector2f size = mainBox.getSize();
+    
+    for (size_t i = 0; i < options.size(); ++i) {
+        RoundedRectangleShape box(size, Config::UI::BUTTON_CORNER_RADIUS);
+        box.setPosition(sf::Vector2f(pos.x, pos.y + size.y * (i + 1)));
+        box.setFillColor(idleColor);
+        box.setOutlineColor(outlineColor);
+        box.setOutlineThickness(Config::UI::BUTTON_OUTLINE);
+        itemBoxes.push_back(box);
+
+        sf::Text text(ctx.font, options[i], Config::UI::FONT_SIZE_BUTTON);
+        text.setFillColor(textColor);
+        
+        sf::FloatRect bounds = text.getLocalBounds();
+        text.setOrigin({
+            bounds.position.x + bounds.size.x / 2.f, 
+            bounds.position.y + bounds.size.y / 2.f
+        });
+        text.setPosition({box.getPosition().x + size.x / 2.f, box.getPosition().y + size.y / 2.f});
+        itemTexts.push_back(text);
+    }
+}
+
+void Dropdown::updateLayout() {
+    sf::Vector2f pos = mainBox.getPosition();
+    sf::Vector2f size = mainBox.getSize();
+    
+    float arrowAreaWidth = size.y; 
+    arrowBox.setPosition(sf::Vector2f(pos.x + size.x - arrowAreaWidth, pos.y));
+    
+    // Update Triangle
     arrowTriangle.setPoint(0, sf::Vector2f(0.f, 0.f));
     arrowTriangle.setPoint(1, sf::Vector2f(16.f, 0.f));
     arrowTriangle.setPoint(2, sf::Vector2f(8.f, 10.f));
-    arrowTriangle.setFillColor(sf::Color::White);
     arrowTriangle.setPosition(sf::Vector2f(
         arrowBox.getPosition().x + (arrowAreaWidth - 16.f) / 2.f,
         arrowBox.getPosition().y + (size.y - 10.f) / 2.f
     ));
 
-    // Setup Main Text
-    mainText.setCharacterSize(static_cast<unsigned int>(size.y * 0.45f));
-    mainText.setFillColor(sf::Color::White);
-    mainText.setString(label);
+    sf::FloatRect bounds = mainText.getLocalBounds();
+    mainText.setOrigin({
+        bounds.position.x + bounds.size.x / 2.f, 
+        bounds.position.y + bounds.size.y / 2.f
+    });
     
-    // Canh giữa chữ trong khu vực không tính ô mũi tên
-    sf::FloatRect mainBounds = mainText.getLocalBounds();
-    float mainTextX = position.x + (size.x - size.y - mainBounds.size.x) / 2.f;
-    mainText.setPosition(sf::Vector2f(mainTextX, position.y + size.y * 0.25f));
-
-    // Setup Options
-    for (size_t i = 0; i < options.size(); ++i) {
-        RoundedRectangleShape box;
-        box.setPosition(sf::Vector2f(position.x, position.y + size.y * (i + 1)));
-        box.setSize(size);
-        box.setFillColor(sf::Color(50, 50, 50));
-        box.setOutlineColor(sf::Color::White);
-        box.setOutlineThickness(1.f);
-        itemBoxes.push_back(box);
-
-        sf::Text text(ctx.font);
-        text.setCharacterSize(mainText.getCharacterSize());
-        text.setFillColor(sf::Color::White);
-        text.setString(options[i]);
-        
-        // Canh giữa chữ trong ô Option
-        sf::FloatRect textBounds = text.getLocalBounds();
-        float textX = box.getPosition().x + (size.x - textBounds.size.x) / 2.f;
-        text.setPosition(sf::Vector2f(textX, box.getPosition().y + size.y * 0.25f));
-        itemTexts.push_back(text);
+    float mainTextX = pos.x + (size.x - arrowAreaWidth) / 2.f;
+    mainText.setPosition({mainTextX, pos.y + size.y / 2.f});
+    
+    // Rebuild options layout
+    if (!options.empty()) {
+        for (size_t i = 0; i < options.size(); ++i) {
+            itemBoxes[i].setSize(size);
+            itemBoxes[i].setPosition(sf::Vector2f(pos.x, pos.y + size.y * (i + 1)));
+            itemTexts[i].setPosition({itemBoxes[i].getPosition().x + size.x / 2.f, itemBoxes[i].getPosition().y + size.y / 2.f});
+        }
     }
 }
 
 void Dropdown::update(sf::Vector2i mousePos) {
     sf::Vector2f mappedMouse = ctx.window.mapPixelToCoords(mousePos);
-
+    
+    isHovered = mainBox.getGlobalBounds().contains(mappedMouse);
+    
     if (isDropped) {
         arrowTriangle.setPoint(0, sf::Vector2f(0.f, 10.f));
         arrowTriangle.setPoint(1, sf::Vector2f(16.f, 10.f));
         arrowTriangle.setPoint(2, sf::Vector2f(8.f, 0.f));
 
-        // Hiệu ứng Click: Khi danh sách đang bị thả xuống, nút chính sẽ tối đi (Pressed state)
-        mainBox.setFillColor(sf::Color(30, 30, 30));
-        arrowBox.setFillColor(sf::Color(50, 50, 50));
-    } else if (mainBox.getGlobalBounds().contains(mappedMouse)) {
+        mainBox.setFillColor(pressedColor);
+        arrowBox.setFillColor(idleColor);
+        mainBox.setOutlineColor(hoverOutlineColor);
+    } else if (isHovered) {
         arrowTriangle.setPoint(0, sf::Vector2f(0.f, 0.f));
         arrowTriangle.setPoint(1, sf::Vector2f(16.f, 0.f));
         arrowTriangle.setPoint(2, sf::Vector2f(8.f, 10.f));
 
-        mainBox.setFillColor(sf::Color(80, 80, 80));
-        arrowBox.setFillColor(sf::Color(100, 100, 100));
+        mainBox.setFillColor(hoverColor);
+        arrowBox.setFillColor(pressedColor);
+        mainBox.setOutlineColor(hoverOutlineColor);
     } else {
         arrowTriangle.setPoint(0, sf::Vector2f(0.f, 0.f));
         arrowTriangle.setPoint(1, sf::Vector2f(16.f, 0.f));
         arrowTriangle.setPoint(2, sf::Vector2f(8.f, 10.f));
 
-        mainBox.setFillColor(sf::Color(50, 50, 50));
-        arrowBox.setFillColor(sf::Color(70, 70, 70));
+        mainBox.setFillColor(idleColor);
+        arrowBox.setFillColor(hoverColor);
+        mainBox.setOutlineColor(outlineColor);
     }
 
     if (isDropped) {
         for (size_t i = 0; i < itemBoxes.size(); ++i) {
             if (itemBoxes[i].getGlobalBounds().contains(mappedMouse)) {
-                itemBoxes[i].setFillColor(sf::Color(100, 100, 100)); // Highlight lighter gray
+                itemBoxes[i].setFillColor(hoverColor);
             } else {
-                itemBoxes[i].setFillColor(sf::Color(50, 50, 50));
+                itemBoxes[i].setFillColor(idleColor);
             }
         }
     }
 }
 
-void Dropdown::handleEvent(const sf::Event::MouseButtonPressed& event) {
-    if (event.button == sf::Mouse::Button::Left) {
-        sf::Vector2f mousePos = ctx.window.mapPixelToCoords(sf::Mouse::getPosition(ctx.window));
+bool Dropdown::isClicked(const sf::Event& event) {
+    if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonPressed>()) {
+        if (mouseEvent->button == sf::Mouse::Button::Left) {
+            sf::Vector2f mousePos = ctx.window.mapPixelToCoords(sf::Mouse::getPosition(ctx.window));
 
-        bool clickedInsideMainBox = mainBox.getGlobalBounds().contains(mousePos);
+            bool clickedInsideMainBox = mainBox.getGlobalBounds().contains(mousePos);
 
-        // 1. Toggle when clicking main box
-        if (clickedInsideMainBox) {
-            isDropped = !isDropped;
-            return;
-        }
+            if (clickedInsideMainBox) {
+                isDropped = !isDropped;
+                return true;
+            }
 
-        // 2. Click outside or select item
-        if (isDropped) {
-            bool clickedAnyItem = false;
+            if (isDropped) {
+                bool clickedAnyItem = false;
 
-            for (size_t i = 0; i < itemBoxes.size(); ++i) {
-                if (itemBoxes[i].getGlobalBounds().contains(mousePos)) {
-                    selectedIndex = static_cast<int>(i);
-                    isDropped = false;
-                    clickedAnyItem = true;
-                    break;
+                for (size_t i = 0; i < itemBoxes.size(); ++i) {
+                    if (itemBoxes[i].getGlobalBounds().contains(mousePos)) {
+                        selectedIndex = static_cast<int>(i);
+                        isDropped = false;
+                        clickedAnyItem = true;
+                        // setLabel(options[selectedIndex]); // You can enable this if dropdown should change text automatically
+                        return true;
+                    }
+                }
+
+                if (!clickedAnyItem) {
+                    isDropped = false; 
                 }
             }
-
-            if (!clickedAnyItem) {
-                isDropped = false; // Click outside
-            }
         }
     }
+    return false;
 }
 
-void Dropdown::draw() const {
+void Dropdown::draw() {
     ctx.window.draw(mainBox);
     ctx.window.draw(arrowBox);
     ctx.window.draw(arrowTriangle);
@@ -160,11 +224,8 @@ int Dropdown::getSelectedIndex() const {
 }
 
 std::string Dropdown::getSelectedText() const {
-    if (selectedIndex >= 0 && selectedIndex < itemTexts.size()) {
-        return itemTexts[selectedIndex].getString();
+    if (selectedIndex >= 0 && selectedIndex < (int)options.size()) {
+        return options[selectedIndex];
     }
     return "";
 }
-
-} // namespace Widgets
-} // namespace UI
