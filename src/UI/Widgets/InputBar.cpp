@@ -1,5 +1,6 @@
 #include "UI/Widgets/InputBar.hpp"
 
+
 namespace UI::Widgets {
 
 InputBar::InputBar( AppContext& context,
@@ -25,6 +26,9 @@ InputBar::InputBar( AppContext& context,
     text.setFillColor(textColor);
     placeholderText.setFillColor(placeholderColor);
 
+    cursor.setSize({2.f, text.getCharacterSize() + 5.f});
+    cursor.setFillColor(sf::Color::White);
+
     updateTextPositions();
 }
 
@@ -48,6 +52,22 @@ void InputBar::updateTextPositions() {
         placeholderBounds.position.y + placeholderBounds.size.y / 2.f
     });
     placeholderText.setPosition({pos.x + paddingX, centerY});
+
+    
+
+    float cursorX;
+    
+
+    if (content.empty()) {
+        cursorX = placeholderText.getPosition().x;
+    } else {
+        sf::FloatRect global = text.getGlobalBounds();
+        cursorX = global.position.x + global.size.x + 2.f;
+    }
+
+    float cursorY = box.getPosition().y + box.getSize().y / 2.f - cursor.getSize().y / 2.f;
+
+    cursor.setPosition({cursorX, cursorY});
 }
 
 void InputBar::handleEvent(const sf::Event& event) {
@@ -71,6 +91,8 @@ void InputBar::handleEvent(const sf::Event& event) {
                 content.pop_back();
                 text.setString(content);
                 updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
             }
         }
         else if (unicode >= 32 && unicode <= 126) {
@@ -78,16 +100,24 @@ void InputBar::handleEvent(const sf::Event& event) {
                 content.push_back(static_cast<char> (unicode));
                 text.setString(content);
                 updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
             }
         }
+        
     }
 }
 
 void InputBar::update() {
     if (isFocused) {
+        if (cursorClock.getElapsedTime().asSeconds() >= cursorBlinkTime ) {
+            showCursor = !showCursor;
+            cursorClock.restart();
+        }
         box.setFillColor(focusedColor);
         box.setOutlineColor(focusedOutlineColor);
     } else {
+        showCursor = false;
         box.setFillColor(idleColor);
         box.setOutlineColor(outlineColor);
     }
@@ -100,6 +130,10 @@ void InputBar::draw(){
         ctx.window.draw(placeholderText);
     } else {
         ctx.window.draw(text);
+    }
+
+    if (isFocused && showCursor) {
+        ctx.window.draw(cursor);
     }
 }
 

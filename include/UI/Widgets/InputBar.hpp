@@ -27,6 +27,10 @@ private:
     std::string content;
     std::size_t maxLength = 20;
     bool isFocused = false;
+    sf::RectangleShape cursor;
+    bool showCursor = true;
+    sf::Clock cursorClock;
+    float cursorBlinkTime = 0.5f;
 
     void updateTextPositions();
 
