@@ -6,17 +6,23 @@ namespace UI::Widgets {
 InputBar::InputBar( AppContext& context,
                     sf::Vector2f pos,
                     sf::Vector2f size,
-                    const std::string& placeholder)
+                    const std::string& placeholder,
+                    InputType inputType)
     :   ctx(context),
         box(size, Config::UI::BUTTON_CORNER_RADIUS),
         text(ctx.font, "", Config::UI::FONT_SIZE_BUTTON),
         placeholderText(ctx.font, placeholder, Config::UI::FONT_SIZE_BUTTON),
+        errorText(ctx.font, "", 18),
         idleColor(Config::UI::Colors::InputBarIdle),
         focusedColor(Config::UI::Colors::InputBarFocuse),
+        invalidColor(sf::Color(55, 40, 40)),
+        invalidOutlineColor(sf::Color::Red),
+        errorColor(sf::Color::Red),
         outlineColor(Config::UI::Colors::InputBarOutline),
         focusedOutlineColor(Config::UI::Colors::InputBarFocusedOutline),
         textColor(Config::UI::Colors::InputBarText),
-        placeholderColor(Config::UI::Colors::InputBarPlaceholder)
+        placeholderColor(Config::UI::Colors::InputBarPlaceholder),
+        type(inputType)
 {
     box.setPosition(pos);
     box.setOutlineThickness(Config::UI::BUTTON_OUTLINE);
@@ -25,11 +31,122 @@ InputBar::InputBar( AppContext& context,
 
     text.setFillColor(textColor);
     placeholderText.setFillColor(placeholderColor);
+    errorText.setFillColor(errorColor);
 
     cursor.setSize({2.f, text.getCharacterSize() + 5.f});
     cursor.setFillColor(sf::Color::White);
 
     updateTextPositions();
+}
+
+//validate input data function
+bool InputBar::isCharacterAllowed(char32_t unicode) const {
+    if (unicode < 32 || unicode > 126) return false;
+
+    char c = static_cast<char>(unicode);
+
+    switch (type) {
+        case InputType::AnyText:
+            return true;
+
+        case InputType::Integer:
+            return std::isdigit(static_cast<unsigned char>(c)) || c == '-';
+
+        case InputType::IntegerList:
+        case InputType::EdgeTriple:
+            return std::isdigit(static_cast<unsigned char>(c)) || c == '-' || c == ' ';
+
+        case InputType::Word:
+            return std::isalpha(static_cast<unsigned char>(c));
+    }
+
+    return false;
+}
+
+//validate all the string!, (avoid "--12" )
+bool InputBar::validateContent() {
+    isValid = true;
+    errorMessage.clear();
+
+    if (content.empty()) {
+        errorText.setString("");
+        return true;
+    }
+
+    try {
+        switch (type) {
+            case InputType::AnyText:
+                break;
+
+            case InputType::Word:
+                for (char c : content) {
+                    if (!std::isalpha(static_cast<unsigned char>(c))) {
+                        isValid = false;
+                        errorMessage = "Only letters are allowed";
+                        break;
+                    }
+                }
+                break;
+
+            case InputType::Integer: {
+                std::size_t pos = 0;
+                std::stoi(content, &pos);
+                if (pos != content.size()) {
+                    isValid = false;
+                    errorMessage = "Invalid integer";
+                }
+                break;
+            }
+
+            case InputType::IntegerList: {
+                std::stringstream ss(content);
+                int x;
+                bool hasNumber = false;
+
+                while (ss >> x) {
+                    hasNumber = true;
+                }
+
+                if (!hasNumber || !ss.eof()) {
+                    isValid = false;
+                    errorMessage = "Enter integers separated by spaces";
+                }
+                break;
+            }
+
+            case InputType::EdgeTriple: {
+                std::stringstream ss(content);
+                int u, v, w;
+                char extra;
+
+                if (!(ss >> u >> v >> w) || (ss >> extra)) {
+                    isValid = false;
+                    errorMessage = "Format: u v w";
+                }
+                break;
+            }
+        }
+    } catch (...) {
+        isValid = false;
+        switch (type) {
+            case InputType::Integer:
+                errorMessage = "Invalid integer";
+                break;
+            case InputType::IntegerList:
+                errorMessage = "Enter integers separated by spaces";
+                break;
+            case InputType::EdgeTriple:
+                errorMessage = "Format: u v w";
+                break;
+            default:
+                errorMessage = "Invalid input";
+                break;
+        }
+    }
+
+    errorText.setString(errorMessage);
+    updateTextPositions();
+    return isValid;
 }
 
 void InputBar::updateTextPositions() {
@@ -53,7 +170,7 @@ void InputBar::updateTextPositions() {
     });
     placeholderText.setPosition({pos.x + paddingX, centerY});
 
-    
+    errorText.setPosition({pos.x, pos.y + size.y + 8.f});
 
     float cursorX;
     
@@ -79,6 +196,11 @@ void InputBar::handleEvent(const sf::Event& event) {
             );
 
             isFocused = box.getGlobalBounds().contains(mousePos);
+
+            if (isFocused) {
+                cursorClock.restart();
+                showCursor = true;
+            }
         }
     }
     if (!isFocused) return;
@@ -90,15 +212,18 @@ void InputBar::handleEvent(const sf::Event& event) {
             if (!content.empty()) {
                 content.pop_back();
                 text.setString(content);
+                validateContent();
                 updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
+                
             }
         }
-        else if (unicode >= 32 && unicode <= 126) {
+        else if (isCharacterAllowed(unicode)) {
             if (content.size() < maxLength) {
                 content.push_back(static_cast<char> (unicode));
                 text.setString(content);
+                validateContent();
                 updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
@@ -114,10 +239,17 @@ void InputBar::update() {
             showCursor = !showCursor;
             cursorClock.restart();
         }
+    } else {
+        showCursor = false;
+    }
+
+    if (!isValid) {
+        box.setFillColor(invalidColor);
+        box.setOutlineColor(invalidOutlineColor);
+    } else if (isFocused) {
         box.setFillColor(focusedColor);
         box.setOutlineColor(focusedOutlineColor);
     } else {
-        showCursor = false;
         box.setFillColor(idleColor);
         box.setOutlineColor(outlineColor);
     }
@@ -135,8 +267,14 @@ void InputBar::draw(){
     if (isFocused && showCursor) {
         ctx.window.draw(cursor);
     }
+
+    if (!errorMessage.empty()) {
+        ctx.window.draw(errorText);
+    }
 }
 
+
+// setter
 void InputBar::setPosition(sf::Vector2f pos) {
     box.setPosition(pos);
     updateTextPositions();
@@ -162,9 +300,31 @@ void InputBar::setMaxLength(std::size_t length) {
     maxLength = length;
 }
 
+void InputBar::setFocus(bool focus) {
+    isFocused = focus;
+    if (isFocused) {
+        cursorClock.restart();
+        showCursor = true;
+    }
+}
+
+void InputBar::setType(InputType inputType) {
+    type = inputType;
+    validateContent();
+}
+
+// getter
 const std::string& InputBar::getText() const {
     return content;
 }
+bool InputBar::valid() const {
+    return isValid;
+}
+
+const std::string& InputBar::getErrorMessage() const {
+    return errorMessage;
+}
+
 
 bool InputBar::empty() const {
     return content.empty();
@@ -177,12 +337,14 @@ bool InputBar::focused() const {
 void InputBar::clear() {
     content.clear();
     text.setString(content);
+    errorMessage.clear();
+    errorText.setString("");
+    isValid = true;
     updateTextPositions();
 }
 
-void InputBar::setFocus(bool focus) {
-    isFocused = focus;
-}
+
+
 
 bool InputBar::isSubmitted(const sf::Event& event) const{
     if (!isFocused) return false;
