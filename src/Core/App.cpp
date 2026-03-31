@@ -17,7 +17,11 @@ App::App(): font("assets/fonts/SpaceMono.ttf"),
 };
 
 void App::run(){
+    sf::Clock dtClock;
+
     while (window.isOpen()){
+        float dt = dtClock.restart().asSeconds();
+
         while (auto event = window.pollEvent()){
             if (event->is<sf::Event::Closed>()){
                 window.close();
@@ -27,6 +31,7 @@ void App::run(){
             currentScreen->handleEvent(*event);
         }
 
+        context.animManager.update(dt);
         currentScreen->update();
 
         window.clear(Config::Colors::Background); 
