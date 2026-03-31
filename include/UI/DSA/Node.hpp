@@ -26,7 +26,6 @@ public:
 
     // Getters
     sf::Vector2f getPosition() const;
-    sf::Vector2f getCenter() const;
     sf::Color getFillColor() const;
     sf::Color getOutlineColor() const;
     const std::string& getLabel() const;
