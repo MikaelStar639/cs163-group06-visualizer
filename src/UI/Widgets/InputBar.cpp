@@ -36,6 +36,7 @@ InputBar::InputBar( AppContext& context,
     cursor.setSize({2.f, text.getCharacterSize() + 5.f});
     cursor.setFillColor(sf::Color::White);
 
+    setType(inputType);
     updateTextPositions();
 }
 
@@ -50,7 +51,13 @@ bool InputBar::isCharacterAllowed(char32_t unicode) const {
             return true;
 
         case InputType::Integer:
-            return std::isdigit(static_cast<unsigned char>(c)) || c == '-';
+            if (std::isdigit(static_cast<unsigned char>(c))) return true;
+
+            if (c == '-') {
+                return content.empty(); // only allow to place "-" at the beginning
+            }
+            return false;
+             
 
         case InputType::IntegerList:
         case InputType::EdgeTriple:
@@ -79,6 +86,11 @@ bool InputBar::validateContent() {
                 break;
 
             case InputType::Word:
+                if (content.size() > 20) {
+                    isValid = false;
+                    errorMessage = "Maximum 20 letters";
+                    break;
+                }
                 for (char c : content) {
                     if (!std::isalpha(static_cast<unsigned char>(c))) {
                         isValid = false;
@@ -90,10 +102,15 @@ bool InputBar::validateContent() {
 
             case InputType::Integer: {
                 std::size_t pos = 0;
-                std::stoi(content, &pos);
+                int value = std::stoi(content, &pos);
                 if (pos != content.size()) {
                     isValid = false;
                     errorMessage = "Invalid integer";
+                }
+
+                if (value < -999 || value > 999) {
+                    isValid = false;
+                    errorMessage = "Value must be from -999 to 999";
                 }
                 break;
             }
@@ -310,6 +327,21 @@ void InputBar::setFocus(bool focus) {
 
 void InputBar::setType(InputType inputType) {
     type = inputType;
+    switch (type) {
+        case InputType::Integer:
+            maxLength = 4;   // -999 đến 999
+            break;
+
+        case InputType::Word:
+            maxLength = 20;
+            break;
+
+        case InputType::AnyText:
+        case InputType::IntegerList:
+        case InputType::EdgeTriple:
+            maxLength = 30;
+            break;
+    }
     validateContent();
 }
 
