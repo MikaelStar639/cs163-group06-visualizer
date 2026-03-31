@@ -2,6 +2,7 @@
 #include "States/Screen.hpp"
 #include "UI/Widgets/Button.hpp"
 #include "UI/DSA/Node.hpp"
+#include "UI/DSA/Edge.hpp"  // Added this
 #include <vector>
 
 class TestScreen : public Screen {
@@ -9,6 +10,7 @@ private:
     AppContext& ctx;
     UI::Widgets::Button btnInsert;
     std::vector<UI::DSA::Node> nodes;
+    std::vector<UI::DSA::Edge> edges;
     std::vector<int> drawOrder;
 
     int draggedNodeIndex = -1; 
