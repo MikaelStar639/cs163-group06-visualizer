@@ -1,5 +1,7 @@
 #include "UI/Widgets/Dropdown.hpp"
 
+namespace UI::Widgets {
+
 Dropdown::Dropdown(AppContext& context, const std::string& label, 
     sf::Vector2f pos, sf::Vector2f size):
     ctx(context), 
@@ -228,4 +230,6 @@ std::string Dropdown::getSelectedText() const {
         return options[selectedIndex];
     }
     return "";
+}
+
 }

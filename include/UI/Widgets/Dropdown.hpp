@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 
+namespace UI::Widgets {
 class Dropdown {
 private:
     AppContext&           ctx;
@@ -51,3 +52,5 @@ public:
 private:
     void updateLayout();
 };
+
+}
