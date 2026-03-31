@@ -1,6 +1,6 @@
 #include "UI/Widgets/Button.hpp"
 
- 
+namespace UI::Widgets{
 Button::Button(AppContext& context, const std::string& label, 
     sf::Vector2f pos, sf::Vector2f size):
     ctx(context), 
@@ -109,4 +109,5 @@ void Button::draw() {
     } else {
         ctx.window.draw(text);
     }
+}
 }
