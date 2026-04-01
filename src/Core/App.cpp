@@ -1,4 +1,5 @@
 #include "Core/App.hpp"
+#include "UI/Widgets/Dropdown.hpp"
 
 App::App(): window(sf::VideoMode({1600, 900}), "Visualizer", sf::Style::Default ^ sf::Style::Resize),
             font("assets/fonts/SpaceMono.ttf"),
