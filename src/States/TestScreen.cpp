@@ -4,6 +4,7 @@
 #include "UI/Animations/InsertAnimation.hpp"
 #include "UI/Animations/DeleteAnimation.hpp"
 #include "UI/Animations/SwapAnimation.hpp"
+#include "UI/Animations/ColorAnimation.hpp"
 #include <iostream>
 
 #include <cstdlib> 
@@ -95,6 +96,35 @@ void TestScreen::handleEvent(const sf::Event& event) {
                         }
                     )
                 );
+            }
+        }
+        if (keyPressed->code == sf::Keyboard::Key::H) {
+            if (!nodes.empty()) {
+                sf::Color highlightColor = Config::UI::Colors::NodeHighlight;
+                sf::Color currentColor = nodes[0]->getFillColor();
+                
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::ColorAnimation>(
+                        nodes[0].get(), currentColor, highlightColor, 0.3f
+                    )
+                );
+                std::cout << ">>> Node 0 Highlighted!\n";
+            }
+        }
+
+        // Test Unhighlight (Phím U)
+        if (keyPressed->code == sf::Keyboard::Key::U) {
+            if (!nodes.empty()) {
+                // Unhighlight về màu mặc định (Lấy từ Config của bạn)
+                sf::Color defaultColor = Config::UI::Colors::NodeFill; 
+                sf::Color currentColor = nodes[0]->getFillColor();
+                
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::ColorAnimation>(
+                        nodes[0].get(), currentColor, defaultColor, 0.3f
+                    )
+                );
+                std::cout << ">>> Node 0 Unhighlighted!\n";
             }
         }
     }

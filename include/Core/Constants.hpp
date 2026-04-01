@@ -36,7 +36,8 @@ namespace Config {
             const sf::Color NodeFill    = sf::Color(45, 45, 45); 
             const sf::Color NodeOutline = sf::Color(100, 100, 100); 
             const sf::Color NodeText    = sf::Color::White;
-            
+            const sf::Color NodeHighlight = sf::Color(255, 165, 0);
+
             //UI States
             const sf::Color NodeHover   = sf::Color(173, 216, 230);
         }
