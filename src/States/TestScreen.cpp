@@ -35,7 +35,13 @@ void TestScreen::addNewNode(const std::string &val){
 
     // Connect all existing nodes to the newest one using their index
     for (size_t i = 0; i < newNodeIndex; ++i) {
-        edges.emplace_back(i, newNodeIndex); 
+        edges.emplace_back(i, newNodeIndex, ctx); 
+        
+        sf::Color randomColor(std::rand() % 256, std::rand() % 256, std::rand() % 256);
+        edges.back().setColor(randomColor);
+        edges.back().toggleDirection(1);
+        edges.back().flipDirection();
+        edges.back().setThickness(3);
     }
     
     drawOrder.push_back(newNodeIndex);
