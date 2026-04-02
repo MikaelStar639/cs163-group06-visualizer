@@ -8,11 +8,9 @@ namespace UI::DSA {
 
 class Edge {
 public:
-    // Pass indices instead of pointers
-    Edge(size_t srcIdx, size_t destIdx, AppContext& context, float weight = 1.0f, float thickness = 2.0f);
+    Edge(Node* src, Node* dest, AppContext& context, float weight = 1.0f, float thickness = 2.0f);
 
-    // Now update() needs to know where the nodes are located
-    void update(const std::vector<Node>& nodes);
+    void update();
 
     void draw(sf::RenderTarget& target);
 
@@ -28,8 +26,8 @@ public:
 private:
     AppContext& ctx; // Reference to access the font
 
-    size_t sourceIdx;
-    size_t destIdx;
+    Node* source;
+    Node* dest;
 
     float weight;
     sf::Text weightText;

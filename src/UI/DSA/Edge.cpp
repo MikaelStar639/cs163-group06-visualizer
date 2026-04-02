@@ -3,8 +3,8 @@
 
 namespace UI::DSA {
 
-Edge::Edge(size_t srcIdx, size_t destIdx, AppContext& context, float weight, float thickness)
-    : sourceIdx(srcIdx), destIdx(destIdx), ctx(context), weight(weight), thickness(thickness), weightText(ctx.font) 
+Edge::Edge(Node* src, Node* dest, AppContext& context, float weight, float thickness)
+    : source(src), dest(dest), ctx(context), weight(weight), thickness(thickness), weightText(ctx.font) 
 {
     color = sf::Color(150, 150, 150); // Default grey
     isDirected = 0;
@@ -27,12 +27,10 @@ void Edge::setWeight(float newWeight) {
     });
 }
 
-void Edge::update(const std::vector<Node>& nodes) {
-    // Safety check: ensure indices are still valid
-    if (sourceIdx >= nodes.size() || destIdx >= nodes.size()) return;
+void Edge::update() {
 
-    sf::Vector2f p1 = nodes[sourceIdx].getPosition();
-    sf::Vector2f p2 = nodes[destIdx].getPosition();
+    sf::Vector2f p1 = source->getPosition();
+    sf::Vector2f p2 = dest->getPosition();
 
     // Calculate direction vector and perpendicular vector for thickness
     sf::Vector2f direction = p2 - p1;
@@ -75,7 +73,7 @@ void Edge::update(const std::vector<Node>& nodes) {
         sf::Vector2f unitDir = direction / length;
 
         // 1. Calculate Position (Same as before)
-        float radius = nodes[destIdx].getRadius();
+        float radius = dest->getRadius();
         sf::Vector2f arrowTip = p2 - (unitDir * radius);
 
         // 2. Setup the Triangle with DYNAMIC Scaling
@@ -123,7 +121,7 @@ void Edge::toggleDirection(bool directed) {
 }
 
 void Edge::flipDirection(){
-    std::swap(sourceIdx, destIdx);
+    std::swap(source, dest);
 }
 
 float Edge::getWeight() const{

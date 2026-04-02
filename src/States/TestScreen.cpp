@@ -28,14 +28,13 @@ void TestScreen::addNewNode(const std::string &val){
     float finalY = static_cast<float>(std::rand() % static_cast<int>(yMax - yMin + 1)) + yMin;
 
     // 1. Create the new node
-    nodes.emplace_back(ctx, val, sf::Vector2f(finalX, finalY));
-    UI::DSA::Node* newNodePtr = &nodes.back();
+    nodes.emplace_back(std::make_unique<UI::DSA::Node>(ctx, val, sf::Vector2f(finalX, finalY)));
 
     size_t newNodeIndex = nodes.size() - 1;
 
     // Connect all existing nodes to the newest one using their index
     for (size_t i = 0; i < newNodeIndex; ++i) {
-        edges.emplace_back(i, newNodeIndex, ctx); 
+        edges.emplace_back(nodes[i].get(), nodes[newNodeIndex].get(), ctx); 
         
         sf::Color randomColor(std::rand() % 256, std::rand() % 256, std::rand() % 256);
         edges.back().setColor(randomColor);
@@ -66,9 +65,9 @@ void TestScreen::handleEvent(const sf::Event& event) {
             sf::Vector2f mousePos(mouseEvent->position.x, mouseEvent->position.y);
             for (int i = drawOrder.size() - 1; i >= 0; --i) {
                 int nodeIdx = drawOrder[i]; 
-                if (nodes[nodeIdx].contains(mousePos)) {
+                if (nodes[nodeIdx]->contains(mousePos)) {
                     draggedNodeIndex = nodeIdx;
-                    dragOffset = nodes[nodeIdx].getPosition() - mousePos;
+                    dragOffset = nodes[nodeIdx]->getPosition() - mousePos;
                     drawOrder.erase(drawOrder.begin() + i);
                     drawOrder.push_back(nodeIdx);
                     break; 
@@ -90,27 +89,27 @@ void TestScreen::update() {
     
     // Update Node positions (dragging)
     if (draggedNodeIndex != -1) {
-        nodes[draggedNodeIndex].setPosition(mousePos + dragOffset);
+        nodes[draggedNodeIndex]->setPosition(mousePos + dragOffset);
     } 
     else {
         // ... (Keep your existing hover logic)
         int hoveredNodeIdx = -1;
         for (int i = drawOrder.size() - 1; i >= 0; --i) {
             int realIdx = drawOrder[i];
-            if (nodes[realIdx].contains(mousePos)) {
+            if (nodes[realIdx]->contains(mousePos)) {
                 hoveredNodeIdx = realIdx; 
                 break; 
             }
         }
         for (int i = 0; i < nodes.size(); ++i) {
-            if (i == hoveredNodeIdx) nodes[i].onHover(); 
-            else nodes[i].onIdle(); 
+            if (i == hoveredNodeIdx) nodes[i]->onHover(); 
+            else nodes[i]->onIdle(); 
         }
     }
 
     // Update all edges by giving them access to the node list
     for (auto& edge : edges) {
-        edge.update(nodes);
+        edge.update();
     }
 }
 
@@ -122,7 +121,7 @@ void TestScreen::draw() {
 
     // Then draw nodes
     for (int idx : drawOrder) {
-        nodes[idx].draw();
+        nodes[idx]->draw();
     }
 
     btnInsert.draw(); // UI on top
