@@ -17,6 +17,11 @@ namespace Config {
         inline constexpr float BUTTON_HEIGHT        = 70.f;
         inline constexpr float BUTTON_OUTLINE       = 2.f;
         inline constexpr float BUTTON_CORNER_RADIUS = 12.f;
+
+        //Input Bar
+        inline constexpr float INPUT_BAR_WIDTH      = 300.f;
+        inline constexpr float INPUT_BAR_HEIGHT     = 60.f;
+
         
         namespace Colors {
             //Buttons
@@ -26,6 +31,16 @@ namespace Config {
             const sf::Color ButtonText         = sf::Color::White;
             const sf::Color ButtonOutline      = sf::Color(100, 100, 100); 
             const sf::Color ButtonOutlineHover = sf::Color(173, 216, 230);
+
+            //Input Bars
+            const sf::Color InputBarIdle            = sf::Color(45, 45, 45);
+            const sf::Color InputBarFocuse          = sf::Color(70, 70, 70);
+            const sf::Color InputBarOutline         = sf::Color(100, 100, 100);
+            const sf::Color InputBarFocusedOutline  = sf::Color(173, 216, 230);
+            const sf::Color InputBarText            = sf::Color::White;
+            const sf::Color InputBarPlaceholder     = sf::Color(150, 150, 150);
+
+
         }
     }
 
