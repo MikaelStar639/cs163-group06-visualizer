@@ -40,6 +40,8 @@ public:
     void setColors(sf::Color idle, sf::Color hover, sf::Color pressed, sf::Color textCol);
     void setLabel(const std::string& label);
     void setOptions(const std::vector<std::string>& opts);
+    void clearSelection();
+    void setSelectedIndex(int index);
 
     void update(sf::Vector2i mousePos);
     bool isClicked(const sf::Event& event);

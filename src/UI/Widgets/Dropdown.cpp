@@ -61,6 +61,21 @@ void Dropdown::setLabel(const std::string& label) {
     updateLayout();
 }
 
+void Dropdown::clearSelection() {
+    selectedIndex = -1;
+    isDropped = false;
+}
+
+void Dropdown::setSelectedIndex(int index) {
+    if (index >= 0 && index < (int)options.size()) {
+        selectedIndex = index;
+        mainText.setString(options[index]);
+    } else {
+        selectedIndex = -1;
+    }
+    updateLayout();
+}
+
 void Dropdown::setOptions(const std::vector<std::string>& opts) {
     options = opts;
     itemBoxes.clear();
