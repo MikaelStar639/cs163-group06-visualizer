@@ -22,12 +22,14 @@ public:
     void setLabel(const std::string& label);
     void setFillColor(sf::Color color);
     void setOutlineColor(sf::Color color);
+    void setLabelColor(sf::Color color);
     void setScale(float scaleFactor);
 
     // Getters
     sf::Vector2f getPosition() const;
     sf::Color getFillColor() const;
     sf::Color getOutlineColor() const;
+    sf::Color getLabelColor() const;
     const std::string& getLabel() const;
     float getRadius() const;
     float getScale() const;

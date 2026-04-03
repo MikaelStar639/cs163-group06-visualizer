@@ -50,6 +50,7 @@ void Node::setLabel(const std::string& newLabel) {
 
 void Node::setFillColor(sf::Color color) { shape.setFillColor(color); }
 void Node::setOutlineColor(sf::Color color) { shape.setOutlineColor(color); }
+void Node::setLabelColor(sf::Color color) { text.setFillColor(color); }
 
 // --- Getters ---
 sf::Vector2f Node::getPosition() const { 
@@ -60,6 +61,7 @@ float Node::getRadius() const { return shape.getRadius(); }
 const std::string& Node::getLabel() const { return label; }
 sf::Color Node::getFillColor() const { return shape.getFillColor(); }
 sf::Color Node::getOutlineColor() const { return shape.getOutlineColor(); }
+sf::Color Node::getLabelColor() const { return text.getFillColor(); }
 float Node::getScale() const { return shape.getScale().x; }
 
 bool Node::contains(sf::Vector2f point) const {

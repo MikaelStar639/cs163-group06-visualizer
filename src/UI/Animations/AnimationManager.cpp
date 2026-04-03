@@ -2,6 +2,10 @@
 
 namespace UI::Animations {
 
+    bool AnimationManager::empty() const{
+        return activeAnimations.empty();
+    }
+    
     void AnimationManager::addAnimation(std::unique_ptr<AnimationBase> anim) {
         if (anim) {
             activeAnimations.push_back(std::move(anim));
