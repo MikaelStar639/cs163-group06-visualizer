@@ -3,23 +3,27 @@
 
 namespace UI::DSA {
 
-// 1. The Simplest calls the Master with defaults
-Edge::Edge(Node* src, Node* dest, AppContext& context)
-    : Edge(src, dest, context, "", false, 2.0f, sf::Color(150, 150, 150)) {}
+// Basic connection
+Edge::Edge(AppContext& context, Node* src, Node* dest)
+    : Edge(context, src, dest, false, "", Config::UI::EDGE_THICKNESS, Config::UI::Colors::EdgeFill) {}
 
-// 2. The Weight one calls the Master
-Edge::Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr)
-    : Edge(src, dest, context, weightStr, false, 2.0f, sf::Color(150, 150, 150)) {}
+// Connection with Weight
+Edge::Edge(AppContext& context, Node* src, Node* dest, const std::string& weightStr)
+    : Edge(context, src, dest, false, weightStr, Config::UI::EDGE_THICKNESS, Config::UI::Colors::EdgeFill) {}
 
-// 3. The Directed one calls the Master
-Edge::Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr, bool directed)
-    : Edge(src, dest, context, weightStr, directed, 2.0f, sf::Color(150, 150, 150)) {}
+// Connection with Directionality
+Edge::Edge(AppContext& context, Node* src, Node* dest, bool directed)
+    : Edge(context, src, dest, directed, "", Config::UI::EDGE_THICKNESS, Config::UI::Colors::EdgeFill) {}
 
-// 4. THE MASTER CONSTRUCTOR
-Edge::Edge(Node* src, Node* dest, AppContext& context, 
-           const std::string& weightStr, bool directed, float thickness, sf::Color color)
-    : source(src), dest(dest), ctx(context), weight(weightStr), 
-      isDirected(directed), thickness(thickness), color(color), weightText(ctx.font) 
+// Connection with Weight and Directionality
+Edge::Edge(AppContext& context, Node* src, Node* dest, bool directed, const std::string& weightStr)
+    : Edge(context, src, dest, directed, weightStr, Config::UI::EDGE_THICKNESS, Config::UI::Colors::EdgeFill) {}
+
+// Everything
+Edge::Edge(AppContext& context, Node* src, Node* dest, 
+        bool directed, const std::string& weightStr, float thickness, sf::Color color)
+    : ctx(context), source(src), dest(dest), isDirected(directed),
+      weight(weightStr), thickness(thickness), color(color), weightText(ctx.font) 
 {
     // Initialize visuals
     lineShape.setFillColor(color);
@@ -30,6 +34,7 @@ Edge::Edge(Node* src, Node* dest, AppContext& context,
     weightText.setFillColor(sf::Color::White);
     setWeight(weightStr); 
 }
+
 
 void Edge::setWeight(std::string newWeight) {
     weight = newWeight;

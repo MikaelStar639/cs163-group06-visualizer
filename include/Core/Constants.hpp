@@ -23,6 +23,9 @@ namespace Config {
         inline constexpr float NODE_OUTLINE_THICKNESS = 3.f;
         inline constexpr std::size_t NODE_POINT_COUNT = 30;
 
+        //Edges
+        inline constexpr float EDGE_THICKNESS = 2.0f;
+
         namespace Colors {
             //Buttons
             const sf::Color ButtonIdle         = sf::Color(60, 60, 60);  
@@ -37,7 +40,10 @@ namespace Config {
             const sf::Color NodeOutline = sf::Color(100, 100, 100); 
             const sf::Color NodeText    = sf::Color::White;
             const sf::Color NodeHighlight     = sf::Color(255, 165, 0); 
-            const sf::Color LabelHighlight    = sf::Color(30, 30, 30); 
+            const sf::Color LabelHighlight    = sf::Color(30, 30, 30);
+            
+            //Edges
+            const sf::Color EdgeFill = sf::Color(150, 150, 150);
             
             //UI States
             const sf::Color NodeHover   = sf::Color(173, 216, 230);

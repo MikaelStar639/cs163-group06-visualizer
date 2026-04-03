@@ -8,18 +8,21 @@ namespace UI::DSA {
 
 class Edge {
 public:
-    // 1. The Simplest: Just a basic connection
-    Edge(Node* src, Node* dest, AppContext& context);
+    // Basic connection
+    Edge(AppContext& context, Node* src, Node* dest);
 
-    // 2. Connection with Weight
-    Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr);
+    // Connection with Weight
+    Edge(AppContext& context, Node* src, Node* dest, const std::string& weightStr);
+    
+    // Connection with Directionality
+    Edge(AppContext& context, Node* src, Node* dest, bool directed);
+    
+    // Connection with Weight and Directionality
+    Edge(AppContext& context, Node* src, Node* dest, bool directed, const std::string& weightStr);
 
-    // 3. Connection with Weight and Directionality
-    Edge(Node* src, Node* dest, AppContext& context, const std::string& weightStr, bool directed);
-
-    // 4. The "Master": Everything included
-    Edge(Node* src, Node* dest, AppContext& context, 
-         const std::string& weightStr, bool directed, float thickness, sf::Color color);
+    // Everything
+    Edge(AppContext& context, Node* src, Node* dest, 
+         bool directed, const std::string& weightStr, float thickness, sf::Color color);
 
     void update();
 

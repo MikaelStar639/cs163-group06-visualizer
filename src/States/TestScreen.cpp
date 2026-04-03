@@ -45,7 +45,7 @@ void TestScreen::addNewNode(const std::string &val){
 
     // Connect all existing nodes to the newest one using their index
     for (size_t i = 0; i < newNodeIndex; ++i) {
-        edges.emplace_back(nodes[i].get(), nodes[newNodeIndex].get(), ctx, "5.2", 1, 5, sf::Color::Green); 
+        edges.emplace_back(ctx, nodes[i].get(), nodes[newNodeIndex].get(), true); 
     }
     
     drawOrder.push_back(newNodeIndex);
