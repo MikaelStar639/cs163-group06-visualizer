@@ -44,12 +44,11 @@ void TestScreen::addNewNode(const std::string &val){
     size_t newNodeIndex = nodes.size() - 1;
 
     // Connect all existing nodes to the newest one using their index
-    for (size_t i = 0; i < newNodeIndex; ++i) {
-        edges.emplace_back(nodes[i].get(), nodes[newNodeIndex].get(), ctx); 
-        
+    if (nodes.size() >= 2){
+        edges.emplace_back(nodes.end()[-2].get(), nodes.back().get(), ctx);
         sf::Color randomColor(std::rand() % 256, std::rand() % 256, std::rand() % 256);
         edges.back().setColor(randomColor);
-        edges.back().toggleDirection(1);
+        edges.back().toggleDirection(true);
         edges.back().flipDirection();
         edges.back().setThickness(3);
     }
@@ -97,8 +96,8 @@ void TestScreen::handleEvent(const sf::Event& event) {
                         nodeToDeletePtr, 0.3f, 
                         [this]() { 
                             if (!nodes.empty()) {
-                                nodes.pop_back();       // Xóa data thật khỏi bộ nhớ
-                                drawOrder.pop_back();   // Cập nhật lại mảng vẽ
+                                nodes.pop_back();       
+                                drawOrder.pop_back();   
                                 std::cout << "[-] Node Deleted successfully!\n";
                             }
                         }
