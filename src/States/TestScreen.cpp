@@ -1,5 +1,12 @@
 #include "States/TestScreen.hpp"
 #include "Core/Constants.hpp"
+#include "UI/Animations/ScaleAnimation.hpp"
+#include "UI/Animations/InsertAnimation.hpp"
+#include "UI/Animations/DeleteAnimation.hpp"
+#include "UI/Animations/SwapAnimation.hpp"
+#include "UI/Animations/ColorAnimation.hpp"
+#include "UI/Animations/HighlightAnimation.hpp"
+#include "UI/Animations/UnhighlightAnimation.hpp"
 #include <iostream>
 #include <cstdlib> 
 #include <ctime>   
@@ -23,12 +30,16 @@ void TestScreen::addNewNode(const std::string &val){
     float xMax = viewW - totalNodeSize - padding;
     float yMin = 150.f; 
     float yMax = viewH - totalNodeSize - padding;
-
     float finalX = static_cast<float>(std::rand() % static_cast<int>(xMax - xMin + 1)) + xMin;
     float finalY = static_cast<float>(std::rand() % static_cast<int>(yMax - yMin + 1)) + yMin;
 
     // 1. Create the new node
     nodes.emplace_back(std::make_unique<UI::DSA::Node>(ctx, val, sf::Vector2f(finalX, finalY)));
+
+    UI::DSA::Node* newNodePtr = nodes.back().get();
+    ctx.animManager.addAnimation(
+        std::make_unique<UI::Animations::InsertAnimation>(newNodePtr, 0.3f)
+    );
 
     size_t newNodeIndex = nodes.size() - 1;
 
@@ -60,6 +71,66 @@ void TestScreen::handleEvent(const sf::Event& event) {
         }
     }
 
+    if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        if (keyPressed->code == sf::Keyboard::Key::Space) {
+            // 1. BLOCK SPAM
+            if (ctx.animManager.empty()){
+                if (nodes.size() >= 2) {
+                    ctx.animManager.addAnimation(
+                        std::make_unique<UI::Animations::SwapAnimation>(
+                            nodes[0].get(), nodes[1].get(), 0.3f
+                        )
+                    );
+    
+                    std::swap(nodes[0], nodes[1]);
+                    
+                    std::cout << ">>> Swapped Node 0 and Node 1!\n";
+                }
+            }
+        }
+
+        if (keyPressed->code == sf::Keyboard::Key::Backspace) {
+            if (!nodes.empty()) {
+                UI::DSA::Node* nodeToDeletePtr = nodes.back().get();
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::DeleteAnimation>(
+                        nodeToDeletePtr, 0.3f, 
+                        [this]() { 
+                            if (!nodes.empty()) {
+                                nodes.pop_back();       // Xóa data thật khỏi bộ nhớ
+                                drawOrder.pop_back();   // Cập nhật lại mảng vẽ
+                                std::cout << "[-] Node Deleted successfully!\n";
+                            }
+                        }
+                    )
+                );
+            }
+        }
+        if (keyPressed->code == sf::Keyboard::Key::H) {
+            if (!nodes.empty()) {
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::HighlightAnimation>(
+                        nodes[0].get(), .3f
+                    )
+                );
+                std::cout << ">>> Node 0 Highlighted!\n";
+            }
+        }
+
+        // Test Unhighlight (Phím U)
+        if (keyPressed->code == sf::Keyboard::Key::U) {
+            if (!nodes.empty()) {
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::UnhighlightAnimation>(
+                        nodes[0].get(), .3f
+                    )
+                );
+                std::cout << ">>> Node 0 Unhighlighted!\n";
+            }
+        }
+    }
+
+    //event for drawing nodes
     if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (mouseEvent->button == sf::Mouse::Button::Left) {
             sf::Vector2f mousePos(mouseEvent->position.x, mouseEvent->position.y);
@@ -102,8 +173,11 @@ void TestScreen::update() {
             }
         }
         for (int i = 0; i < nodes.size(); ++i) {
-            if (i == hoveredNodeIdx) nodes[i]->onHover(); 
-            else nodes[i]->onIdle(); 
+            if (i == hoveredNodeIdx) {
+                nodes[i]->onHover(); 
+            } else {
+                nodes[i]->onIdle(); 
+            }
         }
     }
 
