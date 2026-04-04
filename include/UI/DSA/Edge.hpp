@@ -25,18 +25,21 @@ public:
          bool directed, const std::string& weightStr, float thickness, sf::Color color);
 
     void update();
-
     void draw();
 
-    // Setters for visual states (useful for DSA animations)
+    // Setters
     void setColor(sf::Color color);
-    void setThickness(float newThickness);
-
     void setWeight(std::string newWeight);
-    std::string getWeight() const;
-
+    void setThickness(float newThickness);
     void toggleDirection(bool directed);
     void flipDirection();
+    
+    // Getters
+    std::string getWeight() const;
+    sf::Color   getColor() const;
+    bool connectsTo(const Node* node) const;
+
+
 private:
     AppContext& ctx; // Reference to access the font
 
@@ -50,8 +53,8 @@ private:
     sf::Color color;
     float thickness;
 
-    sf::ConvexShape arrowhead;
-    bool isDirected; // You can toggle this in the constructor
+    sf::ConvexShape arrowHead;
+    bool isDirected; 
 };
 
 } 

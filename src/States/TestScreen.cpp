@@ -11,6 +11,7 @@
 #include <cstdlib> 
 #include <ctime>   
 
+
 TestScreen::TestScreen(AppContext& context)
     : ctx(context), 
       btnInsert(context, "INSERT NODE", {50.f, 50.f}, {250.f, 60.f}) 
@@ -43,9 +44,11 @@ void TestScreen::addNewNode(const std::string &val){
 
     size_t newNodeIndex = nodes.size() - 1;
 
-    // Connect all existing nodes to the newest one using their index
-    for (size_t i = 0; i < newNodeIndex; ++i) {
-        edges.emplace_back(ctx, nodes[i].get(), nodes[newNodeIndex].get(), true); 
+
+    if (nodes.size() >= 2){
+        edges.emplace_back(ctx, nodes.end()[-2].get(), nodes[newNodeIndex].get(), true); 
+        edges.back().setColor(sf::Color::White);
+        edges.back().setWeight("1");
     }
     
     drawOrder.push_back(newNodeIndex);
