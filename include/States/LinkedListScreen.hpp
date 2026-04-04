@@ -45,7 +45,7 @@ private:
 
     void initUI();
     void updateLayout();
-    void renderSubMenu(float boxY, ActiveMenu type);
+    void renderSubMenu(float boxX, float boxY, ActiveMenu type);
 
 public:
     explicit LinkedListScreen(AppContext& context);

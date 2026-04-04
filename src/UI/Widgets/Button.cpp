@@ -99,6 +99,14 @@ bool Button::isClicked(const sf::Event& event) {
     return false;
 }
 
+sf::Vector2f Button::getPosition() const {
+    return shape.getPosition();
+}
+
+sf::Vector2f Button::getSize() const {
+    return shape.getSize();
+}
+
 void Button::draw() {
     ctx.window.draw(shape);
     

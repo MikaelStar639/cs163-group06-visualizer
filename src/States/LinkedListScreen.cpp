@@ -41,9 +41,8 @@ void LinkedListScreen::initUI() {
     panelBg.setOutlineColor(sf::Color(200, 220, 200));
 }
 
-void LinkedListScreen::renderSubMenu(float boxY, ActiveMenu type) {
-    float mainX = 30.f;  
-    float boxX = mainX + 160.f + 10.f; 
+void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
+    
     float innerX = boxX + 15.f;
     float innerY = boxY + 15.f;
     float boxHeight = 70.f;
@@ -140,20 +139,31 @@ void LinkedListScreen::renderSubMenu(float boxY, ActiveMenu type) {
 
     panelBg.setPosition({boxX, boxY});
     panelBg.setSize({boxWidth, boxHeight});
+
+    
+    float windowWidth = static_cast<float>(ctx.window.getSize().x);
+
+    if (boxX + boxWidth > windowWidth - 20.f) {
+        boxX = windowWidth - boxWidth - 20.f;
+        innerX = boxX + 15.f;
+    }
 }
 
 void LinkedListScreen::updateLayout() {
     float mainX = 30.f;      
+    float mainY = 80.f;
     float gapMain = 5.f;    
+    float buttonWidth = 160.f;
+    float buttonHeight = 55.f;
 
-    // --- Place Main Left Buttons ---
+    // --- Place Main Buttons Horizontally  ---
     ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Clean};
     
     for (size_t i = 0; i < mainButtons.size(); ++i) {
         auto& b = mainButtons[i];
         bool isActive = (activeMenu == enums[i]);
-        b->setSize({160.f, 55.f});
-        b->setPosition({mainX, 150.f + (55.f + gapMain) * static_cast<float>(i)});
+        b->setSize({buttonWidth, buttonHeight});
+        b->setPosition({mainX + (buttonWidth + gapMain) * static_cast<float>(i), mainY});
         
         if (isActive) {
             b->setColors(sf::Color(122, 160, 142), sf::Color(122, 160, 142), sf::Color(122, 160, 142), sf::Color::White);
@@ -169,15 +179,20 @@ void LinkedListScreen::updateLayout() {
     if (activeMenu == ActiveMenu::None || activeMenu == ActiveMenu::Clean) return;
 
     // --- Panel Settings ---
-    float boxY = 150.f;
-    for (size_t i = 0; i < 4; ++i) {
+    float boxX = 30.f;
+    float boxY = mainY + 55.f + 15.f; // Panels stay under buttons
+    for (size_t i = 0; i < mainButtons.size(); ++i) {
         if (activeMenu == enums[i]) {
-            boxY = 150.f + (55.f + gapMain) * static_cast<float>(i);
+            sf::Vector2f btnPos  = mainButtons[i]->getPosition();
+            sf::Vector2f btnSize = mainButtons[i]->getSize();
+
+            boxX = btnPos.x;
+            boxY = btnPos.y + btnSize.y + 15.f;
             break;
         }
     }
 
-    renderSubMenu(boxY, activeMenu);
+    renderSubMenu(boxX, boxY, activeMenu);
 }
 
 void LinkedListScreen::handleEvent(const sf::Event& event) {
