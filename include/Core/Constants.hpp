@@ -43,6 +43,7 @@ namespace Config {
             const sf::Color LabelHighlight    = sf::Color(30, 30, 30);
             
             //Edges
+            const sf::Color EdgeHighlight     = sf::Color(255, 165, 0); 
             const sf::Color EdgeFill = sf::Color(150, 150, 150);
             
             //UI States

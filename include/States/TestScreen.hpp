@@ -10,7 +10,7 @@ private:
     AppContext& ctx;
     UI::Widgets::Button btnInsert;
     std::vector<std::unique_ptr<UI::DSA::Node>> nodes;
-    std::vector<UI::DSA::Edge> edges;
+    std::vector<std::unique_ptr<UI::DSA::Edge>> edges;
     std::vector<int> drawOrder;
 
     int draggedNodeIndex = -1; 

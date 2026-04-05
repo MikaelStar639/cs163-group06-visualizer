@@ -37,6 +37,9 @@ public:
     // Getters
     std::string getWeight() const;
     sf::Color   getColor() const;
+    Node* getSource() const { return source; }
+    Node* getDest() const { return dest; }
+    float getThickness() const { return thickness; }
     bool connectsTo(const Node* node) const;
 
 

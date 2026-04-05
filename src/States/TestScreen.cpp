@@ -3,10 +3,12 @@
 #include "UI/Animations/Node/NodeScaleAnimation.hpp"
 #include "UI/Animations/Node/NodeSwapAnimation.hpp"
 #include "UI/Animations/Node/NodeColorAnimation.hpp"
+#include "UI/Animations/Edge/EdgeColorAnimation.hpp"
+#include "UI/Animations/Edge/EdgeScaleAnimation.hpp"
 #include <iostream>
 #include <cstdlib> 
 #include <ctime>   
-
+#include <algorithm>
 
 TestScreen::TestScreen(AppContext& context)
     : ctx(context), 
@@ -41,10 +43,22 @@ void TestScreen::addNewNode(const std::string &val){
     size_t newNodeIndex = nodes.size() - 1;
 
 
-    if (nodes.size() >= 2){
-        edges.emplace_back(ctx, nodes.end()[-2].get(), nodes[newNodeIndex].get(), true); 
-        edges.back().setColor(sf::Color::White);
-        edges.back().setWeight("1");
+    if (nodes.size() >= 2) {
+        // 1. Add the edge to the vector
+        edges.emplace_back(std::make_unique<UI::DSA::Edge>(
+            ctx, 
+            nodes.end()[-2].get(), 
+            nodes[newNodeIndex].get(), 
+            true
+        ));
+
+        // 2. Get the pointer from the back of the vector (matching your Node pattern)
+        UI::DSA::Edge* newEdgePtr = edges.back().get();
+
+        // 3. Register the animation via the manager
+        ctx.animManager.addAnimation(
+            std::make_unique<UI::Animations::EdgeInsertAnimation>(newEdgePtr, 0.3f)
+        );
     }
     
     drawOrder.push_back(newNodeIndex);
@@ -83,6 +97,22 @@ void TestScreen::handleEvent(const sf::Event& event) {
         }
 
         if (keyPressed->code == sf::Keyboard::Key::Backspace) {
+            if (!edges.empty()) {
+                UI::DSA::Edge* edgeToDeletePtr = edges.back().get();
+                
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::EdgeDeleteAnimation>(
+                        edgeToDeletePtr, 
+                        0.3f, 
+                        [this]() {
+                            if (!edges.empty()) {
+                                edges.pop_back();
+                                std::cout << "[-] Edge Deleted successfully!\n";
+                            }
+                        }
+                    )
+                );
+            }
             if (!nodes.empty()) {
                 UI::DSA::Node* nodeToDeletePtr = nodes.back().get();
                 ctx.animManager.addAnimation(
@@ -108,6 +138,13 @@ void TestScreen::handleEvent(const sf::Event& event) {
                 );
                 std::cout << ">>> Node 0 Highlighted!\n";
             }
+
+            if (!edges.empty()) {
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::EdgeHighlightAnimation>(edges[0].get(), 0.3f)
+                );
+                std::cout << ">>> Edge 0 Highlighted!\n";
+            }
         }
 
         // Test Unhighlight (Phím U)
@@ -119,6 +156,13 @@ void TestScreen::handleEvent(const sf::Event& event) {
                     )
                 );
                 std::cout << ">>> Node 0 Unhighlighted!\n";
+            }
+
+            if (!edges.empty()) {
+                ctx.animManager.addAnimation(
+                    std::make_unique<UI::Animations::EdgeUnhighlightAnimation>(edges[0].get(), 0.3f)
+                );
+                std::cout << ">>> Edge 0 Highlighted!\n";
             }
         }
     }
@@ -176,14 +220,14 @@ void TestScreen::update() {
 
     // Update all edges by giving them access to the node list
     for (auto& edge : edges) {
-        edge.update();
+        edge->update();
     }
 }
 
 void TestScreen::draw() {
     // 4. Draw order: Edges FIRST (so they appear under nodes)
     for (auto& edge : edges) {
-        edge.draw();
+        edge->draw();
     }
 
     // Then draw nodes
