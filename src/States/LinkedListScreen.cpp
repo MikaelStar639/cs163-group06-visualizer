@@ -4,18 +4,18 @@
 
 LinkedListScreen::LinkedListScreen(AppContext& context)
     : ctx(context),
-      btnBack(context, " MENU ", {0.f, 0.f}, {120.f, 50.f}),
+      btnBack(context, " Back ", {0.f, 0.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::BUTTON_CORNER_RADIUS),
       btnPrev(context, "|<", {700.f, 840.f}, {60.f, 40.f}),
       btnPlay(context, "||", {770.f, 840.f}, {60.f, 40.f}),
       btnNext(context, ">|", {840.f, 840.f}, {60.f, 40.f}),
       title(context.font, "Linked List", 24)
 {
-    mainButtons.emplace_back(context, "Create", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
-    mainButtons.emplace_back(context, "Insert", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
-    mainButtons.emplace_back(context, "Delete", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
-    mainButtons.emplace_back(context, "Search", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
-    mainButtons.emplace_back(context, "Clear All", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
+    mainButtons.emplace_back(context, "Create", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
+    mainButtons.emplace_back(context, "Insert", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
+    mainButtons.emplace_back(context, "Delete", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
+    mainButtons.emplace_back(context, "Search", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
+    mainButtons.emplace_back(context, "Clear All", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
 
     initUI();
     updateLayout();
@@ -33,6 +33,7 @@ void LinkedListScreen::initUI() {
     };
 
     applyBtnColors(btnBack); 
+    btnBack.setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, Config::UI::Colors::ButtonPressed, sf::Color(255, 50, 50));
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
     
     sf::Color panelColor(122, 160, 142);
@@ -45,7 +46,7 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     
     float innerX = boxX + 15.f;
     float innerY = boxY + 15.f;
-    float boxHeight = 70.f;
+    float boxHeight = 80.f;
     float boxWidth = 0.f;
 
     activeSubButtons.clear();
@@ -57,7 +58,7 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     sf::Color innerBtnPress(30, 50, 50);
 
     auto createDropdown = [&](const std::vector<std::string>& options, float x, float w) {
-        dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f});
+        dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
         dropdownAction->setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
         dropdownAction->setOptions(options);
         
@@ -73,12 +74,12 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     };
 
     auto createInput = [&](const std::string& placeholder, float x, float w,  UI::Widgets::InputType inputType = UI::Widgets::InputType::Integer) {
-        activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f}, "", inputType);
+        activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f}, "", inputType);
         activeInputs.back().setPlaceholder(placeholder);
     };
 
     auto createExecuteBtn = [&](float x) {
-        activeSubButtons.emplace_back(ctx, "Go", sf::Vector2f{x, innerY}, sf::Vector2f{80.f, 40.f});
+        activeSubButtons.emplace_back(ctx, "Go", sf::Vector2f{x, innerY}, sf::Vector2f{90.f, 45.f});
         activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
     };
 
@@ -86,51 +87,51 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     float gap = 15.f; // Increased gap for better spacing
 
     if (type == ActiveMenu::Create) {
-        int sel = createDropdown({"Random", "File"}, currentX, 130.f);
-        currentX += 130.f + gap;
+        int sel = createDropdown({"Random", "File"}, currentX, 160.f);
+        currentX += 160.f + gap;
 
         if (sel == 0) { // Random
-            createInput("Size", currentX, 110.f);
-            currentX += 110.f + gap;
+            createInput("Size", currentX, 120.f);
+            currentX += 120.f + gap;
         }else if (sel == 1) { // File
-            createInput("File path", currentX, 480.f, UI::Widgets::InputType::AnyText);
-            currentX += 480.f + gap;
+            createInput("File path", currentX, 500.f, UI::Widgets::InputType::AnyText);
+            currentX += 500.f + gap;
         }
         createExecuteBtn(currentX);
-        currentX += 80.f;
+        currentX += 90.f;
     }
     else if (type == ActiveMenu::Insert) {
-        int sel = createDropdown({"Head", "Tail", "At"}, currentX, 130.f);
-        currentX += 130.f + gap;
+        int sel = createDropdown({"Head", "Tail", "At"}, currentX, 160.f);
+        currentX += 160.f + gap;
 
-        createInput("Value", currentX, 110.f);
-        currentX += 110.f + gap;
+        createInput("Value", currentX, 120.f);
+        currentX += 120.f + gap;
 
         if (sel == 2) { // At
-            createInput("Pos", currentX, 90.f);
-            currentX += 90.f + gap;
+            createInput("Pos", currentX, 100.f);
+            currentX += 100.f + gap;
         }
 
         createExecuteBtn(currentX);
-        currentX += 80.f;
+        currentX += 90.f;
     }
     else if (type == ActiveMenu::Remove) {
-        int sel = createDropdown({"Head", "Tail", "At"}, currentX, 130.f);
-        currentX += 130.f + gap;
+        int sel = createDropdown({"Head", "Tail", "At"}, currentX, 160.f);
+        currentX += 160.f + gap;
 
         if (sel == 2) { // At
-            createInput("Pos", currentX, 90.f);
-            currentX += 90.f + gap;
+            createInput("Pos", currentX, 100.f);
+            currentX += 100.f + gap;
         }
 
         createExecuteBtn(currentX);
-        currentX += 80.f;
+        currentX += 90.f;
     }
     else if (type == ActiveMenu::Search) {
-        createInput("Value", currentX, 150.f);
-        currentX += 150.f + gap;
+        createInput("Value", currentX, 160.f);
+        currentX += 160.f + gap;
         createExecuteBtn(currentX);
-        currentX += 80.f;
+        currentX += 90.f;
     }
 
     boxWidth = (currentX - boxX) + 20.f; // Slightly more right-padding 
@@ -151,8 +152,8 @@ void LinkedListScreen::updateLayout() {
     float mainX = 30.f;      
     float mainY = 80.f;
     float gapMain = 5.f;    
-    float buttonWidth = 160.f;
-    float buttonHeight = 55.f;
+    float buttonWidth = 180.f;
+    float buttonHeight = 60.f;
 
     // --- Place Main Buttons Horizontally  ---
     ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Clean};
