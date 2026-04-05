@@ -4,7 +4,7 @@
 
 LinkedListScreen::LinkedListScreen(AppContext& context)
     : ctx(context),
-      btnBack(context, " Back ", {0.f, 0.f}, {120.f, 50.f}),
+      btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::BUTTON_CORNER_RADIUS),
       btnPrev(context, "|<", {700.f, 840.f}, {60.f, 40.f}),
       btnPlay(context, "||", {770.f, 840.f}, {60.f, 40.f}),
@@ -25,7 +25,7 @@ void LinkedListScreen::initUI() {
     title.setFillColor(Config::UI::Colors::ButtonHover);
     title.setStyle(sf::Text::Bold);
     title.setOrigin({0.f, 0.f});
-    title.setPosition({140.f, 10.f}); 
+    title.setPosition({160.f, 30.f}); 
 
     auto applyBtnColors = [](UI::Widgets::Button& b) {
         b.setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, 
@@ -150,7 +150,7 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
 
 void LinkedListScreen::updateLayout() {
     float mainX = 30.f;      
-    float mainY = 80.f;
+    float mainY = 100.f;
     float gapMain = 5.f;    
     float buttonWidth = 180.f;
     float buttonHeight = 60.f;
