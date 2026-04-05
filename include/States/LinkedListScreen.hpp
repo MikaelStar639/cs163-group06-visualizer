@@ -8,6 +8,7 @@
 #include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <UI/Widgets/Dropdown.hpp>
 #include <vector>
+#include <optional>
 #include <memory>
 
 // Enum for State Management
@@ -27,7 +28,7 @@ private:
     RoundedRectangleShape panelBg;
 
     // Contextual execution
-    std::unique_ptr<UI::Widgets::Dropdown> dropdownAction;
+    std::optional<UI::Widgets::Dropdown> dropdownAction;
     int lastDropdownIndex = -1;
 
     // Timeline Controls
@@ -39,9 +40,9 @@ private:
     ActiveMenu activeMenu = ActiveMenu::None;
 
     // Active Widgets managed by unique_ptr
-    std::vector<std::unique_ptr<UI::Widgets::Button>> mainButtons;
-    std::vector<std::unique_ptr<UI::Widgets::Button>> activeSubButtons;
-    std::vector<std::unique_ptr<UI::Widgets::InputBar>> activeInputs;
+    std::vector<UI::Widgets::Button> mainButtons;
+    std::vector<UI::Widgets::Button> activeSubButtons;
+    std::vector<UI::Widgets::InputBar> activeInputs;
 
     void initUI();
     void updateLayout();

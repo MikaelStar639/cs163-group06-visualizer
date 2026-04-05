@@ -11,11 +11,11 @@ LinkedListScreen::LinkedListScreen(AppContext& context)
       btnNext(context, ">|", {840.f, 840.f}, {60.f, 40.f}),
       title(context.font, "Linked List", 24)
 {
-    mainButtons.push_back(std::make_unique<UI::Widgets::Button>(context, "Create", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f}));
-    mainButtons.push_back(std::make_unique<UI::Widgets::Button>(context, "Insert", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f}));
-    mainButtons.push_back(std::make_unique<UI::Widgets::Button>(context, "Delete", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f}));
-    mainButtons.push_back(std::make_unique<UI::Widgets::Button>(context, "Search", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f}));
-    mainButtons.push_back(std::make_unique<UI::Widgets::Button>(context, "Clear All", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f}));
+    mainButtons.emplace_back(context, "Create", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
+    mainButtons.emplace_back(context, "Insert", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
+    mainButtons.emplace_back(context, "Delete", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
+    mainButtons.emplace_back(context, "Search", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
+    mainButtons.emplace_back(context, "Clear All", sf::Vector2f{0.f, 0.f}, sf::Vector2f{160.f, 55.f});
 
     initUI();
     updateLayout();
@@ -57,7 +57,7 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     sf::Color innerBtnPress(30, 50, 50);
 
     auto createDropdown = [&](const std::vector<std::string>& options, float x, float w) {
-        dropdownAction = std::make_unique<UI::Widgets::Dropdown>(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f});
+        dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f});
         dropdownAction->setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
         dropdownAction->setOptions(options);
         
@@ -73,15 +73,13 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     };
 
     auto createInput = [&](const std::string& placeholder, float x, float w,  UI::Widgets::InputType inputType = UI::Widgets::InputType::Integer) {
-        auto input = std::make_unique<UI::Widgets::InputBar>(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f}, "", inputType);
-        input->setPlaceholder(placeholder);
-        activeInputs.push_back(std::move(input));
+        activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 40.f}, "", inputType);
+        activeInputs.back().setPlaceholder(placeholder);
     };
 
     auto createExecuteBtn = [&](float x) {
-        auto btn = std::make_unique<UI::Widgets::Button>(ctx, "Go", sf::Vector2f{x, innerY}, sf::Vector2f{80.f, 40.f});
-        btn->setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
-        activeSubButtons.push_back(std::move(btn));
+        activeSubButtons.emplace_back(ctx, "Go", sf::Vector2f{x, innerY}, sf::Vector2f{80.f, 40.f});
+        activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
     };
 
     float currentX = innerX;
@@ -162,13 +160,13 @@ void LinkedListScreen::updateLayout() {
     for (size_t i = 0; i < mainButtons.size(); ++i) {
         auto& b = mainButtons[i];
         bool isActive = (activeMenu == enums[i]);
-        b->setSize({buttonWidth, buttonHeight});
-        b->setPosition({mainX + (buttonWidth + gapMain) * static_cast<float>(i), mainY});
+        b.setSize({buttonWidth, buttonHeight});
+        b.setPosition({mainX + (buttonWidth + gapMain) * static_cast<float>(i), mainY});
         
         if (isActive) {
-            b->setColors(sf::Color(122, 160, 142), sf::Color(122, 160, 142), sf::Color(122, 160, 142), sf::Color::White);
+            b.setColors(sf::Color(122, 160, 142), sf::Color(122, 160, 142), sf::Color(122, 160, 142), sf::Color::White);
         } else {
-            b->setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, Config::UI::Colors::ButtonPressed, Config::UI::Colors::ButtonText);
+            b.setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, Config::UI::Colors::ButtonPressed, Config::UI::Colors::ButtonText);
         }
     }
 
@@ -183,8 +181,8 @@ void LinkedListScreen::updateLayout() {
     float boxY = mainY + 55.f + 15.f; // Panels stay under buttons
     for (size_t i = 0; i < mainButtons.size(); ++i) {
         if (activeMenu == enums[i]) {
-            sf::Vector2f btnPos  = mainButtons[i]->getPosition();
-            sf::Vector2f btnSize = mainButtons[i]->getSize();
+            sf::Vector2f btnPos  = mainButtons[i].getPosition();
+            sf::Vector2f btnSize = mainButtons[i].getSize();
 
             boxX = btnPos.x;
             boxY = btnPos.y + btnSize.y + 15.f;
@@ -200,13 +198,16 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
 
     ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Clean};
     for (size_t i = 0; i < mainButtons.size(); ++i) {
-        if (mainButtons[i]->isClicked(event)) {
+        if (mainButtons[i].isClicked(event)) {
             activeMenu = (activeMenu == enums[i]) ? ActiveMenu::None : enums[i];
             
             lastDropdownIndex = 0;
             
             if (activeMenu == ActiveMenu::Clean) {
                 std::cout << "[UI LOG] Action executed: Clear All" << std::endl;
+                // -------------------------------------------------------------
+                // [TODO] CODE LOGIC Ở ĐÂY: XOÁ TOÀN BỘ LINKED LIST (CLEAR)
+                // -------------------------------------------------------------
                 activeMenu = ActiveMenu::None; 
             }
             updateLayout();
@@ -226,38 +227,85 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
     // Pass event to active inputs, but only if dropdown is not active intercepting
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
         for (auto& input : activeInputs) {
-            input->handleEvent(event);
+            input.handleEvent(event);
         }
     }
 
-    if (!activeSubButtons.empty() && activeSubButtons[0]->isClicked(event)) {
+    if (!activeSubButtons.empty() && activeSubButtons[0].isClicked(event)) {
         if (activeMenu == ActiveMenu::Create) {
              int sel = dropdownAction ? dropdownAction->getSelectedIndex() : -1;
-             if (sel == 0) std::cout << "[UI LOG] Create Random | Size = " << (!activeInputs.empty() ? activeInputs[0]->getText() : "") << std::endl;
-                else if (sel == 1) {
-                    std::cout << "[UI LOG] Create File | Path = "
-                    << (!activeInputs.empty() ? activeInputs[0]->getText() : "")
-                    << std::endl;
-                    //std::string path = !activeInputs.empty() ? activeInputs[0]->getText() : ""; // use to read file
-                }
+             if (sel == 0) {
+                 std::cout << "[UI LOG] Create Random | Size = " << (!activeInputs.empty() ? activeInputs[0].getText() : "") << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: KHỞI TẠO LINKED LIST NGẪU NHIÊN 
+                 // (Dùng biến 'size' lấy từ activeInputs[0].getText())
+                 // -------------------------------------------------------------
+             }
+             else if (sel == 1) {
+                 std::cout << "[UI LOG] Create File | Path = " << (!activeInputs.empty() ? activeInputs[0].getText() : "") << std::endl;
+                 std::string path = !activeInputs.empty() ? activeInputs[0].getText() : "";
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: ĐỌC TỪ FILE VÀ KHỞI TẠO LINKED LIST
+                 // (File path đang ở biến 'path')
+                 // -------------------------------------------------------------
+             }
         }
         else if (activeMenu == ActiveMenu::Insert) {
              int sel = dropdownAction ? dropdownAction->getSelectedIndex() : -1;
-             std::string val = !activeInputs.empty() ? activeInputs[0]->getText() : "";
-             if (sel == 0) std::cout << "[UI LOG] Insert Head | Val = " << val << std::endl;
-             else if (sel == 1) std::cout << "[UI LOG] Insert Tail | Val = " << val << std::endl;
-             else if (sel == 2) std::cout << "[UI LOG] Insert At | Val = " << val << " | Pos = " << (activeInputs.size() > 1 ? activeInputs[1]->getText() : "") << std::endl;
+             std::string val = !activeInputs.empty() ? activeInputs[0].getText() : "";
+             
+             if (sel == 0) {
+                 std::cout << "[UI LOG] Insert Head | Val = " << val << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: CHÈN PHẦN TỬ VÀO ĐẦU (INSERT HEAD)
+                 // -------------------------------------------------------------
+             }
+             else if (sel == 1) {
+                 std::cout << "[UI LOG] Insert Tail | Val = " << val << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: CHÈN PHẦN TỬ VÀO CUỐI (INSERT TAIL)
+                 // -------------------------------------------------------------
+             }
+             else if (sel == 2) {
+                 std::string pos = activeInputs.size() > 1 ? activeInputs[1].getText() : "";
+                 std::cout << "[UI LOG] Insert At | Val = " << val << " | Pos = " << pos << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: CHÈN PHẦN TỬ VÀO VỊ TRÍ 'POS' (INSERT AT)
+                 // -------------------------------------------------------------
+             }
         }
         else if (activeMenu == ActiveMenu::Remove) {
              int sel = dropdownAction ? dropdownAction->getSelectedIndex() : -1;
-             if (sel == 0) std::cout << "[UI LOG] Delete Head" << std::endl;
-             else if (sel == 1) std::cout << "[UI LOG] Delete Tail" << std::endl;
-             else if (sel == 2) std::cout << "[UI LOG] Delete At | Pos = " << (!activeInputs.empty() ? activeInputs[0]->getText() : "") << std::endl;
+             
+             if (sel == 0) {
+                 std::cout << "[UI LOG] Delete Head" << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: XOÁ PHẦN TỬ Ở ĐẦU (DELETE HEAD)
+                 // -------------------------------------------------------------
+             }
+             else if (sel == 1) {
+                 std::cout << "[UI LOG] Delete Tail" << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: XOÁ PHẦN TỬ Ở CUỐI (DELETE TAIL)
+                 // -------------------------------------------------------------
+             }
+             else if (sel == 2) {
+                 std::string pos = !activeInputs.empty() ? activeInputs[0].getText() : "";
+                 std::cout << "[UI LOG] Delete At | Pos = " << pos << std::endl;
+                 // -------------------------------------------------------------
+                 // [TODO] CODE LOGIC Ở ĐÂY: XOÁ PHẦN TỬ Ở VỊ TRÍ 'POS' (DELETE AT)
+                 // -------------------------------------------------------------
+             }
         }
         else if (activeMenu == ActiveMenu::Search) {
-             std::cout << "[UI LOG] Search | Val = " << (!activeInputs.empty() ? activeInputs[0]->getText() : "") << std::endl;
+             std::string val = !activeInputs.empty() ? activeInputs[0].getText() : "";
+             std::cout << "[UI LOG] Search | Val = " << val << std::endl;
+             // -------------------------------------------------------------
+             // [TODO] CODE LOGIC Ở ĐÂY: TÌM KIẾM PHẦN TỬ THEO 'VAL' (SEARCH)
+             // -------------------------------------------------------------
         }
-        for (auto& input : activeInputs) input->clear();
+        
+        for (auto& input : activeInputs) input.clear();
     }
 
     if (btnPrev.isClicked(event)) { }
@@ -273,9 +321,9 @@ void LinkedListScreen::update() {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
     btnBack.update(mousePos);
     
-    for (auto& btn : mainButtons) btn->update(mousePos);
-    for (auto& input : activeInputs) input->update();
-    for (auto& btn : activeSubButtons) btn->update(mousePos);
+    for (auto& btn : mainButtons) btn.update(mousePos);
+    for (auto& input : activeInputs) input.update();
+    for (auto& btn : activeSubButtons) btn.update(mousePos);
     
     if (dropdownAction) {
         dropdownAction->update(mousePos);
@@ -290,13 +338,13 @@ void LinkedListScreen::draw() {
     ctx.window.draw(title);
     btnBack.draw();
     
-    for (auto& btn : mainButtons) btn->draw();
+    for (auto& btn : mainButtons) btn.draw();
     
     if (activeMenu != ActiveMenu::None && activeMenu != ActiveMenu::Clean) {
         ctx.window.draw(panelBg);
         
-        for (auto& input : activeInputs) input->draw();
-        for (auto& btn : activeSubButtons) btn->draw();
+        for (auto& input : activeInputs) input.draw();
+        for (auto& btn : activeSubButtons) btn.draw();
         
         if (dropdownAction) {
              dropdownAction->draw();
