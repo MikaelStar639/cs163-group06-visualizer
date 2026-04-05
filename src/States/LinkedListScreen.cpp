@@ -53,13 +53,15 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     activeInputs.clear();
     dropdownAction.reset();
 
-    sf::Color innerBtnIdle(40, 60, 60);
-    sf::Color innerBtnHover(60, 80, 80);
-    sf::Color innerBtnPress(30, 50, 50);
+    sf::Color innerBtnIdle = Config::UI::Colors::ButtonIdle;
+    sf::Color innerBtnHover = Config::UI::Colors::ButtonHover;
+    sf::Color innerBtnPress = Config::UI::Colors::ButtonPressed;
+    sf::Color dropdownHover = Config::UI::Colors::ButtonHover;
+    sf::Color dropdownPress = Config::UI::Colors::ButtonPressed;
 
     auto createDropdown = [&](const std::vector<std::string>& options, float x, float w) {
         dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
-        dropdownAction->setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
+        dropdownAction->setColors(innerBtnIdle, dropdownHover, dropdownPress, sf::Color::White);
         dropdownAction->setOptions(options);
         
         if (lastDropdownIndex >= 0 && lastDropdownIndex < static_cast<int>(options.size())) {

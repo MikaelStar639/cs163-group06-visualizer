@@ -151,7 +151,7 @@ void Dropdown::update(sf::Vector2i mousePos) {
         arrowTriangle.setPoint(2, sf::Vector2f(8.f, 0.f));
 
         mainBox.setFillColor(pressedColor);
-        arrowBox.setFillColor(idleColor);
+        arrowBox.setFillColor(hoverOutlineColor);
         mainBox.setOutlineColor(hoverOutlineColor);
     } else if (isHovered) {
         arrowTriangle.setPoint(0, sf::Vector2f(0.f, 0.f));
@@ -159,7 +159,7 @@ void Dropdown::update(sf::Vector2i mousePos) {
         arrowTriangle.setPoint(2, sf::Vector2f(8.f, 10.f));
 
         mainBox.setFillColor(hoverColor);
-        arrowBox.setFillColor(pressedColor);
+        arrowBox.setFillColor(hoverOutlineColor);
         mainBox.setOutlineColor(hoverOutlineColor);
     } else {
         arrowTriangle.setPoint(0, sf::Vector2f(0.f, 0.f));
