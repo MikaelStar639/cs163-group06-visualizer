@@ -14,6 +14,7 @@ private:
     RoundedRectangleShape mainBox;
     RoundedRectangleShape arrowBox;
     sf::ConvexShape       arrowTriangle;
+    RoundedRectangleShape dropdownBg;
 
     sf::Color idleColor;
     sf::Color pressedColor;
@@ -28,6 +29,7 @@ private:
 
     std::vector<RoundedRectangleShape> itemBoxes;
     std::vector<sf::Text>              itemTexts;
+    std::vector<sf::RectangleShape>    dividers;
     std::vector<std::string>           options;
 
 public:
