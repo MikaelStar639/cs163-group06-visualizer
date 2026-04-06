@@ -5,6 +5,8 @@
 #include "UI/Animations/Node/NodeColorAnimation.hpp"
 #include "UI/Animations/Edge/EdgeColorAnimation.hpp"
 #include "UI/Animations/Edge/EdgeScaleAnimation.hpp"
+#include "UI/Animations/Core/SequenceAnimation.hpp"
+#include "UI/Animations/Core/ParallelAnimation.hpp"
 #include <iostream>
 #include <cstdlib> 
 #include <ctime>   
@@ -36,10 +38,6 @@ void TestScreen::addNewNode(const std::string &val){
     nodes.emplace_back(std::make_unique<UI::DSA::Node>(ctx, val, sf::Vector2f(finalX, finalY)));
 
     UI::DSA::Node* newNodePtr = nodes.back().get();
-    ctx.animManager.addAnimation(
-        std::make_unique<UI::Animations::NodeInsertAnimation>(newNodePtr, 0.3f)
-    );
-
     size_t newNodeIndex = nodes.size() - 1;
 
 
@@ -54,15 +52,18 @@ void TestScreen::addNewNode(const std::string &val){
 
         // 2. Get the pointer from the back of the vector (matching your Node pattern)
         UI::DSA::Edge* newEdgePtr = edges.back().get();
-
-        // 3. Register the animation via the manager
+        auto addNewEdge = std::make_unique<UI::Animations::SequenceAnimation>();
+        addNewEdge->add(std::make_unique<UI::Animations::EdgeInsertAnimation>(newEdgePtr, 0.2f));
+        addNewEdge->add(std::make_unique<UI::Animations::NodeInsertAnimation>(newNodePtr, 0.2f));
+        ctx.animManager.addAnimation(std::move(addNewEdge));
+    } else{
         ctx.animManager.addAnimation(
-            std::make_unique<UI::Animations::EdgeInsertAnimation>(newEdgePtr, 0.3f)
+            std::make_unique<UI::Animations::NodeInsertAnimation>(newNodePtr, 0.1f)
         );
     }
     
     drawOrder.push_back(newNodeIndex);
-    std::cout << ">>> Node '" << val << "' inserted and connected to " << nodes.size() - 1 << " nodes.\n";
+    std::cout << ">>> Node '" << val << "' inserted\n";
 }
 
 void TestScreen::handleEvent(const sf::Event& event) {
@@ -163,6 +164,37 @@ void TestScreen::handleEvent(const sf::Event& event) {
                     std::make_unique<UI::Animations::EdgeUnhighlightAnimation>(edges[0].get(), 0.3f)
                 );
                 std::cout << ">>> Edge 0 Highlighted!\n";
+            }
+        }
+        if (keyPressed->code == sf::Keyboard::Key::P) {
+            // Chỉ test khi có ít nhất 2 node và 1 cạnh
+            if (nodes.size() >= 2 && !edges.empty()) {
+                UI::DSA::Node* targetNode = nodes.back().get();
+                UI::DSA::Edge* targetEdge = edges.back().get();
+
+                // 1. Kịch bản tổng thể là một chuỗi (Nối tiếp)
+                auto masterSequence = std::make_unique<UI::Animations::SequenceAnimation>();
+
+                // 2. BƯỚC 1: BUNG LÊN & ĐỔI MÀU (Chạy Song song)
+                auto step1 = std::make_unique<UI::Animations::ParallelAnimation>();
+                step1->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(targetNode, 0.3f));
+                step1->add(std::make_unique<UI::Animations::EdgeHighlightAnimation>(targetEdge, 0.3f));
+                step1->add(std::make_unique<UI::Animations::NodeScaleAnimation>(targetNode, 1.0f, 1.5f, 0.3f)); // Phóng to 1.5x
+                
+                masterSequence->add(std::move(step1)); // Nạp Bước 1 vào chuỗi chính
+
+                // 3. BƯỚC 2: THU VỀ & TRẢ MÀU CŨ (Chạy Song song)
+                auto step2 = std::make_unique<UI::Animations::ParallelAnimation>();
+                step2->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(targetNode, 0.3f));
+                step2->add(std::make_unique<UI::Animations::EdgeUnhighlightAnimation>(targetEdge, 0.3f));
+                step2->add(std::make_unique<UI::Animations::NodeScaleAnimation>(targetNode, 1.5f, 1.0f, 0.3f)); // Thu về 1.0x
+                
+                masterSequence->add(std::move(step2)); // Nạp Bước 2 vào chuỗi chính
+
+                // Đưa cho Manager chạy toàn bộ kịch bản
+                ctx.animManager.addAnimation(std::move(masterSequence));
+                
+                std::cout << ">>> Playing Nested Parallel Animations!\n";
             }
         }
     }

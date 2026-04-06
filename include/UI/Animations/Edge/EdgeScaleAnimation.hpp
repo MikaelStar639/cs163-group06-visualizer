@@ -25,7 +25,7 @@ namespace UI::Animations {
     public:
         // Automatically starts at 0.0f thickness and grows to 5.0f (or your preferred max)
         EdgeInsertAnimation(UI::DSA::Edge* edge, float duration)
-            : EdgeScaleAnimation(edge, 0.0f, 5.0f, duration) {}
+            : EdgeScaleAnimation(edge, 0.0f, Config::UI::EDGE_THICKNESS, duration) {}
     };
 
     class EdgeDeleteAnimation : public EdgeScaleAnimation {
