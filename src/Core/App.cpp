@@ -2,16 +2,28 @@
 #include "UI/Widgets/Dropdown.hpp"
 
 
-App::App(): window(sf::VideoMode({1600, 900}), "Visualizer", sf::Style::Default ^ sf::Style::Resize),
-            font("assets/fonts/SpaceMono.ttf"),
+App::App(): font("assets/fonts/SpaceMono.ttf"),
             context{window, font, ScreenState::None} 
 {
+    sf::ContextSettings settings;
+    settings.antiAliasingLevel = 8;
+    
+    window.create(sf::VideoMode({1600, 900}), 
+                  "Visualizer", 
+                  sf::Style::Default ^ sf::Style::Resize, 
+                  sf::State::Windowed, 
+                  settings);
+
     window.setFramerateLimit(60);
     currentScreen = std::make_unique<MenuScreen>(context);
 };
 
 void App::run(){
+    sf::Clock dtClock;
+
     while (window.isOpen()){
+        float dt = dtClock.restart().asSeconds();
+
         while (auto event = window.pollEvent()){
             if (event->is<sf::Event::Closed>()){
                 window.close();
@@ -21,6 +33,7 @@ void App::run(){
             currentScreen->handleEvent(*event);
         }
 
+        context.animManager.update(dt);
         currentScreen->update();
 
         window.clear(Config::Colors::Background); 
