@@ -13,7 +13,7 @@ App::App(): font("assets/fonts/SpaceMono.ttf"),
                   settings);
 
     window.setFramerateLimit(60);
-    currentScreen = std::make_unique<TestScreen>(context);
+    currentScreen = std::make_unique<MenuScreen>(context);
 };
 
 void App::run(){
