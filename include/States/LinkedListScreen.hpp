@@ -7,13 +7,14 @@
 #include <UI/Widgets/InputBar.hpp>
 #include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <UI/Widgets/Dropdown.hpp>
+#include <UI/Widgets/Slider.hpp>
 #include <vector>
 #include <optional>
 #include <memory>
 
 // Enum for State Management
 enum class ActiveMenu {
-    None, Create, Insert, Remove, Search, Clean
+    None, Create, Insert, Remove, Search, Update, SetRadius, Clean
 };
 
 class LinkedListScreen : public Screen {

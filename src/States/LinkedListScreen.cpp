@@ -15,6 +15,8 @@ LinkedListScreen::LinkedListScreen(AppContext& context)
     mainButtons.emplace_back(context, "Insert", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
     mainButtons.emplace_back(context, "Delete", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
     mainButtons.emplace_back(context, "Search", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
+    mainButtons.emplace_back(context, "Update", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
+    mainButtons.emplace_back(context, "Set Radius", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
     mainButtons.emplace_back(context, "Clear All", sf::Vector2f{0.f, 0.f}, sf::Vector2f{180.f, 60.f});
 
     initUI();
@@ -35,7 +37,7 @@ void LinkedListScreen::initUI() {
     applyBtnColors(btnBack); 
     btnBack.setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, Config::UI::Colors::ButtonPressed, sf::Color(255, 50, 50));
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
-    
+
     sf::Color panelColor(122, 160, 142);
     panelBg.setFillColor(panelColor);
     panelBg.setOutlineThickness(2.f);
@@ -135,6 +137,31 @@ void LinkedListScreen::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
+    else if (type == ActiveMenu::Update) {
+        int sel = createDropdown({"At", "By Value"}, currentX, 190.f);
+        currentX += 190.f + gap;
+        
+        if (sel == 0) { // At
+            createInput("Pos", currentX, 120.f);
+            currentX += 120.f + gap;
+            createInput("New Val", currentX, 150.f);
+            currentX += 150.f + gap;
+        } else if (sel == 1) { // By Value
+            createInput("Old Val", currentX, 150.f);
+            currentX += 150.f + gap;
+            createInput("New Val", currentX, 150.f);
+            currentX += 150.f + gap;
+        }
+
+        createExecuteBtn(currentX);
+        currentX += 90.f;
+    }
+    else if (type == ActiveMenu::SetRadius) {
+        createInput("Radius", currentX, 150.f);
+        currentX += 150.f + gap;
+        createExecuteBtn(currentX);
+        currentX += 90.f;
+    }
 
     boxWidth = (currentX - boxX) + 20.f; // Slightly more right-padding 
 
@@ -154,11 +181,11 @@ void LinkedListScreen::updateLayout() {
     float mainX = 30.f;      
     float mainY = 100.f;
     float gapMain = 5.f;    
-    float buttonWidth = 180.f;
+    float buttonWidth = 170.f; // Nới rộng các nút để text không bị chèn lấp
     float buttonHeight = 60.f;
 
     // --- Place Main Buttons Horizontally  ---
-    ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Clean};
+    ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::SetRadius, ActiveMenu::Clean};
     
     for (size_t i = 0; i < mainButtons.size(); ++i) {
         auto& b = mainButtons[i];
@@ -199,7 +226,7 @@ void LinkedListScreen::updateLayout() {
 void LinkedListScreen::handleEvent(const sf::Event& event) {
     if (btnBack.isClicked(event)) ctx.nextState = ScreenState::MainMenu;
 
-    ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Clean};
+    ActiveMenu enums[] = {ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::SetRadius, ActiveMenu::Clean};
     for (size_t i = 0; i < mainButtons.size(); ++i) {
         if (mainButtons[i].isClicked(event)) {
             activeMenu = (activeMenu == enums[i]) ? ActiveMenu::None : enums[i];
@@ -217,7 +244,7 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
         }
     }
 
-    if (activeMenu == ActiveMenu::Create || activeMenu == ActiveMenu::Insert || activeMenu == ActiveMenu::Remove) {
+    if (activeMenu == ActiveMenu::Create || activeMenu == ActiveMenu::Insert || activeMenu == ActiveMenu::Remove || activeMenu == ActiveMenu::Update) {
         if (dropdownAction && dropdownAction->isClicked(event)) {
             if (dropdownAction->getSelectedIndex() != lastDropdownIndex) {
                  dropdownAction->setLabel(dropdownAction->getSelectedText());
@@ -227,7 +254,6 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
         }
     }
 
-    // Pass event to active inputs, but only if dropdown is not active intercepting
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
         for (auto& input : activeInputs) {
             input.handleEvent(event);
@@ -306,6 +332,24 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
              // -------------------------------------------------------------
              // [TODO] CODE LOGIC Ở ĐÂY: TÌM KIẾM PHẦN TỬ THEO 'VAL' (SEARCH)
              // -------------------------------------------------------------
+        }
+        else if (activeMenu == ActiveMenu::Update) {
+             int sel = dropdownAction ? dropdownAction->getSelectedIndex() : -1;
+             if (sel == 0) {
+                 std::string pos = activeInputs.size() > 0 ? activeInputs[0].getText() : "";
+                 std::string newVal = activeInputs.size() > 1 ? activeInputs[1].getText() : "";
+                 std::cout << "[UI LOG] Update At | Pos = " << pos << " | New Val = " << newVal << std::endl;
+             }
+             else if (sel == 1) {
+                 std::string oldVal = activeInputs.size() > 0 ? activeInputs[0].getText() : "";
+                 std::string newVal = activeInputs.size() > 1 ? activeInputs[1].getText() : "";
+                 std::cout << "[UI LOG] Update By Value | Old Val = " << oldVal << " | New Val = " << newVal << std::endl;
+             }
+        }
+        else if (activeMenu == ActiveMenu::SetRadius) {
+             std::string radStr = !activeInputs.empty() ? activeInputs[0].getText() : "";
+             std::cout << "[UI LOG] Set Radius to: " << radStr << std::endl;
+             // [TODO]: Apply radius setting
         }
         
         for (auto& input : activeInputs) input.clear();
