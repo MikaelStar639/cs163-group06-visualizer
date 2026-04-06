@@ -1,17 +1,14 @@
 #pragma once
 #include "States/Screen.hpp"
 #include "UI/Widgets/Button.hpp"
-#include "UI/DSA/Node.hpp"
-#include "UI/DSA/Edge.hpp"  // Added this
+#include "UI/DSA/Graph.hpp"
 #include <vector>
 
 class TestScreen : public Screen {
 private:
     AppContext& ctx;
     UI::Widgets::Button btnInsert;
-    std::vector<std::unique_ptr<UI::DSA::Node>> nodes;
-    std::vector<std::unique_ptr<UI::DSA::Edge>> edges;
-    std::vector<int> drawOrder;
+    UI::DSA::Graph myGraph;
 
     int draggedNodeIndex = -1; 
     
