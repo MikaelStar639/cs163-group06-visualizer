@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <Core/AppContext.hpp>
 #include <States/Screen.hpp>
-#include <UI/Widgets/LinkedListMenu.hpp>
+#include <UI/Components/LinkedListMenu.hpp>
 #include <UI/DSA/Graph.hpp>
 #include <vector>
 #include <string>

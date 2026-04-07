@@ -102,7 +102,7 @@ void Dropdown::setOptions(const std::vector<std::string>& opts) {
         float itemY = dropTop + padding + (itemHeight + itemGap) * i;
         
         // Items are plain rectangles (small corner radius, no outline) inside the container
-        RoundedRectangleShape box({size.x - padding * 2.f, itemHeight}, 8.f);
+        RoundedRectangleShape box({size.x - padding * 2.f, itemHeight}, Config::UI::Radius::Md);
         box.setPosition(sf::Vector2f(pos.x + padding, itemY));
         box.setFillColor(sf::Color::Transparent);
         box.setOutlineThickness(0.f);

@@ -1,4 +1,4 @@
-#include "UI/Widgets/DSAMenuBase.hpp"
+#include "UI/Components/DSAMenuBase.hpp"
 #include <iostream>
 
 namespace UI::Widgets {
@@ -6,7 +6,7 @@ namespace UI::Widgets {
 DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     : ctx(context),
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
-      panelBg({300.f, 150.f}, Config::UI::BUTTON_CORNER_RADIUS),
+      panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
       btnPrev(context, "|<", {700.f, 840.f}, {60.f, 40.f}),
       btnPlay(context, "||", {770.f, 840.f}, {60.f, 40.f}),
       btnNext(context, ">|", {840.f, 840.f}, {60.f, 40.f}),
@@ -40,7 +40,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // Assuming labels correspond to ActiveMenu enums starting from Create
     std::vector<ActiveMenu> enums = {
         ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, 
-        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::SetRadius, ActiveMenu::Clean
+        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::Clean
     };
 
     for (size_t i = 0; i < mainButtons.size(); ++i) {
@@ -115,7 +115,7 @@ void DSAMenuBase::updateLayout() {
     std::vector<std::string> labels = getMainButtonLabels();
     std::vector<ActiveMenu> enums = {
         ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, 
-        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::SetRadius, ActiveMenu::Clean
+        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::Clean
     };
 
     if (mainButtons.empty()) {

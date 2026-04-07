@@ -1,4 +1,4 @@
-#include "UI/Widgets/LinkedListMenu.hpp"
+#include "UI/Components/LinkedListMenu.hpp"
 
 namespace UI::Widgets {
 
@@ -9,7 +9,7 @@ LinkedListMenu::LinkedListMenu(AppContext& context)
 }
 
 std::vector<std::string> LinkedListMenu::getMainButtonLabels() const {
-    return {"Create", "Insert", "Delete", "Search", "Update", "Set Radius", "Clear All"};
+    return {"Create", "Insert", "Delete", "Search", "Update", "Clear All"};
 }
 
 void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
@@ -116,12 +116,6 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
             currentX += 150.f + gap;
         }
 
-        createExecuteBtn(currentX);
-        currentX += 90.f;
-    }
-    else if (type == ActiveMenu::SetRadius) {
-        createInput("Radius", currentX, 150.f, InputType::Integer);
-        currentX += 150.f + gap;
         createExecuteBtn(currentX);
         currentX += 90.f;
     }

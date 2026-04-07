@@ -1,5 +1,5 @@
 #pragma once
-#include "UI/Widgets/DSAMenuBase.hpp"
+#include "UI/Components/DSAMenuBase.hpp"
 
 namespace UI::Widgets {
 

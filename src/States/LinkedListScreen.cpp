@@ -75,10 +75,6 @@ void LinkedListScreen::handleMenuAction() {
             std::cout << "[UI LOG] Update By Value | Old Val = " << oldVal << " | New Val = " << newVal << std::endl;
         }
     }
-    else if (menu == ActiveMenu::SetRadius) {
-        std::string radStr = !inputs.empty() ? inputs[0].getText() : "";
-        std::cout << "[UI LOG] Set Radius to: " << radStr << std::endl;
-    }
     else if (menu == ActiveMenu::Clean) {
         // In the base class, Clean triggers goClicked immediately
         std::cout << "[UI LOG] Action executed: Clear All" << std::endl;

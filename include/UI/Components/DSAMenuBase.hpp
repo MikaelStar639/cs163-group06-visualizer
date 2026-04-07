@@ -13,7 +13,7 @@
 namespace UI::Widgets {
 
     enum class ActiveMenu {
-        None, Create, Insert, Remove, Search, Update, SetRadius, Clean
+        None, Create, Insert, Remove, Search, Update, Clean
     };
 
     class DSAMenuBase {
