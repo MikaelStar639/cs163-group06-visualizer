@@ -14,9 +14,9 @@ namespace UI::DSA {
         
         std::vector<std::unique_ptr<Node>> nodes;
         std::vector<std::unique_ptr<Edge>> edges;
-        std::vector<int> drawOrder;
+        std::vector<Node*> drawOrder;
 
-        int draggedNodeIndex = -1;
+        Node* draggedNode = nullptr;
         sf::Vector2f dragOffset;
 
         bool isDirected;
@@ -29,10 +29,14 @@ namespace UI::DSA {
         bool getDraggable() const;
 
         void addNode(const std::string& val, sf::Vector2f pos);
+        void insertNodeAt(int index, const std::string& val, sf::Vector2f pos); 
         void removeLastNode(); 
+        void removeNodeAt(int index); 
+        void updateNodeValue(int index, const std::string &newVal);
         
         void addEdge(int srcIndex, int destIndex, const std::string& weight = "");
-        
+        void removeEdge(int srcIndex, int destIndex);
+
         void clear();      
         void clearEdges(); 
 
@@ -40,8 +44,13 @@ namespace UI::DSA {
         void update();
         void draw();
 
-        const std::vector<std::unique_ptr<Node>>& getNodes() const { return nodes; }
-        const std::vector<std::unique_ptr<Edge>>& getEdges() const { return edges; }
+        const std::vector<std::unique_ptr<Node>>& getNodes() const;
+        const std::vector<std::unique_ptr<Edge>>& getEdges() const;
+
+        Node* getNode(int index) const; 
+        Edge* getEdge(int srcIndex, int destIndex) const; 
+        bool isAnimating() const;
+        
         bool getIsDirected() const { return isDirected; }
     };
 
