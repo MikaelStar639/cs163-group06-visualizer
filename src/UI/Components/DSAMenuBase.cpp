@@ -45,13 +45,16 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
 
     for (size_t i = 0; i < mainButtons.size(); ++i) {
         if (mainButtons[i].isClicked(event)) {
-            activeMenu = (activeMenu == enums[i]) ? ActiveMenu::None : enums[i];
-            lastDropdownIndex = (activeMenu == ActiveMenu::None) ? -1 : 0;
+            ActiveMenu clickedMenu = enums[i];
             
-            if (activeMenu == ActiveMenu::Clean) {
-                goClicked = true; // Signal Clean action
-                activeMenu = ActiveMenu::None;
+            if (clickedMenu == ActiveMenu::Clean) {
+                activeMenu = ActiveMenu::Clean;
+                goClicked = true; 
+            } else {
+                activeMenu = (activeMenu == clickedMenu) ? ActiveMenu::None : clickedMenu;
+                lastDropdownIndex = (activeMenu == ActiveMenu::None) ? -1 : 0;
             }
+            
             updateLayout();
         }
     }
@@ -163,6 +166,12 @@ bool DSAMenuBase::consumeGoClicked() {
         return true;
     }
     return false;
+}
+
+void DSAMenuBase::resetMenu() {
+    activeMenu = ActiveMenu::None;
+    lastDropdownIndex = -1;
+    updateLayout();
 }
 
 void DSAMenuBase::clearInputs() {

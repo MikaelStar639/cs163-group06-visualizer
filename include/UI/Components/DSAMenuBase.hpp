@@ -64,6 +64,7 @@ namespace UI::Widgets {
         int getDropdownSelection() const { return lastDropdownIndex; }
         const std::vector<InputBar>& getInputs() const { return activeInputs; }
         
+        void resetMenu();
         void clearInputs();
     };
 

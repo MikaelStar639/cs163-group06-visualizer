@@ -21,6 +21,7 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
     if (uiMenu.consumeGoClicked()) {
         handleMenuAction();
         uiMenu.clearInputs();
+        uiMenu.resetMenu();
     }
 
     if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
