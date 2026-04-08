@@ -1,5 +1,6 @@
 #include "UI/DSA/Graph.hpp"
 #include "UI/Animations/Node/NodeScaleAnimation.hpp"
+#include "UI/Animations/Node/NodeColorAnimation.hpp"
 #include "UI/Animations/Edge/EdgeScaleAnimation.hpp"
 #include <algorithm>
 #include <iostream>
@@ -69,6 +70,17 @@ namespace UI::DSA {
         );
     }
 
+    void Graph::updateNodeValue(int index, const std::string& newVal){
+        if (index < 0 || index >= nodes.size()) return;
+    
+        Node* targetNode = nodes[index].get();
+        targetNode->setLabel(newVal); 
+
+        ctx.animManager.addAnimation(
+            std::make_unique<UI::Animations::NodeHighlightAnimation>(targetNode, 0.3f)
+        );
+    }
+
     void Graph::removeLastNode() {
         if (nodes.empty()) return;
 
@@ -132,6 +144,7 @@ namespace UI::DSA {
     }
 
     void Graph::clear() {
+        ctx.animManager.clearAll();
         edges.clear();
         nodes.clear();
         drawOrder.clear();
@@ -210,6 +223,8 @@ namespace UI::DSA {
     const std::vector<std::unique_ptr<Node>>& Graph::getNodes() const { return nodes; }
     const std::vector<std::unique_ptr<Edge>>& Graph::getEdges() const { return edges; }
 
+    bool Graph::isAnimating() const {return !ctx.animManager.empty();}
+
     Node* Graph::getNode(int index) const {
         if (index >= 0 && index < nodes.size()) return nodes[index].get();
         return nullptr;
@@ -221,11 +236,12 @@ namespace UI::DSA {
         Node* dest = nodes[destIndex].get();
         
         for (const auto& edge : edges) {
-            if (edge->connectsTo(src) && edge->connectsTo(dest)) {
-                return edge.get();
+            if (getIsDirected()) {
+                if (edge->getSource() == src && edge->getDest() == dest) return edge.get();
+            } else {
+                if (edge->connectsTo(src) && edge->connectsTo(dest)) return edge.get();
             }
         }
         return nullptr;
     }
-
 } // namespace UI::DSA

@@ -32,6 +32,7 @@ namespace UI::DSA {
         void insertNodeAt(int index, const std::string& val, sf::Vector2f pos); 
         void removeLastNode(); 
         void removeNodeAt(int index); 
+        void updateNodeValue(int index, const std::string &newVal);
         
         void addEdge(int srcIndex, int destIndex, const std::string& weight = "");
         void removeEdge(int srcIndex, int destIndex);
@@ -48,6 +49,7 @@ namespace UI::DSA {
 
         Node* getNode(int index) const; 
         Edge* getEdge(int srcIndex, int destIndex) const; 
+        bool isAnimating() const;
         
         bool getIsDirected() const { return isDirected; }
     };
