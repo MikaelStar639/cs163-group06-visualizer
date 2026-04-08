@@ -82,35 +82,10 @@ namespace UI::DSA {
     }
 
     void Graph::removeLastNode() {
-        if (nodes.empty()) return;
-
-        Node* nodeToDeletePtr = nodes.back().get();
-        int nodeIndexToDelete = nodes.size() - 1;
-
-        ctx.animManager.addAnimation(
-            std::make_unique<UI::Animations::NodeDeleteAnimation>(
-                nodeToDeletePtr, 0.2f, 
-                [this, nodeToDeletePtr, nodeIndexToDelete]() { 
-                    if (!nodes.empty()) {
-                        edges.erase(
-                            std::remove_if(edges.begin(), edges.end(),
-                                [nodeToDeletePtr](const std::unique_ptr<Edge>& edge) {
-                                    return edge->connectsTo(nodeToDeletePtr);
-                                }),
-                            edges.end()
-                        );
-
-                        auto it = std::find(drawOrder.begin(), drawOrder.end(), nodeIndexToDelete);
-                        if (it != drawOrder.end()) {
-                            drawOrder.erase(it);
-                        }
-
-                        nodes.pop_back();       
-                    }
-                }
-            )
-        );
-    }
+    if (nodes.empty()) return;
+    
+    removeNodeAt(nodes.size() - 1); 
+}
 
     void Graph::addEdge(int srcIndex, int destIndex, const std::string& weight) {
         if (srcIndex < 0 || srcIndex >= nodes.size() || 
