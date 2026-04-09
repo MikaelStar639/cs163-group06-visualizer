@@ -6,6 +6,11 @@
 #include "UI/Animations/Node/NodeScaleAnimation.hpp"
 #include <iostream>
 #include <algorithm>
+#include <fstream>
+#include <filesystem>
+#include <string>
+#include <cstdlib>
+#include <sstream>
 
 namespace Controllers {
 
@@ -36,6 +41,129 @@ namespace Controllers {
         }
         syncGraphEdges();
         triggerLayout(0.6f);
+    }
+
+    void LinkedListController::handleCreateFromFile() {
+        std::string dirPath = "user_data";
+        std::string filePath = dirPath + "/LinkedListData.txt";
+
+        if (!std::filesystem::exists(dirPath)) {
+            std::filesystem::create_directories(dirPath);
+        }
+
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            // File does not exist, initialize it
+            std::ofstream outFile(filePath);
+            if (outFile.is_open()) {
+                outFile << "# --- LINKED LIST VISUALIZER DATA ---\n"
+                        << "# DETAILED INSTRUCTIONS:\n"
+                        << "# 1. Type your integer values directly below this line.\n"
+                        << "#    (Maximum recommended size is 15 nodes and each value must be 3 digits for best visual experience).\n"
+                        << "# 2. You can put all numbers on one line separated by spaces:\n"
+                        << "#    Example: 10 20 30 40 50\n"
+                        << "# 3. Or, you can put each number on a new line (hit Enter).\n"
+                        << "# 4. Do NOT use commas (,) or other punctuation marks.\n"
+                        << "# 5. When you are done:\n"
+                        << "#    - Save this file by pressing Ctrl + S\n"
+                        << "#    - Go back to the Application and click the 'Go' button.\n"
+                        << "# -----------------------------------\n";
+                outFile.close();
+            }
+            std::cout << "[UI LOG] File chưa tồn tại. Đã tự động sinh file trống và mở Notepad để bạn nhập liệu.\n";
+            std::system(("start notepad " + filePath).c_str());
+            return;
+        }
+
+        // Smart Parser
+        std::string line;
+        std::vector<int> parsedData;
+        const int MAX_NODES = 15; 
+
+        while (std::getline(file, line)) {
+            size_t startPos = line.find_first_not_of(" \t\r\n");
+            if (startPos != std::string::npos && line[startPos] == '#') {
+                continue; // Ignore comment/instruction lines
+            }
+
+            std::stringstream ss(line);
+            std::string token;
+            while (ss >> token) {
+                try {
+                    int val = std::stoi(token);
+                    parsedData.push_back(val);
+                    if (parsedData.size() >= MAX_NODES) break;
+                } catch (...) {
+                    // Ignore valid text
+                }
+            }
+            if (parsedData.size() >= MAX_NODES) break;
+        }
+        file.close();
+
+        if (parsedData.empty()) {
+            std::cout << "[UI LOG] Không đọc được dữ liệu nào hợp lệ. Vui lòng nhập số vào file.\n";
+            std::system(("start notepad " + filePath).c_str());
+            return;
+        }
+
+        model.clear();
+        graph.clear();
+
+        for (int val : parsedData) {
+            model.insertTail(val);
+            graph.addNode(std::to_string(val), {startX, startY});
+        }
+
+        syncGraphEdges();
+        triggerLayout(0.6f);
+    }
+
+    void LinkedListController::handleEditDataFile() {
+        std::string dirPath = "user_data";
+        std::string filePath = dirPath + "/LinkedListData.txt";
+
+        if (!std::filesystem::exists(dirPath)) {
+            std::filesystem::create_directories(dirPath);
+        }
+
+        std::string header = "# --- LINKED LIST VISUALIZER DATA ---\n"
+                             "# DETAILED INSTRUCTIONS:\n"
+                             "# 1. Type your integer values directly below this line.\n"
+                             "#    (Maximum recommended size is 15 nodes and each value must be 3 digits for best visual experience).\n"
+                             "# 2. You can put all numbers on one line separated by spaces:\n"
+                             "#    Example: 10 20 30 40 50\n"
+                             "# 3. Or, you can put each number on a new line (hit Enter).\n"
+                             "# 4. Do NOT use commas (,) or other punctuation marks.\n"
+                             "# 5. When you are done:\n"
+                             "#    - Save this file by pressing Ctrl + S\n"
+                             "#    - Go back to the Application and click the 'Go' button.\n"
+                             "# -----------------------------------\n";
+
+        std::ifstream inFile(filePath);
+        std::string userContent = "";
+
+        if (inFile.is_open()) {
+            std::string line;
+            while (std::getline(inFile, line)) {
+                size_t startPos = line.find_first_not_of(" \t\r\n");
+                if (startPos == std::string::npos) {
+                    // Tránh ghi quá nhiều dòng trống. Chỉ giữ dòng trống nếu userContent không rỗng (chứa số rồi)
+                    if (!userContent.empty()) userContent += "\n";
+                } else if (line[startPos] != '#') {
+                    userContent += line + "\n";
+                }
+            }
+            inFile.close();
+        }
+
+        std::ofstream outFile(filePath);
+        if (outFile.is_open()) {
+            outFile << header << userContent;
+            outFile.close();
+        }
+        
+        std::system(("start notepad " + filePath).c_str());
     }
 
     void LinkedListController::handleInsert(int sel, int pos, int val) {

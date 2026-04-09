@@ -24,6 +24,8 @@ namespace Controllers {
         LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m);
 
         void handleCreateRandom(int size);
+        void handleCreateFromFile();
+        void handleEditDataFile();
         void handleInsert(int sel, int pos, int val);
         void handleRemove(int sel, int pos);
         void handleSearch(int targetValue);

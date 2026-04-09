@@ -47,6 +47,7 @@ namespace UI::Widgets {
 
         // Flag for interaction
         bool goClicked = false;
+        int clickedSubButtonIndex = -1;
 
     public:
         DSAMenuBase(AppContext& context, const std::string& titleText);
@@ -62,6 +63,7 @@ namespace UI::Widgets {
 
         ActiveMenu getActiveMenu() const { return activeMenu; }
         int getDropdownSelection() const { return lastDropdownIndex; }
+        int getClickedSubButtonIndex() const { return clickedSubButtonIndex; }
         const std::vector<InputBar>& getInputs() const { return activeInputs; }
         
         void resetMenu();

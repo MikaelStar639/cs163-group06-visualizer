@@ -60,12 +60,19 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         if (sel == 0) { // Random
             createInput("Size", currentX, 120.f, InputType::Integer);
             currentX += 120.f + gap;
+            createExecuteBtn(currentX);
+            currentX += 90.f;
         } else if (sel == 1) { // File
-            createInput("File path", currentX, 500.f, InputType::AnyText);
-            currentX += 500.f + gap;
+            // Create "Edit" button
+            activeSubButtons.emplace_back(ctx, "Edit", sf::Vector2f{currentX, innerY}, sf::Vector2f{90.f, 45.f});
+            activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
+            currentX += 90.f + gap;
+            
+            // Create "Go" button
+            activeSubButtons.emplace_back(ctx, "Go", sf::Vector2f{currentX, innerY}, sf::Vector2f{90.f, 45.f});
+            activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
+            currentX += 90.f;
         }
-        createExecuteBtn(currentX);
-        currentX += 90.f;
     }
     else if (type == ActiveMenu::Insert) {
         int sel = createDropdown({"Head", "Tail", "At"}, currentX, 160.f);

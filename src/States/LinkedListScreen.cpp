@@ -57,7 +57,9 @@ void LinkedListScreen::handleMenuAction() {
             int size = std::stoi(sizeStr);
             controller.handleCreateRandom(size);
         } else if (sel == 1) { // File
-            std::cout << "[TODO] Not yet.\n";
+            int subBtn = uiMenu.getClickedSubButtonIndex();
+            if (subBtn == 0) controller.handleEditDataFile();
+            else if (subBtn == 1) controller.handleCreateFromFile();
         }
     }
     else if (menu == ActiveMenu::Insert) {

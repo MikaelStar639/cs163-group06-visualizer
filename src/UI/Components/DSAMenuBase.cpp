@@ -73,9 +73,14 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
-    if (!activeSubButtons.empty() && activeSubButtons[0].isClicked(event)) {
-        goClicked = true;
-        // logic for clearing inputs is moved to consumeGoClicked or clearInputs
+    if (!activeSubButtons.empty()) {
+        for (size_t i = 0; i < activeSubButtons.size(); ++i) {
+            if (activeSubButtons[i].isClicked(event)) {
+                goClicked = true;
+                clickedSubButtonIndex = static_cast<int>(i);
+                break;
+            }
+        }
     }
 }
 
