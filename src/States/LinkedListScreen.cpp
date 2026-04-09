@@ -50,12 +50,14 @@ void LinkedListScreen::handleMenuAction() {
         }
     }
     else if (menu == ActiveMenu::Insert) {
-        std::string val = !inputs.empty() ? inputs[0].getText() : "";
-        if (sel == 0) std::cout << "[UI LOG] Insert Head | Val = " << val << std::endl;
-        else if (sel == 1) std::cout << "[UI LOG] Insert Tail | Val = " << val << std::endl;
-        else if (sel == 2) {
-            std::string pos = inputs.size() > 1 ? inputs[1].getText() : "";
+        if (sel == 2) { // At
+            std::string pos = !inputs.empty() ? inputs[0].getText() : "";
+            std::string val = inputs.size() > 1 ? inputs[1].getText() : "";
             std::cout << "[UI LOG] Insert At | Val = " << val << " | Pos = " << pos << std::endl;
+        } else { // Head or Tail
+            std::string val = !inputs.empty() ? inputs[0].getText() : "";
+            if (sel == 0) std::cout << "[UI LOG] Insert Head | Val = " << val << std::endl;
+            else if (sel == 1) std::cout << "[UI LOG] Insert Tail | Val = " << val << std::endl;
         }
     }
     else if (menu == ActiveMenu::Remove) {

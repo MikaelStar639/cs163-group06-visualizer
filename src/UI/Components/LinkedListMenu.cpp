@@ -71,13 +71,13 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         int sel = createDropdown({"Head", "Tail", "At"}, currentX, 160.f);
         currentX += 160.f + gap;
 
-        createInput("Value", currentX, 120.f, InputType::Integer);
-        currentX += 120.f + gap;
-
         if (sel == 2) { // At
             createInput("Pos", currentX, 100.f, InputType::Integer);
             currentX += 100.f + gap;
         }
+
+        createInput("Value", currentX, 120.f, InputType::Integer);
+        currentX += 120.f + gap;
 
         createExecuteBtn(currentX);
         currentX += 90.f;
