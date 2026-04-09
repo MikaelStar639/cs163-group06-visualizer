@@ -32,10 +32,10 @@ namespace Controllers {
         for (int i = 0; i < size; ++i) {
             int randomVal = std::rand() % 100;
             model.insertTail(randomVal);
-            graph.addNode(std::to_string(randomVal), {startX + (rand() % 800), startY - 200.f});
+            graph.addNode(std::to_string(randomVal), {startX, startY});
         }
         syncGraphEdges();
-        triggerLayout();
+        triggerLayout(0.6f);
     }
 
     void LinkedListController::handleInsert(int sel, int pos, int val) {
