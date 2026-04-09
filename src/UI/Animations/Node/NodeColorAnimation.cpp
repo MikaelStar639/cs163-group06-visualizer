@@ -12,12 +12,7 @@ namespace UI::Animations {
               startFill(startF), endFill(endF), 
               startText(startT), endText(endT),
               totalDuration(duration), elapsedTime(0.f) 
-    {
-        if (targetNode) {
-            targetNode->setFillColor(startFill); 
-            targetNode->setLabelColor(startText);
-        }
-    }
+    {}
 
     sf::Color NodeColorAnimation::lerpColor(sf::Color start, sf::Color end, float t) {
         std::uint8_t r = static_cast<std::uint8_t>(start.r + t * (end.r - start.r));

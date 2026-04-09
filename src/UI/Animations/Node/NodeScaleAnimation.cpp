@@ -6,11 +6,7 @@ namespace UI::Animations {
     NodeScaleAnimation::NodeScaleAnimation(UI::DSA::Node* node, float start, float end, float duration)
             : targetNode(node), startScale(start), endScale(end), 
               totalDuration(duration), elapsedTime(0.f) 
-    {
-        if (targetNode) {
-            targetNode->setScale(startScale); 
-        }
-    }
+    {}
 
     void NodeScaleAnimation::update(float dt) {
         if (!targetNode || isFinished()) return;
