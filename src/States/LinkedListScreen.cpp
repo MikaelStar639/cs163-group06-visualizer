@@ -1,11 +1,19 @@
 #include "States/LinkedListScreen.hpp"
+#include "UI/DSA/LayoutEngine.hpp"
+#include "UI/Animations/Node/NodeColorAnimation.hpp"
+#include "UI/Animations/Node/NodeScaleAnimation.hpp"
+#include "UI/Animations/Core/SequenceAnimation.hpp"
+#include "UI/Animations/Core/CallbackAnimation.hpp"
 #include <iostream>
+
 
 LinkedListScreen::LinkedListScreen(AppContext& context)
     : ctx(context), 
       uiMenu(context),
-      myGraph(context, true)
+      myGraph(context, true),
+      controller(context, myGraph, model)
 {
+    myGraph.setDraggable(false);
 }
 
 void LinkedListScreen::handleEvent(const sf::Event& event) {
@@ -19,18 +27,23 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
     }
 
     if (uiMenu.consumeGoClicked()) {
-        UI::Widgets::ActiveMenu current = uiMenu.getActiveMenu();
+        if (myGraph.isAnimating()) {
+            std::cout << "[WARNING] Wait!\n";
+            return;
+        }
+        
         handleMenuAction();
         uiMenu.clearInputs();
-        
-        // Only reset (auto-close) for one-shot trigger actions like Clear All
-        if (current == UI::Widgets::ActiveMenu::Clean) {
+
+        if (uiMenu.getActiveMenu() == UI::Widgets::ActiveMenu::Clean) {
             uiMenu.resetMenu();
         }
     }
 
     if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
-        if (keyPressed->code == sf::Keyboard::Key::Escape) ctx.nextState = ScreenState::MainMenu;
+        if (keyPressed->code == sf::Keyboard::Key::Escape){
+            ctx.nextState = ScreenState::MainMenu;
+        }
     }
 }
 
@@ -41,51 +54,54 @@ void LinkedListScreen::handleMenuAction() {
     const auto& inputs = uiMenu.getInputs();
 
     if (menu == ActiveMenu::Create) {
-        if (sel == 0) {
-            std::string size = !inputs.empty() ? inputs[0].getText() : "";
-            std::cout << "[UI LOG] Create Random | Size = " << size << std::endl;
-        } else if (sel == 1) {
-            std::string path = !inputs.empty() ? inputs[0].getText() : "";
-            std::cout << "[UI LOG] Create File | Path = " << path << std::endl;
+        if (sel == 0) { // Random
+            std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
+            if (sizeStr.empty()) return;
+            
+            int size = std::stoi(sizeStr);
+            if (size > 15) size = 15; 
+            
+            controller.handleCreateRandom(size);
+        } else if (sel == 1) { // File
+            std::cout << "[TODO] Not yet.\n";
         }
     }
     else if (menu == ActiveMenu::Insert) {
-        if (sel == 2) { // At
-            std::string pos = !inputs.empty() ? inputs[0].getText() : "";
-            std::string val = inputs.size() > 1 ? inputs[1].getText() : "";
-            std::cout << "[UI LOG] Insert At | Val = " << val << " | Pos = " << pos << std::endl;
-        } else { // Head or Tail
-            std::string val = !inputs.empty() ? inputs[0].getText() : "";
-            if (sel == 0) std::cout << "[UI LOG] Insert Head | Val = " << val << std::endl;
-            else if (sel == 1) std::cout << "[UI LOG] Insert Tail | Val = " << val << std::endl;
+        int val = 0;
+        int pos = 0;
+
+        if (sel == 2) { 
+            if (inputs.size() < 2 || inputs[0].getText().empty() || inputs[1].getText().empty()) return;
+            
+            pos = std::stoi(inputs[0].getText());
+            val = std::stoi(inputs[1].getText());
+            
+        } else { 
+            if (inputs.empty() || inputs[0].getText().empty()) return;
+            
+            val = std::stoi(inputs[0].getText());
         }
+        
+        controller.handleInsert(sel, pos, val);
     }
     else if (menu == ActiveMenu::Remove) {
-        if (sel == 0) std::cout << "[UI LOG] Delete Head" << std::endl;
-        else if (sel == 1) std::cout << "[UI LOG] Delete Tail" << std::endl;
-        else if (sel == 2) {
-            std::string pos = !inputs.empty() ? inputs[0].getText() : "";
-            std::cout << "[UI LOG] Delete At | Pos = " << pos << std::endl;
-        }
+        int pos = (sel == 2 && !inputs.empty()) ? std::stoi(inputs[0].getText()) : 0;
+        controller.handleRemove(sel, pos);
     }
     else if (menu == ActiveMenu::Search) {
-        std::string val = !inputs.empty() ? inputs[0].getText() : "";
-        std::cout << "[UI LOG] Search | Val = " << val << std::endl;
+        std::string valStr = !inputs.empty() ? inputs[0].getText() : "";
+        if (valStr.empty()) return;
+        
+        controller.handleSearch(std::stoi(valStr));
     }
     else if (menu == ActiveMenu::Update) {
-        if (sel == 0) {
-            std::string pos = inputs.size() > 0 ? inputs[0].getText() : "";
-            std::string newVal = inputs.size() > 1 ? inputs[1].getText() : "";
-            std::cout << "[UI LOG] Update At | Pos = " << pos << " | New Val = " << newVal << std::endl;
-        } else if (sel == 1) {
-            std::string oldVal = inputs.size() > 0 ? inputs[0].getText() : "";
-            std::string newVal = inputs.size() > 1 ? inputs[1].getText() : "";
-            std::cout << "[UI LOG] Update By Value | Old Val = " << oldVal << " | New Val = " << newVal << std::endl;
-        }
+        int arg1 = (inputs.size() > 0 && !inputs[0].getText().empty()) ? std::stoi(inputs[0].getText()) : 0;
+        int arg2 = (inputs.size() > 1 && !inputs[1].getText().empty()) ? std::stoi(inputs[1].getText()) : 0;
+        
+        controller.handleUpdate(sel, arg1, arg1, arg2);
     }
     else if (menu == ActiveMenu::Clean) {
-        // In the base class, Clean triggers goClicked immediately
-        std::cout << "[UI LOG] Action executed: Clear All" << std::endl;
+        controller.handleClearAll();
     }
 }
 

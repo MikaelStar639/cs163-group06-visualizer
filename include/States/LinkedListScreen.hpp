@@ -2,21 +2,24 @@
 
 #include <SFML/Graphics.hpp>
 #include <Core/AppContext.hpp>
+#include <Core/DSA/LinkedList.hpp>
 #include <States/Screen.hpp>
 #include <UI/Components/LinkedListMenu.hpp>
 #include <UI/DSA/Graph.hpp>
 #include <vector>
 #include <string>
+#include "Controllers/LinkedListController.hpp"
 
 class LinkedListScreen : public Screen {
 private:
     AppContext& ctx;
 
-    // View components
     UI::Widgets::LinkedListMenu uiMenu;
     UI::DSA::Graph myGraph;
+    Core::DSA::LinkedList model;
 
-    // Helper for handling specialized logic (logging for now)
+    Controllers::LinkedListController controller;
+
     void handleMenuAction();
 
 public:
