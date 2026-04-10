@@ -243,5 +243,11 @@ namespace UI::DSA {
 
     bool Graph::getIsDirected() const  { return isDirected; }
 
+
+    void Graph::setNodeValueRaw(int index, const std::string& newVal) {
+        if (index < 0 || index >= nodes.size()) return;
+        nodes[index]->setLabel(newVal);
+    }
+
     
 } // namespace UI::DSA

@@ -14,6 +14,12 @@
 #include <cmath>
 
 namespace Controllers {
+    namespace {
+    constexpr float HEAP_COMPARE_HIGHLIGHT = 0.35f;
+    constexpr float HEAP_COMPARE_UNHIGHLIGHT = 0.18f;
+    constexpr float HEAP_NODE_SCALE_UP = 0.20f;
+    constexpr float HEAP_NODE_SCALE_DOWN = 0.20f;
+}
 
     HeapController::HeapController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Heap& m)
         : ctx(context), graph(g), model(m) {}
@@ -251,46 +257,107 @@ namespace Controllers {
     }
 
     void HeapController::handleInsert(int val) {
-        model.insert(val);
-        rebuildGraphFromModel();
-    }
+        std::vector<int> before = model.getPool();
+        auto steps = buildInsertSteps(before, val);
+
+        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+
+        for (const auto& step : steps) {
+            if (step.type == HeapStepType::InsertLastVisual) {
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this, val]() {
+                        graph.addNode(std::to_string(val), {centerX, startY});
+                        syncGraphEdges();
+                        triggerLayout();
+                    }
+                ));
+            }
+            else if (step.type == HeapStepType::Compare) {
+                auto* a = graph.getNode(step.i);
+                auto* b = graph.getNode(step.j);
+
+                if (a) sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(a, HEAP_COMPARE_HIGHLIGHT));
+                if (b) sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(b, HEAP_COMPARE_HIGHLIGHT));
+                if (a) sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(a, HEAP_COMPARE_UNHIGHLIGHT));
+                if (b) sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(b, HEAP_COMPARE_UNHIGHLIGHT));
+            }
+            else if (step.type == HeapStepType::ApplyState) {
+                auto state = step.state;
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this, state]() {
+                        applyStateToGraph(state);
+                    }
+                ));
+            }
+        }
+
+    sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+        [this, val]() {
+            model.insert(val);
+        }
+    ));
+
+    ctx.animManager.addAnimation(std::move(sequence));
+}
 
     void HeapController::handleRemove(int val) {
-        int targetPos = model.search(val);
-        if (targetPos < 0) {
+        std::vector<int> before = model.getPool();
+        auto steps = buildDeleteSteps(before, val);
+
+        if (steps.empty()) {
             std::cout << "[UI LOG] Value not found: " << val << '\n';
             return;
         }
 
         auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
 
-        for (int i = 0; i <= targetPos; ++i) {
-            auto* uiNode = graph.getNode(i);
-            if (uiNode) {
-                sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-                if (i < targetPos) {
-                    sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
-                }
+        for (const auto& step : steps) {
+            if (step.type == HeapStepType::Compare) {
+                auto* a = graph.getNode(step.i);
+                auto* b = graph.getNode(step.j);
+
+                if (a) sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(a, HEAP_COMPARE_HIGHLIGHT));
+                if (b) sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(b, HEAP_COMPARE_HIGHLIGHT));
+                if (a) sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(a, HEAP_COMPARE_UNHIGHLIGHT));
+                if (b) sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(b, HEAP_COMPARE_UNHIGHLIGHT));
+            }
+            else if (step.type == HeapStepType::OverwriteValue) {
+                int idx = step.i;
+                int value = step.value;
+
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this, idx, value]() {
+                        graph.setNodeValueRaw(idx, std::to_string(value));
+                    }
+                ));
+            }
+            else if (step.type == HeapStepType::RemoveLastVisual) {
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this]() {
+                        graph.removeLastNode();
+                        syncGraphEdges();
+                        triggerLayout();
+                    }
+                ));
+            }
+            else if (step.type == HeapStepType::ApplyState) {
+                auto state = step.state;
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this, state]() {
+                        applyStateToGraph(state);
+                    }
+                ));
             }
         }
 
-        auto* targetNode = graph.getNode(targetPos);
-        if (targetNode) {
-            sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(targetNode, 1.0f, 1.2f, 0.15f));
-            sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(targetNode, 1.2f, 1.0f, 0.15f));
-            sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(targetNode, 0.2f));
-        }
-
-        // callback phải là bước CUỐI CÙNG
-        sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, val]() {
-            if (model.deleteValue(val)) {
-                pendingRebuild = true;
+        sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+            [this, val]() {
+                model.deleteValue(val);
             }
-        }));
+        ));
 
         ctx.animManager.addAnimation(std::move(sequence));
     }
-
     void HeapController::handleSearch(int targetValue) {
         auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
         const auto& pool = model.getPool();
@@ -320,40 +387,52 @@ namespace Controllers {
         ctx.animManager.addAnimation(std::move(sequence));
     }
 
-     void HeapController::handleUpdate(int oldVal, int newVal) {
-        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
-        const auto& pool = model.getPool();
-        bool found = false;
+    void HeapController::handleUpdate(int oldVal, int newVal) {
+        std::vector<int> before = model.getPool();
+        auto steps = buildUpdateSteps(before, oldVal, newVal);
 
-        for (int i = 0; i < static_cast<int>(pool.size()); ++i) {
-            auto* uiNode = graph.getNode(i);
-            if (!uiNode) continue;
-
-            sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(uiNode, 0.2f));
-
-            if (pool[i] == oldVal) {
-                sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.0f, 1.2f, 0.15f));
-                sequence->add(std::make_unique<UI::Animations::NodeScaleAnimation>(uiNode, 1.2f, 1.0f, 0.15f));
-                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.2f));
-
-                // callback phải là bước CUỐI CÙNG
-                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>([this, oldVal, newVal]() {
-                    if (model.updateValue(oldVal, newVal)) {
-                        pendingRebuild = true;
-                    }
-                }));
-
-                found = true;
-                break;
-            } else {
-                sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(uiNode, 0.1f));
-            }
-        }
-
-        if (!found) {
+        if (steps.empty()) {
             std::cout << "[UI LOG] Value " << oldVal << " not found for update!\n";
             return;
         }
+
+        auto sequence = std::make_unique<UI::Animations::SequenceAnimation>();
+
+        for (const auto& step : steps) {
+            if (step.type == HeapStepType::Compare) {
+                auto* a = graph.getNode(step.i);
+                auto* b = graph.getNode(step.j);
+
+                if (a) sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(a, HEAP_COMPARE_HIGHLIGHT));
+                if (b) sequence->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(b, HEAP_COMPARE_HIGHLIGHT));
+                if (a) sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(a, HEAP_COMPARE_UNHIGHLIGHT));
+                if (b) sequence->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(b, HEAP_COMPARE_UNHIGHLIGHT));
+            }
+            else if (step.type == HeapStepType::OverwriteValue) {
+                int idx = step.i;
+                int value = step.value;
+
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this, idx, value]() {
+                        graph.setNodeValueRaw(idx, std::to_string(value));
+                    }
+                ));
+            }
+            else if (step.type == HeapStepType::ApplyState) {
+                auto state = step.state;
+                sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+                    [this, state]() {
+                        applyStateToGraph(state);
+                    }
+                ));
+            }
+        }
+
+        sequence->add(std::make_unique<UI::Animations::CallbackAnimation>(
+            [this, oldVal, newVal]() {
+                model.updateValue(oldVal, newVal);
+            }
+        ));
 
         ctx.animManager.addAnimation(std::move(sequence));
     }
@@ -378,5 +457,14 @@ namespace Controllers {
             rebuildGraphFromModel();
         }
     }
+
+    void HeapController::applyStateToGraph(const std::vector<int>& state) {
+        for (int i = 0; i < static_cast<int>(state.size()); ++i) {
+            graph.setNodeValueRaw(i, std::to_string(state[i]));
+        }
+    }
+
+    
+
 
 } // namespace Controllers

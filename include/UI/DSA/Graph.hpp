@@ -54,6 +54,9 @@ namespace UI::DSA {
         sf::FloatRect getGraphBounds() const;
         
         bool getIsDirected() const;
+
+        // setter
+        void setNodeValueRaw(int index, const std::string& newVal);
     };
 
 } // namespace UI::DSA

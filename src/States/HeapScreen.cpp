@@ -99,6 +99,7 @@ void HeapScreen::update() {
     uiMenu.update(mousePos);
 
     controller.processDeferredActions();
+
     DSAScreenBase::update();
 }
 
