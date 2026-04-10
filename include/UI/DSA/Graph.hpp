@@ -13,6 +13,7 @@ namespace UI::DSA {
         AppContext& ctx;
         
         std::vector<std::unique_ptr<Node>> nodes;
+        std::vector<std::unique_ptr<Node>> dyingNodes;
         std::vector<std::unique_ptr<Edge>> edges;
         std::vector<Node*> drawOrder;
 
@@ -41,7 +42,7 @@ namespace UI::DSA {
         void clearEdges(); 
 
         void handleEvent(const sf::Event& event, sf::Vector2f mousePos);
-        void update();
+        void update(sf::Vector2f mouseWorldPos);
         void draw();
 
         const std::vector<std::unique_ptr<Node>>& getNodes() const;
@@ -50,8 +51,9 @@ namespace UI::DSA {
         Node* getNode(int index) const; 
         Edge* getEdge(int srcIndex, int destIndex) const; 
         bool isAnimating() const;
+        sf::FloatRect getGraphBounds() const;
         
-        bool getIsDirected() const { return isDirected; }
+        bool getIsDirected() const;
     };
 
 } // namespace UI::DSA

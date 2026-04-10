@@ -3,8 +3,18 @@
 
 namespace Config {
     namespace UI {
+        //Radius
+        namespace Radius {
+            inline constexpr float None = 0.f;
+            inline constexpr float Sm   = 4.f;
+            inline constexpr float Md   = 8.f;
+            inline constexpr float Lg   = 12.f;
+            inline constexpr float Xl   = 16.f;
+            inline constexpr float Full = 9999.f;
+        }
+
         //Default rounded rect shape
-        inline constexpr float DEFAULT_CORNER_RADIUS = 10.f;
+        inline constexpr float DEFAULT_CORNER_RADIUS = Radius::Md;
         inline constexpr std::size_t CORNER_POINTS   = 15;
         inline constexpr float OUTLINE_THICKNESS     = 2.f;
         
@@ -16,7 +26,7 @@ namespace Config {
         inline constexpr float BUTTON_WIDTH         = 400.f;
         inline constexpr float BUTTON_HEIGHT        = 70.f;
         inline constexpr float BUTTON_OUTLINE       = 2.f;
-        inline constexpr float BUTTON_CORNER_RADIUS = 12.f;
+        inline constexpr float BUTTON_CORNER_RADIUS = Radius::Lg;
 
         //Input Bar
         inline constexpr float INPUT_BAR_WIDTH      = 300.f;

@@ -366,6 +366,8 @@ void InputBar::setType(InputType inputType) {
             break;
 
         case InputType::AnyText:
+            maxLength = 50;
+            break;
         case InputType::IntegerList:
         case InputType::EdgeTriple:
             maxLength = 20;

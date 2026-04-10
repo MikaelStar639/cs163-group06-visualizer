@@ -28,6 +28,8 @@ public:
            sf::Vector2f pos, 
            sf::Vector2f size = {Config::UI::BUTTON_WIDTH, Config::UI::BUTTON_HEIGHT});
 
+    sf::Vector2f getPosition() const;
+    sf::Vector2f getSize() const;
 
     void setPosition(sf::Vector2f pos);
     void setSize(sf::Vector2f size);
@@ -37,8 +39,11 @@ public:
     void update(sf::Vector2i mousePos);
     bool isClicked(const sf::Event& event);
     void draw();
+    void animateClick();
 
 private:
     void centerText();
+    bool isAnimated = false;
+    sf::Clock animationClock;
 };
 }

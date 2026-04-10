@@ -14,6 +14,7 @@ private:
     RoundedRectangleShape mainBox;
     RoundedRectangleShape arrowBox;
     sf::ConvexShape       arrowTriangle;
+    RoundedRectangleShape dropdownBg;
 
     sf::Color idleColor;
     sf::Color pressedColor;
@@ -28,6 +29,7 @@ private:
 
     std::vector<RoundedRectangleShape> itemBoxes;
     std::vector<sf::Text>              itemTexts;
+    std::vector<sf::RectangleShape>    dividers;
     std::vector<std::string>           options;
 
 public:
@@ -40,6 +42,8 @@ public:
     void setColors(sf::Color idle, sf::Color hover, sf::Color pressed, sf::Color textCol);
     void setLabel(const std::string& label);
     void setOptions(const std::vector<std::string>& opts);
+    void clearSelection();
+    void setSelectedIndex(int index);
 
     void update(sf::Vector2i mousePos);
     bool isClicked(const sf::Event& event);

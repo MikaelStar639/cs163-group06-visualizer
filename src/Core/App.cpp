@@ -1,5 +1,6 @@
 #include "Core/App.hpp"
 #include "UI/Widgets/Dropdown.hpp"
+#include "States/LinkedListScreen.hpp"
 
 
 App::App(): font("assets/fonts/SpaceMono.ttf"),
@@ -54,9 +55,9 @@ void App::changeScreen(ScreenState nextState) {
         case ScreenState::MainMenu:
             currentScreen = std::make_unique<MenuScreen>(context);
             break;
-        // case ScreenState::LinkedList:
-        //     currentScreen = std::make_unique<MenuScreen>(context);
-        //     break;
+        case ScreenState::LinkedList:
+            currentScreen = std::make_unique<LinkedListScreen>(context);
+            break;
         // case ScreenState::Heap:
         //     currentScreen = std::make_unique<MenuScreen>(context);
         //     break;

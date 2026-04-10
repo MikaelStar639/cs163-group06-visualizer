@@ -63,6 +63,15 @@ void Button::update(sf::Vector2i mousePos) {
     isHovered = shape.getGlobalBounds().contains(static_cast<sf::Vector2f>(mousePos));
     
     bool mouseHeld = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+    bool shouldAnimate = isAnimated && animationClock.getElapsedTime().asSeconds() < 0.1f;
+
+    if (shouldAnimate) {
+        shape.setOutlineColor(hoverOutlineColor);
+        shape.setFillColor(pressedColor);
+        return;
+    } else {
+        if (isAnimated) isAnimated = false;
+    }
 
     if (isHovered) {
         shape.setOutlineColor(hoverOutlineColor); 
@@ -99,10 +108,25 @@ bool Button::isClicked(const sf::Event& event) {
     return false;
 }
 
+sf::Vector2f Button::getPosition() const {
+    return shape.getPosition();
+}
+
+sf::Vector2f Button::getSize() const {
+    return shape.getSize();
+}
+
+void Button::animateClick() {
+    isAnimated = true;
+    animationClock.restart();
+}
+
 void Button::draw() {
     ctx.window.draw(shape);
     
-    if (isPressed) {
+    bool shouldDrawPressed = isPressed || (isAnimated && animationClock.getElapsedTime().asSeconds() < 0.1f);
+
+    if (shouldDrawPressed) {
         text.move({0.f, 2.f});
         ctx.window.draw(text);
         text.move({0.f, -2.f}); 
