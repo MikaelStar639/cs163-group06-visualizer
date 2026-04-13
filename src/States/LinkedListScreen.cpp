@@ -10,9 +10,14 @@
 LinkedListScreen::LinkedListScreen(AppContext& context)
     : DSAScreenBase(context), // parent constructor
       uiMenu(context),
-      controller(context, myGraph, model)
+      codeViewer(context.font),
+      controller(context, myGraph, model, &codeViewer)
 {
     myGraph.setDraggable(false);
+    
+    // Position pseudo-code panel at bottom-right
+    sf::Vector2u winSize = context.window.getSize();
+    codeViewer.setPositionBottomRight(static_cast<float>(winSize.x), static_cast<float>(winSize.y), 20.f);
 }
 
 void LinkedListScreen::handleEvent(const sf::Event& event) {
@@ -109,5 +114,6 @@ void LinkedListScreen::update() {
 
 void LinkedListScreen::draw() {
     DSAScreenBase::draw(); // set camera & draw the graph
-    uiMenu.draw(ctx.window); // UI
+    codeViewer.draw(ctx.window); // Pseudo-code panel (screen-space)
+    uiMenu.draw(ctx.window); // UI menu on top
 }
