@@ -6,6 +6,7 @@
 #include <States/Screen.hpp>
 #include <States/DSAScreenBase.hpp>
 #include <UI/Components/LinkedListMenu.hpp>
+#include <UI/Widgets/PseudoCodeViewer.hpp>
 #include <UI/DSA/Graph.hpp>
 #include <vector>
 #include <string>
@@ -14,6 +15,7 @@
 class LinkedListScreen : public DSAScreenBase {
 private:
     UI::Widgets::LinkedListMenu uiMenu;
+    UI::Widgets::PseudoCodeViewer codeViewer;
     Core::DSA::LinkedList model;
     Controllers::LinkedListController controller;
 

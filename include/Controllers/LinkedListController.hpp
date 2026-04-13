@@ -3,6 +3,8 @@
 #include "Core/AppContext.hpp"
 #include "Core/DSA/LinkedList.hpp"
 #include "UI/DSA/Graph.hpp"
+#include "UI/Widgets/PseudoCodeViewer.hpp"
+#include "UI/Animations/Core/SequenceAnimation.hpp"
 #include <string>
 
 namespace Controllers {
@@ -12,6 +14,7 @@ namespace Controllers {
         AppContext& ctx;
         UI::DSA::Graph& graph;
         Core::DSA::LinkedList& model;
+        UI::Widgets::PseudoCodeViewer* codeViewer = nullptr;
 
         float startX = 100.f;
         float startY = 400.f;
@@ -20,8 +23,12 @@ namespace Controllers {
         void syncGraphEdges();
         void triggerLayout(float duration = 0.5f);
 
+        // Helper to add a highlight callback into a sequence
+        void addHighlight(std::unique_ptr<UI::Animations::SequenceAnimation>& seq, int line);
+
     public:
-        LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m);
+        LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m,
+                             UI::Widgets::PseudoCodeViewer* viewer = nullptr);
 
         void handleCreateRandom(int size);
         void handleCreateFromFile();
