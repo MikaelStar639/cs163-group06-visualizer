@@ -7,10 +7,13 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     : ctx(context),
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
-      btnPrev(context, "|<", {700.f, 840.f}, {60.f, 40.f}),
-      btnPlay(context, "||", {770.f, 840.f}, {60.f, 40.f}),
-      btnNext(context, ">|", {840.f, 840.f}, {60.f, 40.f}),
-      title(context.font, titleText, 24)
+      btnPrev(context, "|<", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnPlay(context, "||", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnNext(context, ">|", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      title(context.font, titleText, 24),
+      speedSlider(context, 
+                  sf::Vector2f{100.f, context.window.getSize().y - 80.f}, 
+                  sf::Vector2f{300.f, 15.f})
 {
     // Initialize Title
     title.setFillColor(Config::UI::Colors::ButtonHover);
@@ -25,6 +28,8 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 
     applyBtnColors(btnBack); 
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
+
+    speedSlider.setValue(50.f);
 
     sf::Color panelColor(122, 160, 142);
     panelBg.setFillColor(panelColor);
@@ -98,6 +103,8 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
             }
         }
     }
+
+    speedSlider.handleEvent(event);
 }
 
 void DSAMenuBase::update(sf::Vector2i mousePos) {
@@ -110,6 +117,19 @@ void DSAMenuBase::update(sf::Vector2i mousePos) {
     btnPrev.update(mousePos); 
     btnPlay.update(mousePos); 
     btnNext.update(mousePos);
+
+    speedSlider.update(mousePos); 
+
+    float sliderVal = speedSlider.getValue(); 
+    
+    float speed = 1.0f;
+    if (sliderVal <= 50.f) {
+        speed = 0.1f + (sliderVal / 50.f) * 0.9f;
+    } else {
+        speed = 1.0f + ((sliderVal - 50.f) / 50.f) * 2.0f;
+    }
+        
+    ctx.animManager.setSpeedScale(speed);
 }
 
 void DSAMenuBase::draw(sf::RenderWindow& window) {
@@ -124,9 +144,11 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
         if (dropdownAction) dropdownAction->draw();
     }
 
+    
     btnPrev.draw(); 
     btnPlay.draw(); 
     btnNext.draw();
+    speedSlider.draw();
 }
 
 void DSAMenuBase::updateLayout() {

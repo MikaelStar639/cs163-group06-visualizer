@@ -1,6 +1,8 @@
 #include "UI/Widgets/Slider.hpp"
 #include <cmath>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 namespace UI::Widgets {
 
@@ -78,7 +80,16 @@ float Slider::getValue() const {
 }
 
 void Slider::updateVisuals() {
-    text.setString(std::to_string(static_cast<int>(value)));
+    float speed = 1.0f;
+    if (value <= 50.f) {
+        speed = 0.1f + (value / 50.f) * 0.9f; 
+    } else {
+        speed = 1.0f + ((value - 50.f) / 50.f) * 2.0f; 
+    }
+
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2) << speed << "x";
+    text.setString(ss.str());
 
     float percent = value / 100.f;
     float trackX = track.getPosition().x;
@@ -93,7 +104,9 @@ void Slider::updateVisuals() {
     float centerY = trackY + (trackHeight / 2.f);
 
     thumb.setPosition({centerX - thumbWidth / 2.f, centerY - thumbHeight / 2.f});
-    text.setPosition({trackX + trackWidth + 20.f, trackY - (trackHeight / 2.f)});
+    
+    float textWidth = text.getGlobalBounds().size.x;
+    text.setPosition({centerX - (textWidth / 2.f), trackY - 50.f});
 }
 
 void Slider::draw() {

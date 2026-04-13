@@ -7,8 +7,8 @@ namespace UI::Animations {
 
     class AnimationManager {
     private:
-        //list of running animations
         std::vector<std::unique_ptr<AnimationBase>> activeAnimations;
+        float speedScale = 1.0f;
 
     public:
 
@@ -21,6 +21,9 @@ namespace UI::Animations {
 
         //clear all (necessary when go to another screen)
         void clearAll(); 
+
+        void setSpeedScale(float scale);
+        float getSpeedScale() const;
     };
 
 }

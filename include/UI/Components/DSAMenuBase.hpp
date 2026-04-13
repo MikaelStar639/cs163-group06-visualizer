@@ -5,6 +5,7 @@
 #include <UI/Widgets/Button.hpp>
 #include <UI/Widgets/InputBar.hpp>
 #include <UI/Widgets/Dropdown.hpp>
+#include <UI/Widgets/Slider.hpp>
 #include <UI/Shapes/RoundedRectangleShape.hpp>
 #include <vector>
 #include <string>
@@ -39,6 +40,7 @@ namespace UI::Widgets {
         std::vector<Button> activeSubButtons;
         std::vector<InputBar> activeInputs;
         std::optional<Dropdown> dropdownAction;
+        Slider speedSlider;
 
         // Layout helpers
         virtual void updateLayout();

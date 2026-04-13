@@ -13,9 +13,9 @@ namespace UI::Animations {
     }
 
     void AnimationManager::update(float dt) {
+        float scaledDt = dt * speedScale;
         for (int i = static_cast<int>(activeAnimations.size()) - 1; i >= 0; --i) {
-            //iterate backward because of the erase function
-            activeAnimations[i]->update(dt);
+            activeAnimations[i]->update(scaledDt);
             
             if (activeAnimations[i]->isFinished()) {
                 activeAnimations.erase(activeAnimations.begin() + i);
@@ -25,6 +25,14 @@ namespace UI::Animations {
 
     void AnimationManager::clearAll() {
         activeAnimations.clear();
+    }
+
+    void AnimationManager::setSpeedScale(float scale) {
+        speedScale = scale; 
+    }
+    
+    float AnimationManager::getSpeedScale() const {
+        return speedScale; 
     }
 
 }
