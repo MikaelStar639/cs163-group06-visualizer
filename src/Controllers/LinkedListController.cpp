@@ -224,7 +224,7 @@ namespace Controllers {
         using Builder = UI::Animations::AnimStepBuilder;
 
         if (sel == 0) { // HEAD
-            auto codeDef = Core::DSA::PseudoCode::insertHead();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertHead();
             Builder b(codeDef, codeViewer);
 
             b.highlight("create_node").wait()
@@ -249,7 +249,7 @@ namespace Controllers {
         // Bounds check for AT POS
         if (sel == 2 && (pos < 0 || pos > currentSize)) {
             std::cout << "[UI LOG] Invalid position: " << pos << " (size: " << currentSize << ")" << std::endl;
-            auto codeDef = Core::DSA::PseudoCode::insertAt();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertAt();
             Builder b(codeDef, codeViewer);
             b.highlight("bounds_check").finish();
             ctx.animManager.addAnimation(b.build());
@@ -260,7 +260,7 @@ namespace Controllers {
 
         if (sel == 1) {
             // INSERT TAIL
-            auto codeDef = Core::DSA::PseudoCode::insertTail();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertTail();
             Builder b(codeDef, codeViewer);
 
             b.highlight("check_null");
@@ -297,7 +297,7 @@ namespace Controllers {
 
         } else {
             // INSERT AT POS
-            auto codeDef = Core::DSA::PseudoCode::insertAt();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::insertAt();
             Builder b(codeDef, codeViewer);
 
             b.highlight("bounds_check")
@@ -340,7 +340,7 @@ namespace Controllers {
         using Builder = UI::Animations::AnimStepBuilder;
 
         if (sel == 0) { // HEAD
-            auto codeDef = Core::DSA::PseudoCode::deleteHead();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteHead();
             Builder b(codeDef, codeViewer);
 
             b.highlight("check_null")
@@ -368,12 +368,12 @@ namespace Controllers {
         if (targetPos < 0 || targetPos >= currentSize) {
             std::cout << "[UI LOG] Invalid position for removal: " << targetPos << std::endl;
             if (sel == 1) {
-                auto codeDef = Core::DSA::PseudoCode::deleteTail();
+                auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteTail();
                 Builder b(codeDef, codeViewer);
                 b.highlight("check_null").finish();
                 ctx.animManager.addAnimation(b.build());
             } else {
-                auto codeDef = Core::DSA::PseudoCode::deleteAt();
+                auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteAt();
                 Builder b(codeDef, codeViewer);
                 b.highlight("bounds_check").finish();
                 ctx.animManager.addAnimation(b.build());
@@ -383,7 +383,7 @@ namespace Controllers {
 
         if (sel == 1) {
             // DELETE TAIL
-            auto codeDef = Core::DSA::PseudoCode::deleteTail();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteTail();
             Builder b(codeDef, codeViewer);
 
             b.highlight("check_null")
@@ -420,7 +420,7 @@ namespace Controllers {
 
         } else {
             // DELETE AT POS
-            auto codeDef = Core::DSA::PseudoCode::deleteAt();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteAt();
             Builder b(codeDef, codeViewer);
 
             b.highlight("bounds_check")
@@ -462,7 +462,7 @@ namespace Controllers {
     void LinkedListController::handleSearch(int targetValue) {
         using Builder = UI::Animations::AnimStepBuilder;
 
-        auto codeDef = Core::DSA::PseudoCode::search();
+        auto codeDef = Core::DSA::PseudoCode::LinkedList::search();
         Builder b(codeDef, codeViewer);
 
         b.highlight("init_curr");
@@ -514,14 +514,14 @@ namespace Controllers {
 
             if (pos < 0 || pos >= currentSize) {
                 std::cout << "[UI LOG] Invalid position for update: " << pos << std::endl;
-                auto codeDef = Core::DSA::PseudoCode::updateAt();
+                auto codeDef = Core::DSA::PseudoCode::LinkedList::updateAt();
                 Builder b(codeDef, codeViewer);
                 b.highlight("bounds_check").finish();
                 ctx.animManager.addAnimation(b.build());
                 return;
             }
 
-            auto codeDef = Core::DSA::PseudoCode::updateAt();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::updateAt();
             Builder b(codeDef, codeViewer);
 
             b.highlight("bounds_check")
@@ -557,7 +557,7 @@ namespace Controllers {
             ctx.animManager.addAnimation(b.build());
 
         } else if (sel == 1) { // UPDATE BY VALUE
-            auto codeDef = Core::DSA::PseudoCode::updateByValue();
+            auto codeDef = Core::DSA::PseudoCode::LinkedList::updateByValue();
             Builder b(codeDef, codeViewer);
 
             b.highlight("init_curr");
