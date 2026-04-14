@@ -4,7 +4,6 @@
 #include "Core/DSA/LinkedList.hpp"
 #include "UI/DSA/Graph.hpp"
 #include "UI/Widgets/PseudoCodeViewer.hpp"
-#include "UI/Animations/Core/SequenceAnimation.hpp"
 #include <string>
 
 namespace Controllers {
@@ -22,9 +21,6 @@ namespace Controllers {
 
         void syncGraphEdges();
         void triggerLayout(float duration = 0.5f);
-
-        // Helper to add a highlight callback into a sequence
-        void addHighlight(std::unique_ptr<UI::Animations::SequenceAnimation>& seq, int line);
 
     public:
         LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m,

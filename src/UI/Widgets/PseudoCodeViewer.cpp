@@ -23,6 +23,10 @@ void PseudoCodeViewer::setCode(const std::vector<std::string>& code) {
     recalcSize();
 }
 
+void PseudoCodeViewer::setCode(const Core::DSA::PseudoCodeDef& def) {
+    setCode(def.toStringVector());
+}
+
 void PseudoCodeViewer::highlightLine(int index) {
     if (index < 0 || index >= static_cast<int>(lines.size())) return;
 

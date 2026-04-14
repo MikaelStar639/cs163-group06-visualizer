@@ -7,9 +7,9 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     : ctx(context),
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
-      btnPrev(context, "|<", {700.f, 840.f}, {60.f, 40.f}),
-      btnPlay(context, "||", {770.f, 840.f}, {60.f, 40.f}),
-      btnNext(context, ">|", {840.f, 840.f}, {60.f, 40.f}),
+      btnPrev(context, "|<", {700.f, 810.f}, {60.f, 40.f}),
+      btnPlay(context, "||", {770.f, 810.f}, {60.f, 40.f}),
+      btnNext(context, ">|", {840.f, 810.f}, {60.f, 40.f}),
       title(context.font, titleText, 24)
 {
     // Initialize Title

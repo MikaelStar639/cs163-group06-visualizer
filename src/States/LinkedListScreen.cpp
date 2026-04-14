@@ -17,7 +17,7 @@ LinkedListScreen::LinkedListScreen(AppContext& context)
     
     // Position pseudo-code panel at bottom-right
     sf::Vector2u winSize = context.window.getSize();
-    codeViewer.setPositionBottomRight(static_cast<float>(winSize.x), static_cast<float>(winSize.y), 20.f);
+    codeViewer.setPositionBottomRight(static_cast<float>(winSize.x), static_cast<float>(winSize.y), 50.f);
 }
 
 void LinkedListScreen::handleEvent(const sf::Event& event) {

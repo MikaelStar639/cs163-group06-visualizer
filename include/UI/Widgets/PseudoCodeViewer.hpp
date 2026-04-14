@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include "UI/Shapes/RoundedRectangleShape.hpp"
+#include "Core/DSA/PseudoCodeData.hpp"
 #include <vector>
 #include <string>
 
@@ -43,6 +44,7 @@ namespace UI::Widgets {
         PseudoCodeViewer(sf::Font& font);
 
         void setCode(const std::vector<std::string>& code);
+        void setCode(const Core::DSA::PseudoCodeDef& def);
         void highlightLine(int index);
         void clearHighlight();
         void hide();
