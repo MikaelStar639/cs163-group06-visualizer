@@ -7,6 +7,8 @@
 #include <UI/Widgets/Dropdown.hpp>
 #include <UI/Widgets/Slider.hpp>
 #include <UI/Shapes/RoundedRectangleShape.hpp>
+#include <UI/Shapes/PauseIcon.hpp>
+#include <UI/Shapes/PlayIcon.hpp>
 #include <vector>
 #include <string>
 #include <optional>
@@ -27,9 +29,12 @@ namespace UI::Widgets {
         RoundedRectangleShape panelBg;
         
         // Timeline Controls
+        Slider speedSlider;
         Button btnPrev;
         Button btnPlay;
         Button btnNext;
+        UI::Shapes::PlayIcon iconPlay;
+        UI::Shapes::PauseIcon iconPause;
 
         // Menu State
         ActiveMenu activeMenu = ActiveMenu::None;
@@ -40,7 +45,6 @@ namespace UI::Widgets {
         std::vector<Button> activeSubButtons;
         std::vector<InputBar> activeInputs;
         std::optional<Dropdown> dropdownAction;
-        Slider speedSlider;
 
         // Layout helpers
         virtual void updateLayout();

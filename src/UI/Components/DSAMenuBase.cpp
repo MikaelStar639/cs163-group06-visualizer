@@ -8,7 +8,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
       btnPrev(context, "|<", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
-      btnPlay(context, "||", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnPlay(context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnNext(context, ">|", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       title(context.font, titleText, 24),
       speedSlider(context, 
@@ -29,12 +29,20 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     applyBtnColors(btnBack); 
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
 
-    speedSlider.setValue(50.f);
-
+    
     sf::Color panelColor(122, 160, 142);
     panelBg.setFillColor(panelColor);
     panelBg.setOutlineThickness(2.f);
     panelBg.setOutlineColor(sf::Color(200, 220, 200));
+
+    speedSlider.setValue(50.f);
+    float playBtnX = (context.window.getSize().x - 200.f) / 2.f + 70.f;
+    float playBtnY = context.window.getSize().y - 95.f;
+    float centerX = playBtnX + 30.f; 
+    float centerY = playBtnY + 20.f;
+
+    iconPlay.setPosition({centerX, centerY});
+    iconPause.setPosition({centerX, centerY});
 }
 
 void DSAMenuBase::handleEvent(const sf::Event& event) {
@@ -109,25 +117,17 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     if (!ctx.animManager.empty()) {
         
         if (btnPlay.isClicked(event)) {
-            ctx.animManager.togglePause();
-            
-            if (ctx.animManager.isPaused()) {
-                btnPlay.setLabel(">");
-            } else {
-                btnPlay.setLabel("||");
-            }
+            ctx.animManager.togglePause();   
         }
 
         if (btnNext.isClicked(event)) {
             ctx.animManager.skipToEnd();
             ctx.animManager.setPaused(false);
-            btnPlay.setLabel("||");
         }
 
         if (btnPrev.isClicked(event)) {
             ctx.animManager.clearAll();
             ctx.animManager.setPaused(false);
-            btnPlay.setLabel("||");
             std::cout << "[INFO] Animation Cancelled.\n";
 
             cancelClicked = true;
@@ -136,7 +136,6 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     else {
         if (ctx.animManager.isPaused()) {
             ctx.animManager.setPaused(false);
-            btnPlay.setLabel("||");
         }
     }
 }
@@ -185,6 +184,12 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
         btnPrev.draw();
         btnPlay.draw();
         btnNext.draw();
+
+        if (ctx.animManager.isPaused()) {
+            window.draw(iconPlay);
+        } else {
+            window.draw(iconPause);
+        }
     }
     speedSlider.draw();
 }
