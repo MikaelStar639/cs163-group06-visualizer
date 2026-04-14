@@ -125,10 +125,12 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
 
         if (btnPrev.isClicked(event)) {
-            // ctx.animManager.clearAll();
-            // ctx.animManager.setPaused(false);
-            // btnPlay.setLabel("||");
-            // std::cout << "[INFO] Animation Cancelled.\n";
+            ctx.animManager.clearAll();
+            ctx.animManager.setPaused(false);
+            btnPlay.setLabel("||");
+            std::cout << "[INFO] Animation Cancelled.\n";
+
+            cancelClicked = true;
         }
     } 
     else {
@@ -245,6 +247,14 @@ bool DSAMenuBase::consumeGoClicked() {
         return true;
     }
     return false;
+}
+
+bool DSAMenuBase::consumeCancelClicked() { 
+    if (cancelClicked) { 
+        cancelClicked = false; 
+        return true; 
+    } 
+    return false; 
 }
 
 void DSAMenuBase::resetMenu() {

@@ -104,6 +104,11 @@ void LinkedListScreen::handleMenuAction() {
 void LinkedListScreen::update() {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
     uiMenu.update(mousePos);
+    if (uiMenu.consumeCancelClicked()) {
+        ctx.animManager.clearAll();
+        myGraph.resetVisuals();
+        controller.forceSnapLayout(); 
+    }
     DSAScreenBase::update();
 }
 

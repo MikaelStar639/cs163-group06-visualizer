@@ -51,6 +51,9 @@ namespace UI::Widgets {
         bool goClicked = false;
         int clickedSubButtonIndex = -1;
 
+        // Flag for prev button
+        bool cancelClicked = false;
+
     public:
         DSAMenuBase(AppContext& context, const std::string& titleText);
         virtual ~DSAMenuBase() = default;
@@ -62,6 +65,7 @@ namespace UI::Widgets {
         // API for Controller (Screen)
         bool isBackClicked(const sf::Event& event) { return btnBack.isClicked(event); }
         bool consumeGoClicked(); // Returns true if Go was clicked, then resets it
+        bool consumeCancelClicked();
 
         ActiveMenu getActiveMenu() const { return activeMenu; }
         int getDropdownSelection() const { return lastDropdownIndex; }

@@ -133,6 +133,15 @@ namespace UI::DSA {
         edges.clear();
     }
 
+    void Graph::resetVisuals(){
+        for (auto& node : nodes) {
+            node->setFillColor(Config::UI::Colors::NodeFill);
+            node->setOutlineColor(Config::UI::Colors::NodeOutline);
+            node->setScale(1.f);
+            node->setLabelColor(Config::UI::Colors::NodeText);
+        }
+    }
+
     void Graph::handleEvent(const sf::Event& event, sf::Vector2f mousePos) {
         if (!isDraggable) return;
 

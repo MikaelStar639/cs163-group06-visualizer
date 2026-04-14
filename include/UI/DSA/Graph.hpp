@@ -41,6 +41,8 @@ namespace UI::DSA {
         void clear();      
         void clearEdges(); 
 
+        void resetVisuals();
+
         void handleEvent(const sf::Event& event, sf::Vector2f mousePos);
         void update(sf::Vector2f mouseWorldPos);
         void draw();

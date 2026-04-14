@@ -23,6 +23,7 @@ namespace Controllers {
     public:
         LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m);
 
+        void forceSnapLayout();
         void handleCreateRandom(int size);
         void handleCreateFromFile();
         void handleEditDataFile();

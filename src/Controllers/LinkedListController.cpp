@@ -30,6 +30,16 @@ namespace Controllers {
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
+    void LinkedListController::forceSnapLayout() {
+        int numNodes = graph.getNodes().size();
+        for (int i = 0; i < numNodes; ++i) {
+            auto* node = graph.getNode(i);
+            if (node) {
+                node->setPosition({startX + i * spacing, startY});
+            }
+        }
+    }
+
     void LinkedListController::handleCreateRandom(int size) {
         model.clear();
         graph.clear();
