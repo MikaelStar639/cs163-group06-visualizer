@@ -9,6 +9,7 @@ namespace UI::Animations {
     private:
         std::vector<std::unique_ptr<AnimationBase>> activeAnimations;
         float speedScale = 1.0f;
+        bool paused = false;
 
     public:
 
@@ -24,6 +25,12 @@ namespace UI::Animations {
 
         void setSpeedScale(float scale);
         float getSpeedScale() const;
+
+        void togglePause();
+        bool isPaused() const;
+        void setPaused(bool p);
+        
+        void skipToEnd();
     };
 
 }

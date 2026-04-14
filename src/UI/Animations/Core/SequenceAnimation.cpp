@@ -9,12 +9,23 @@ namespace UI::Animations {
     }
 
     void SequenceAnimation::update(float dt) {
-        if (sequence.empty()) return;
+        // Thay vì dùng 'if', ta dùng 'while' để tận dụng tối đa lượng dt
+        while (!sequence.empty() && dt > 0.f) {
+            
+            // 1. Cho animation đầu tiên chạy
+            sequence.front()->update(dt);
 
-        sequence.front()->update(dt);
-
-        if (sequence.front()->isFinished()) {
-            sequence.pop();
+            // 2. Nếu nó chạy xong ngay lập tức (nhờ dt rất lớn)
+            if (sequence.front()->isFinished()) {
+                // Xóa nó đi, vòng lặp while sẽ tự động quay lại 
+                // và lấy cái tiếp theo ra chạy luôn trong cùng 1 frame!
+                sequence.pop();
+            } 
+            else {
+                // 3. Nếu nó chưa chạy xong, nghĩa là nó cần thêm thời gian ở frame tiếp theo.
+                // Ta phải break vòng lặp để nhường quyền render cho màn hình.
+                break;
+            }
         }
     }
 

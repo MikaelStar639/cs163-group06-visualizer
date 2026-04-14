@@ -105,6 +105,38 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     }
 
     speedSlider.handleEvent(event);
+
+    if (!ctx.animManager.empty()) {
+        
+        if (btnPlay.isClicked(event)) {
+            ctx.animManager.togglePause();
+            
+            if (ctx.animManager.isPaused()) {
+                btnPlay.setLabel(">");
+            } else {
+                btnPlay.setLabel("||");
+            }
+        }
+
+        if (btnNext.isClicked(event)) {
+            ctx.animManager.skipToEnd();
+            ctx.animManager.setPaused(false);
+            btnPlay.setLabel("||");
+        }
+
+        if (btnPrev.isClicked(event)) {
+            // ctx.animManager.clearAll();
+            // ctx.animManager.setPaused(false);
+            // btnPlay.setLabel("||");
+            // std::cout << "[INFO] Animation Cancelled.\n";
+        }
+    } 
+    else {
+        if (ctx.animManager.isPaused()) {
+            ctx.animManager.setPaused(false);
+            btnPlay.setLabel("||");
+        }
+    }
 }
 
 void DSAMenuBase::update(sf::Vector2i mousePos) {
@@ -114,9 +146,11 @@ void DSAMenuBase::update(sf::Vector2i mousePos) {
     for (auto& btn : activeSubButtons) btn.update(mousePos);
     if (dropdownAction) dropdownAction->update(mousePos);
     
-    btnPrev.update(mousePos); 
-    btnPlay.update(mousePos); 
-    btnNext.update(mousePos);
+    if (!ctx.animManager.empty()) {
+        btnPrev.update(mousePos);
+        btnPlay.update(mousePos);
+        btnNext.update(mousePos);
+    }
 
     speedSlider.update(mousePos); 
 
@@ -145,9 +179,11 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     }
 
     
-    btnPrev.draw(); 
-    btnPlay.draw(); 
-    btnNext.draw();
+    if (!ctx.animManager.empty()) {
+        btnPrev.draw();
+        btnPlay.draw();
+        btnNext.draw();
+    }
     speedSlider.draw();
 }
 
