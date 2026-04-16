@@ -63,6 +63,28 @@ private:
     void fitTextToBox(sf::Text& target, float horizontalPadding = 15.f, float verticalPadding = 10.f);
     void updateTextPositions();
 
+    // to move cursor
+
+    std::size_t caretPos = 0;
+    int preferredColumn = -1;
+
+    std::size_t getLineStart(std::size_t pos) const;
+    std::size_t getLineEnd(std::size_t pos) const;
+    int getLineOfPos(std::size_t pos) const;
+    int getColumnOfPos(std::size_t pos) const;
+    std::size_t getPosFromLineColumn(int line, int column) const;
+
+    float getLineHeight() const;
+    float measureTextWidth(const std::string& s) const;
+
+    void moveCaretLeft();
+    void moveCaretRight();
+    void moveCaretUp();
+    void moveCaretDown();
+    void moveCaretHome();
+    void moveCaretEnd();
+    void moveCaretToMouse(sf::Vector2f mousePos);
+
 public:
     InputBar(AppContext& context,
              sf::Vector2f pos,

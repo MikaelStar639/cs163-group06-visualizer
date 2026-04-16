@@ -239,8 +239,13 @@ void InputBar::updateTextPositions() {
     float paddingX = 15.f;
     float paddingY = 10.f;
 
-    fitTextToBox(text);
-    fitTextToBox(placeholderText);
+    if (isMultiline()) {
+        text.setCharacterSize(Config::UI::FONT_SIZE_BUTTON);
+        placeholderText.setCharacterSize(Config::UI::FONT_SIZE_BUTTON);
+    } else {
+        fitTextToBox(text);
+        fitTextToBox(placeholderText);
+    }
 
     if (isMultiline()) {
         text.setOrigin({0.f, 0.f});
@@ -249,50 +254,51 @@ void InputBar::updateTextPositions() {
         text.setPosition({pos.x + paddingX, pos.y + paddingY});
         placeholderText.setPosition({pos.x + paddingX, pos.y + paddingY});
 
-        std::string lastLine;
-        std::size_t lastBreak = content.find_last_of('\n');
-        if (lastBreak == std::string::npos) lastLine = content;
-        else lastLine = content.substr(lastBreak + 1);
+        float lineHeight = ctx.font.getLineSpacing(text.getCharacterSize());
 
-        int lineCount = 1;
-        for (char c : content) {
-            if (c == '\n') ++lineCount;
-        }
-
-        sf::Text temp(ctx.font, lastLine, text.getCharacterSize());
-        float lineHeight = static_cast<float>(text.getCharacterSize()) * 1.35f;
-
-        float cursorX = pos.x + paddingX + temp.getLocalBounds().size.x + 2.f;
-        float cursorY = pos.y + paddingY + (lineCount - 1) * lineHeight;
-
+        sf::Vector2f caretPixelPos;
         if (content.empty()) {
-            cursorX = pos.x + paddingX;
-            cursorY = pos.y + paddingY;
+            caretPixelPos = text.getPosition();
+        } else {
+            caretPixelPos = text.findCharacterPos(caretPos);
         }
 
-        cursor.setPosition({cursorX, cursorY});
-        cursor.setSize({2.f, static_cast<float>(text.getCharacterSize()) + 5.f});
+        cursor.setPosition({caretPixelPos.x, caretPixelPos.y});
+        cursor.setSize({2.f, lineHeight - 4.f});
     } else {
         float centerY = pos.y + size.y / 2.f;
 
         sf::FloatRect textBounds = text.getLocalBounds();
-        text.setOrigin({0.f, textBounds.position.y + textBounds.size.y / 2.f});
+        text.setOrigin({
+            0.f,
+            textBounds.position.y + textBounds.size.y / 2.f
+        });
         text.setPosition({pos.x + paddingX, centerY});
 
         sf::FloatRect placeholderBounds = placeholderText.getLocalBounds();
-        placeholderText.setOrigin({0.f, placeholderBounds.position.y + placeholderBounds.size.y / 2.f});
+        placeholderText.setOrigin({
+            0.f,
+            placeholderBounds.position.y + placeholderBounds.size.y / 2.f
+        });
         placeholderText.setPosition({pos.x + paddingX, centerY});
 
-        float cursorX;
+        sf::Vector2f caretPixelPos;
         if (content.empty()) {
-            cursorX = placeholderText.getPosition().x;
+            caretPixelPos = {pos.x + paddingX, centerY - cursor.getSize().y / 2.f};
         } else {
-            sf::FloatRect global = text.getGlobalBounds();
-            cursorX = global.position.x + global.size.x + 2.f;
+            sf::Text temp(ctx.font, content, text.getCharacterSize());
+            temp.setPosition({pos.x + paddingX, centerY});
+            sf::FloatRect tempBounds = temp.getLocalBounds();
+            temp.setOrigin({
+                0.f,
+                tempBounds.position.y + tempBounds.size.y / 2.f
+            });
+
+            caretPixelPos = temp.findCharacterPos(caretPos);
+            caretPixelPos.y = centerY - cursor.getSize().y / 2.f;
         }
 
-        float cursorY = box.getPosition().y + box.getSize().y / 2.f - cursor.getSize().y / 2.f;
-        cursor.setPosition({cursorX, cursorY});
+        cursor.setPosition({caretPixelPos.x, caretPixelPos.y});
         cursor.setSize({2.f, static_cast<float>(text.getCharacterSize()) + 5.f});
     }
 
@@ -310,6 +316,8 @@ void InputBar::handleEvent(const sf::Event& event) {
             isFocused = box.getGlobalBounds().contains(mousePos);
 
             if (isFocused) {
+                moveCaretToMouse(mousePos);
+                updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
             }
@@ -321,9 +329,11 @@ void InputBar::handleEvent(const sf::Event& event) {
     if (const auto* textEntered = event.getIf<sf::Event::TextEntered>()) {
         char32_t unicode = textEntered->unicode;
 
-        if (unicode == 8) {
-            if (!content.empty()) {
-                content.pop_back();
+        if (unicode == 8) { // Backspace
+            if (caretPos > 0 && !content.empty()) {
+                content.erase(caretPos - 1, 1);
+                --caretPos;
+                preferredColumn = -1;
                 text.setString(content);
                 validateContent();
                 updateTextPositions();
@@ -336,7 +346,9 @@ void InputBar::handleEvent(const sf::Event& event) {
 
         if ((unicode == 13 || unicode == 10) && isMultiline()) {
             if (content.size() < maxLength) {
-                content.push_back('\n');
+                content.insert(caretPos, 1, '\n');
+                ++caretPos;
+                preferredColumn = -1;
                 text.setString(content);
                 validateContent();
                 updateTextPositions();
@@ -349,7 +361,9 @@ void InputBar::handleEvent(const sf::Event& event) {
 
         if (isCharacterAllowed(unicode)) {
             if (content.size() < maxLength) {
-                content.push_back(static_cast<char>(unicode));
+                content.insert(content.begin() + static_cast<long long>(caretPos), static_cast<char>(unicode));
+                ++caretPos;
+                preferredColumn = -1;
                 text.setString(content);
                 validateContent();
                 updateTextPositions();
@@ -357,6 +371,69 @@ void InputBar::handleEvent(const sf::Event& event) {
                 showCursor = true;
                 dirty = true;
             }
+        }
+    }
+
+
+    if (const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        switch (keyPressed->code) {
+            case sf::Keyboard::Key::Left:
+                moveCaretLeft();
+                updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
+                break;
+
+            case sf::Keyboard::Key::Right:
+                moveCaretRight();
+                updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
+                break;
+
+            case sf::Keyboard::Key::Up:
+                moveCaretUp();
+                updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
+                break;
+
+            case sf::Keyboard::Key::Down:
+                moveCaretDown();
+                updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
+                break;
+
+            case sf::Keyboard::Key::Home:
+                moveCaretHome();
+                updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
+                break;
+
+            case sf::Keyboard::Key::End:
+                moveCaretEnd();
+                updateTextPositions();
+                cursorClock.restart();
+                showCursor = true;
+                break;
+
+            case sf::Keyboard::Key::Delete:
+                if (caretPos < content.size()) {
+                    content.erase(caretPos, 1);
+                    preferredColumn = -1;
+                    text.setString(content);
+                    validateContent();
+                    updateTextPositions();
+                    cursorClock.restart();
+                    showCursor = true;
+                    dirty = true;
+                }
+                break;
+
+            default:
+                break;
         }
     }
 }
@@ -415,6 +492,8 @@ void InputBar::setPlaceholder(const std::string& placeholder) {
 
 void InputBar::setText(const std::string& value) {
     content = value;
+    caretPos = content.size();
+    preferredColumn = -1;
     text.setString(content);
     validateContent();
     updateTextPositions();
@@ -498,6 +577,8 @@ bool InputBar::focused() const {
 
 void InputBar::clear() {
     content.clear();
+    caretPos = 0;
+    preferredColumn = -1;
     text.setString(content);
     errorMessage.clear();
     errorText.setString("");
@@ -526,13 +607,32 @@ bool InputBar::consumeChanged() {
 
 std::vector<std::string> InputBar::getLines(bool skipEmpty) const {
     std::vector<std::string> lines;
-    std::stringstream ss(content);
-    std::string line;
+    std::string current;
 
-    while (std::getline(ss, line)) {
-        line = trim(line);
-        if (skipEmpty && line.empty()) continue;
+    for (char c : content) {
+        if (c == '\n') {
+            std::string line = trim(current);
+            if (!skipEmpty || !line.empty()) {
+                lines.push_back(line);
+            } else if (!skipEmpty) {
+                lines.push_back("");
+            }
+            current.clear();
+        } else {
+            current.push_back(c);
+        }
+    }
+
+    std::string line = trim(current);
+    if (!skipEmpty || !line.empty()) {
         lines.push_back(line);
+    } else if (!skipEmpty) {
+        lines.push_back("");
+    }
+
+    // nếu content kết thúc bằng '\n', cần giữ thêm 1 dòng rỗng cuối
+    if (!content.empty() && content.back() == '\n' && !skipEmpty) {
+        lines.push_back("");
     }
 
     return lines;
@@ -580,6 +680,206 @@ bool InputBar::parseGraphData(int nodeCount,
     }
 
     return true;
+}
+
+ // helper to move cursor
+
+ float InputBar::getLineHeight() const {
+    return ctx.font.getLineSpacing(text.getCharacterSize());
+}
+
+float InputBar::measureTextWidth(const std::string& s) const {
+    if (s.empty()) return 0.f;
+    sf::Text temp(ctx.font, s, text.getCharacterSize());
+    sf::FloatRect bounds = temp.getLocalBounds();
+    return bounds.position.x + bounds.size.x;
+}
+
+std::size_t InputBar::getLineStart(std::size_t pos) const {
+    pos = std::min(pos, content.size());
+    while (pos > 0 && content[pos - 1] != '\n') --pos;
+    return pos;
+}
+
+std::size_t InputBar::getLineEnd(std::size_t pos) const {
+    pos = std::min(pos, content.size());
+    while (pos < content.size() && content[pos] != '\n') ++pos;
+    return pos;
+}
+
+int InputBar::getLineOfPos(std::size_t pos) const {
+    pos = std::min(pos, content.size());
+    int line = 0;
+    for (std::size_t i = 0; i < pos; ++i) {
+        if (content[i] == '\n') ++line;
+    }
+    return line;
+}
+
+int InputBar::getColumnOfPos(std::size_t pos) const {
+    std::size_t start = getLineStart(pos);
+    return static_cast<int>(pos - start);
+}
+
+std::size_t InputBar::getPosFromLineColumn(int line, int column) const {
+    if (line < 0) return 0;
+
+    int currentLine = 0;
+    std::size_t start = 0;
+
+    while (currentLine < line && start < content.size()) {
+        if (content[start] == '\n') ++currentLine;
+        ++start;
+    }
+
+    if (currentLine < line) return content.size();
+
+    std::size_t end = getLineEnd(start);
+    std::size_t len = end - start;
+    std::size_t col = static_cast<std::size_t>(std::max(0, column));
+
+    return start + std::min(col, len);
+}
+
+void InputBar::moveCaretLeft() {
+    if (caretPos > 0) --caretPos;
+    preferredColumn = -1;
+    updateTextPositions();
+    cursorClock.restart();
+    showCursor = true;
+}
+
+void InputBar::moveCaretRight() {
+    if (caretPos < content.size()) ++caretPos;
+    preferredColumn = -1;
+    updateTextPositions();
+    cursorClock.restart();
+    showCursor = true;
+}
+
+void InputBar::moveCaretHome() {
+    caretPos = getLineStart(caretPos);
+    preferredColumn = -1;
+    updateTextPositions();
+    cursorClock.restart();
+    showCursor = true;
+}
+
+void InputBar::moveCaretEnd() {
+    caretPos = getLineEnd(caretPos);
+    preferredColumn = -1;
+    updateTextPositions();
+    cursorClock.restart();
+    showCursor = true;
+}
+
+void InputBar::moveCaretUp() {
+    if (!isMultiline()) return;
+
+    int line = getLineOfPos(caretPos);
+    int col = getColumnOfPos(caretPos);
+
+    if (preferredColumn == -1) preferredColumn = col;
+    if (line <= 0) return;
+
+    caretPos = getPosFromLineColumn(line - 1, preferredColumn);
+    updateTextPositions();
+    cursorClock.restart();
+    showCursor = true;
+}
+
+void InputBar::moveCaretDown() {
+    if (!isMultiline()) return;
+
+    int line = getLineOfPos(caretPos);
+    int col = getColumnOfPos(caretPos);
+
+    if (preferredColumn == -1) preferredColumn = col;
+
+    int totalLines = 1;
+    for (char c : content) {
+        if (c == '\n') ++totalLines;
+    }
+
+    if (line >= totalLines - 1) return;
+
+    caretPos = getPosFromLineColumn(line + 1, preferredColumn);
+    updateTextPositions();
+    cursorClock.restart();
+    showCursor = true;
+}
+
+void InputBar::moveCaretToMouse(sf::Vector2f mousePos) {
+    sf::Vector2f pos = box.getPosition();
+    float paddingX = 15.f;
+    float paddingY = 10.f;
+
+    if (!isMultiline()) {
+        float centerY = pos.y + box.getSize().y / 2.f;
+
+        sf::Text temp(ctx.font, content, text.getCharacterSize());
+        temp.setPosition({pos.x + paddingX, centerY});
+        sf::FloatRect tempBounds = temp.getLocalBounds();
+        temp.setOrigin({
+            0.f,
+            tempBounds.position.y + tempBounds.size.y / 2.f
+        });
+
+        std::size_t bestPos = 0;
+        float bestDist = std::abs(temp.findCharacterPos(0).x - mousePos.x);
+
+        for (std::size_t i = 1; i <= content.size(); ++i) {
+            float x = temp.findCharacterPos(i).x;
+            float d = std::abs(x - mousePos.x);
+            if (d < bestDist) {
+                bestDist = d;
+                bestPos = i;
+            }
+        }
+
+        caretPos = bestPos;
+        preferredColumn = -1;
+        updateTextPositions();
+        cursorClock.restart();
+        showCursor = true;
+        return;
+    }
+
+    float lineHeight = ctx.font.getLineSpacing(text.getCharacterSize());
+    int targetLine = static_cast<int>((mousePos.y - (pos.y + paddingY)) / lineHeight);
+    if (targetLine < 0) targetLine = 0;
+
+    auto lines = getLines(false);
+    if (lines.empty()) lines.push_back("");
+
+    if (targetLine >= static_cast<int>(lines.size())) {
+        targetLine = static_cast<int>(lines.size()) - 1;
+    }
+
+    std::size_t lineStart = getPosFromLineColumn(targetLine, 0);
+    const std::string& lineStr = lines[targetLine];
+
+    sf::Text temp(ctx.font, lineStr, text.getCharacterSize());
+    temp.setOrigin({0.f, 0.f});
+    temp.setPosition({
+        pos.x + paddingX,
+        pos.y + paddingY + targetLine * lineHeight
+    });
+
+    int bestCol = 0;
+    float bestDist = std::abs(temp.findCharacterPos(0).x - mousePos.x);
+
+    for (int i = 1; i <= static_cast<int>(lineStr.size()); ++i) {
+        float x = temp.findCharacterPos(i).x;
+        float d = std::abs(x - mousePos.x);
+        if (d < bestDist) {
+            bestDist = d;
+            bestCol = i;
+        }
+    }
+
+    caretPos = lineStart + static_cast<std::size_t>(bestCol);
+    preferredColumn = -1;
 }
 
 }
