@@ -354,7 +354,7 @@ void DSAMenuBase::updateLayout() {
     float mainX = 30.f;      
     float mainY = 100.f;
     float gapMain = 5.f;    
-    float buttonWidth = 170.f; 
+    float buttonWidth = 200.f; 
     float buttonHeight = 60.f;
 
     std::vector<std::string> labels = getMainButtonLabels();

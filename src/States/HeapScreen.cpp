@@ -111,7 +111,7 @@ void HeapScreen::handleMenuAction(int subBtnIndex) {
     else if (menu == ActiveMenu::Search) { // Find Maximum
         controller.handleReturnRoot();
     }
-    else if (menu == ActiveMenu::Clean) {
+    else if (menu == ActiveMenu::Update) {
         controller.handleClearAll();
         isRawData = false;
         uiMenu.setMainButtonEnabled(1, true);

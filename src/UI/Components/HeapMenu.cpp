@@ -46,13 +46,13 @@ void HeapMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         activeInputs.back().setPlaceholder(placeholder);
     };
 
-    auto createCustomBtn = [&](const std::string& label, float x, float w = 90.f) {
+    auto createCustomBtn = [&](const std::string& label, float x, float w = 100.f) { // Increased default width to 100.f
         activeSubButtons.emplace_back(ctx, label, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
         activeSubButtons.back().setColors(idle, hover, press, sf::Color::White);
     };
 
     float currentX = innerX;
-    float gap = 15.f;
+    float gap = 50.f; // Increased gap for better breathing room
 
     if (type == ActiveMenu::Create) {
         int sel = lastDropdownIndex; 
@@ -70,34 +70,36 @@ void HeapMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
             currentX += 100.f + gap;
         } 
         else if (sel == 1) { // File
-            createCustomBtn("Edit", currentX);
-            currentX += 90.f + gap;
+            createCustomBtn("Edit", currentX, 100.f);
+            currentX += 100.f + gap;
         }
 
-        createCustomBtn("Create", currentX, 100.f);
-        currentX += 100.f + gap;
-        createCustomBtn("Heapify", currentX, 100.f);
-        currentX += 100.f;
+        createCustomBtn("Create", currentX, 110.f);
+        currentX += 110.f + gap;
+        createCustomBtn("Heapify", currentX, 110.f);
+        currentX += 110.f;
     }
     else if (type == ActiveMenu::Insert) {
         createInput("Value", currentX, 140.f);
         currentX += 140.f + gap;
-        createCustomBtn("Insert", currentX);
-        currentX += 90.f;
+        createCustomBtn("Insert", currentX, 110.f);
+        currentX += 110.f;
     }
-    // --- ADDED GO BUTTONS BELOW ---
     else if (type == ActiveMenu::Remove) {
-        // Specifically for "Delete Root"
         createCustomBtn("Go", currentX, 100.f);
         currentX += 100.f;
     }
     else if (type == ActiveMenu::Search) {
-        // Specifically for "Find Maximum"
+        createCustomBtn("Go", currentX, 100.f);
+        currentX += 100.f;
+    }
+    // --- Mapped to the 5th button (Clear All) as requested ---
+    else if (type == ActiveMenu::Update) {
         createCustomBtn("Go", currentX, 100.f);
         currentX += 100.f;
     }
 
-    boxWidth = (currentX - boxX) + 20.f;
+    boxWidth = (currentX - boxX) + 25.f; // Added extra padding to prevent edge clipping
     panelBg.setPosition({boxX, boxY});
     panelBg.setSize({boxWidth, boxHeight});
 }
