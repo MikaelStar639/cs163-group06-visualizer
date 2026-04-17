@@ -29,7 +29,8 @@ void TrieScreen::handleEvent(const sf::Event& event) {
         handleMenuAction();
         uiMenu.clearInputs(); 
 
-        if (uiMenu.getActiveMenu() == UI::Widgets::ActiveMenu::Clean) {
+        // Kiểm tra Clean theo chuẩn Action mới
+        if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::TrieMenu::Action::Clean)) {
             uiMenu.resetMenu();
         }
     }
@@ -43,13 +44,20 @@ void TrieScreen::handleEvent(const sf::Event& event) {
 
 void TrieScreen::handleMenuAction() {
     using namespace UI::Widgets;
-    ActiveMenu menu = uiMenu.getActiveMenu();
+    
+    // Lấy index thay vì ActiveMenu cục bộ
+    int menuIndex = uiMenu.getActiveMenuIndex();
+    if (menuIndex == -1) return;
+
+    // Ép kiểu về enum riêng của TrieMenu
+    TrieMenu::Action menu = static_cast<TrieMenu::Action>(menuIndex);
+    
     int sel = uiMenu.getDropdownSelection();
     const auto& inputs = uiMenu.getInputs();
 
     std::string word = !inputs.empty() ? inputs[0].getText() : "";
 
-    if (menu == ActiveMenu::Create) {
+    if (menu == TrieMenu::Action::Create) {
         if (sel == 0) { // Random
             std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
             if (sizeStr.empty()) return;
@@ -61,21 +69,19 @@ void TrieScreen::handleMenuAction() {
             else if (subBtn == 1) controller.handleCreateFromFile();
         }
     }
-    else if (menu == ActiveMenu::Insert) {
+    else if (menu == TrieMenu::Action::Insert) {
         if (!word.empty()) controller.handleInsert(word);
     }
-    else if (menu == ActiveMenu::Search) {
+    else if (menu == TrieMenu::Action::Search) {
         if (!word.empty()) {
-            int sel = uiMenu.getDropdownSelection(); 
             bool isPrefix = (sel == 1); 
             controller.handleSearch(word, isPrefix); 
         }
     }
-    else if (menu == ActiveMenu::Remove) {
-        std::cout << "dsl";
+    else if (menu == TrieMenu::Action::Remove) {
         if (!word.empty()) controller.handleRemove(word);
     }
-    else if (menu == ActiveMenu::Clean) {
+    else if (menu == TrieMenu::Action::Clean) {
         controller.handleClearAll();
     }
 }

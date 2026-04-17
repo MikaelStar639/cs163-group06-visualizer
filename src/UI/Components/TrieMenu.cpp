@@ -12,21 +12,22 @@ std::vector<std::string> TrieMenu::getMainButtonLabels() const {
     return {"Create", "Insert", "Erase", "Search", "Clear All"};
 }
 
-void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
-    // 1. Setup Coordinates and Padding
+bool TrieMenu::isInstantAction(int index) const {
+    return index == static_cast<int>(Action::Clean);
+}
+
+void TrieMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {
     float innerX = boxX + 15.f;
     float innerY = boxY + 15.f;
     float boxHeight = 80.f;
     float boxWidth = 0.f;
 
-    // 2. Fetch Theme Colors from Config
     sf::Color innerBtnIdle   = Config::UI::Colors::ButtonIdle;
     sf::Color innerBtnHover  = Config::UI::Colors::ButtonHover;
     sf::Color innerBtnPress  = Config::UI::Colors::ButtonPressed;
     sf::Color dropdownHover  = Config::UI::Colors::ButtonHover;
     sf::Color dropdownPress  = Config::UI::Colors::ButtonPressed;
 
-    // 3. Tool: Dropdown Creator (unchanged logic)
     auto createDropdown = [&](const std::vector<std::string>& options, float x, float w) {
         dropdownAction.emplace(ctx, "Select...", sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f});
         dropdownAction->setColors(innerBtnIdle, dropdownHover, dropdownPress, sf::Color::White);
@@ -43,14 +44,11 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         return dropdownAction->getSelectedIndex();
     };
 
-    // 4. Tool: Input Field Creator
-    // NOTE: Defaulting to AnyText here is better for Tries than Integer!
     auto createInput = [&](const std::string& placeholder, float x, float w, InputType inputType = InputType::AnyText) {
         activeInputs.emplace_back(ctx, sf::Vector2f{x, innerY}, sf::Vector2f{w, 45.f}, "", inputType);
         activeInputs.back().setPlaceholder(placeholder);
     };
 
-    // 5. Tool: Execution Button ("Go") Creator
     auto createExecuteBtn = [&](float x) {
         activeSubButtons.emplace_back(ctx, "Go", sf::Vector2f{x, innerY}, sf::Vector2f{90.f, 45.f});
         activeSubButtons.back().setColors(innerBtnIdle, innerBtnHover, innerBtnPress, sf::Color::White);
@@ -58,15 +56,17 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
 
     float currentX = innerX;
     float gap = 15.f; 
+    
+    // Ép kiểu index về enum nội bộ
+    Action type = static_cast<Action>(menuIndex);
 
-    if (type == ActiveMenu::Create) {
+    if (type == Action::Create) {
         int sel = createDropdown({"Random", "File"}, currentX, 160.f);
         currentX += 160.f + gap;
 
         if (sel == 0) { 
             createInput("Count", currentX, 120.f, InputType::Integer);
             currentX += 120.f + gap;
-            
             createExecuteBtn(currentX);
             currentX += 90.f;
         } 
@@ -80,35 +80,23 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
             currentX += 90.f;
         }
     }
-
-    else if (type == ActiveMenu::Insert) {
-        // 1. Create a single text input for the word
+    else if (type == Action::Insert) {
         createInput("Word", currentX, 200.f, InputType::Word);
         currentX += 200.f + gap;
-
-        // 2. Add the Go button
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
-
-    else if (type == ActiveMenu::Remove) {
+    else if (type == Action::Remove) {
         createInput("Word", currentX, 200.f, InputType::Word);
         currentX += 200.f + gap;
-
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
-
-    else if (type == ActiveMenu::Search) {
-        // 1. Let the user choose what kind of search they are doing
+    else if (type == Action::Search) {
         int sel = createDropdown({"Word", "Prefix"}, currentX, 160.f);
         currentX += 160.f + gap;
-
-        // 2. The input box for the search string
         createInput("Text", currentX, 160.f, InputType::AnyText);
         currentX += 160.f + gap;
-
-        // 3. The Go button
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
@@ -125,4 +113,4 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
     }
 }
 
-}
+} // namespace UI::Widgets
