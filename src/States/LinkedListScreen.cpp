@@ -36,8 +36,7 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
         
         handleMenuAction();
         uiMenu.clearInputs();
-
-        if (uiMenu.getActiveMenu() == UI::Widgets::ActiveMenu::Clean) {
+        if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::LinkedListMenu::Action::Clean)) {
             uiMenu.resetMenu();
         }
     }
@@ -51,11 +50,14 @@ void LinkedListScreen::handleEvent(const sf::Event& event) {
 
 void LinkedListScreen::handleMenuAction() {
     using namespace UI::Widgets;
-    ActiveMenu menu = uiMenu.getActiveMenu();
+    int menuIndex = uiMenu.getActiveMenuIndex();
+    if (menuIndex == -1) return;
+    LinkedListMenu::Action menu = static_cast<LinkedListMenu::Action>(menuIndex);
+    
     int sel = uiMenu.getDropdownSelection();
     const auto& inputs = uiMenu.getInputs();
 
-    if (menu == ActiveMenu::Create) {
+    if (menu == LinkedListMenu::Action::Create) {
         if (sel == 0) { // Random
             std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
             if (sizeStr.empty()) return;
@@ -67,7 +69,7 @@ void LinkedListScreen::handleMenuAction() {
             else if (subBtn == 1) controller.handleCreateFromFile();
         }
     }
-    else if (menu == ActiveMenu::Insert) {
+    else if (menu == LinkedListMenu::Action::Insert) {
         int val = 0;
         int pos = 0;
 
@@ -85,23 +87,23 @@ void LinkedListScreen::handleMenuAction() {
         
         controller.handleInsert(sel, pos, val);
     }
-    else if (menu == ActiveMenu::Remove) {
+    else if (menu == LinkedListMenu::Action::Delete) {
         int pos = (sel == 2 && !inputs.empty()) ? std::stoi(inputs[0].getText()) : 0;
         controller.handleRemove(sel, pos);
     }
-    else if (menu == ActiveMenu::Search) {
+    else if (menu == LinkedListMenu::Action::Search) {
         std::string valStr = !inputs.empty() ? inputs[0].getText() : "";
         if (valStr.empty()) return;
         
         controller.handleSearch(std::stoi(valStr));
     }
-    else if (menu == ActiveMenu::Update) {
+    else if (menu == LinkedListMenu::Action::Update) {
         int arg1 = (inputs.size() > 0 && !inputs[0].getText().empty()) ? std::stoi(inputs[0].getText()) : 0;
         int arg2 = (inputs.size() > 1 && !inputs[1].getText().empty()) ? std::stoi(inputs[1].getText()) : 0;
         
         controller.handleUpdate(sel, arg1, arg1, arg2);
     }
-    else if (menu == ActiveMenu::Clean) {
+    else if (menu == LinkedListMenu::Action::Clean) {
         controller.handleClearAll();
     }
 }

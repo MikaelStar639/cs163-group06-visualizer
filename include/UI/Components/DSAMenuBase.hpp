@@ -17,10 +17,6 @@
 
 namespace UI::Widgets {
 
-    enum class ActiveMenu {
-        None, Create, Insert, Remove, Search, Update, Clean
-    };
-
     class DSAMenuBase {
     protected:
         AppContext& ctx;
@@ -41,7 +37,7 @@ namespace UI::Widgets {
         UI::Shapes::PrevIcon iconPrev;
 
         // Menu State
-        ActiveMenu activeMenu = ActiveMenu::None;
+        int activeMenuIndex = -1;
         int lastDropdownIndex = -1;
 
         // Widget containers
@@ -52,8 +48,9 @@ namespace UI::Widgets {
 
         // Layout helpers
         virtual void updateLayout();
-        virtual void renderSubMenu(float boxX, float boxY, ActiveMenu type) = 0;
+        virtual void renderSubMenu(float boxX, float boxY, int menuIndex) = 0;
         virtual std::vector<std::string> getMainButtonLabels() const = 0;
+        virtual bool isInstantAction(int index) const { return false; }
 
         // Flag for interaction
         bool goClicked = false;
@@ -77,7 +74,7 @@ namespace UI::Widgets {
         bool consumeCancelClicked();
         bool consumeSkipClicked();
 
-        ActiveMenu getActiveMenu() const { return activeMenu; }
+        int getActiveMenuIndex() const { return activeMenuIndex; }
         int getDropdownSelection() const { return lastDropdownIndex; }
         int getClickedSubButtonIndex() const { return clickedSubButtonIndex; }
         const std::vector<InputBar>& getInputs() const { return activeInputs; }

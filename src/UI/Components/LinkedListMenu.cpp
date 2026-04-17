@@ -12,7 +12,11 @@ std::vector<std::string> LinkedListMenu::getMainButtonLabels() const {
     return {"Create", "Insert", "Delete", "Search", "Update", "Clear All"};
 }
 
-void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
+bool LinkedListMenu::isInstantAction(int index) const {
+    return index == static_cast<int>(Action::Clean);
+}
+
+void LinkedListMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {
     float innerX = boxX + 15.f;
     float innerY = boxY + 15.f;
     float boxHeight = 80.f;
@@ -52,8 +56,9 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
 
     float currentX = innerX;
     float gap = 15.f; 
+    Action type = static_cast<Action>(menuIndex);
 
-    if (type == ActiveMenu::Create) {
+    if (type == Action::Create) {
         int sel = createDropdown({"Random", "File"}, currentX, 160.f);
         currentX += 160.f + gap;
 
@@ -74,7 +79,7 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
             currentX += 90.f;
         }
     }
-    else if (type == ActiveMenu::Insert) {
+    else if (type == Action::Insert) {
         int sel = createDropdown({"Head", "Tail", "At"}, currentX, 160.f);
         currentX += 160.f + gap;
 
@@ -89,7 +94,7 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
-    else if (type == ActiveMenu::Remove) {
+    else if (type == Action::Delete) {
         int sel = createDropdown({"Head", "Tail", "At"}, currentX, 160.f);
         currentX += 160.f + gap;
 
@@ -101,13 +106,13 @@ void LinkedListMenu::renderSubMenu(float boxX, float boxY, ActiveMenu type) {
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
-    else if (type == ActiveMenu::Search) {
+    else if (type == Action::Search) {
         createInput("Value", currentX, 160.f, InputType::Integer);
         currentX += 160.f + gap;
         createExecuteBtn(currentX);
         currentX += 90.f;
     }
-    else if (type == ActiveMenu::Update) {
+    else if (type == Action::Update) {
         int sel = createDropdown({"At", "By Value"}, currentX, 190.f);
         currentX += 190.f + gap;
         

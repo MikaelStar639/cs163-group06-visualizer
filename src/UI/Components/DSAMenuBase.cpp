@@ -52,22 +52,15 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // btnBack handling is done via public API isBackClicked
     
     std::vector<std::string> labels = getMainButtonLabels();
-    // Assuming labels correspond to ActiveMenu enums starting from Create
-    std::vector<ActiveMenu> enums = {
-        ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, 
-        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::Clean
-    };
 
-    for (size_t i = 0; i < mainButtons.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(mainButtons.size()); ++i) {
         if (mainButtons[i].isClicked(event)) {
-            ActiveMenu clickedMenu = enums[i];
-            
-            if (clickedMenu == ActiveMenu::Clean) {
-                activeMenu = ActiveMenu::Clean;
+            if (isInstantAction(i)) {
+                activeMenuIndex = i;
                 goClicked = true; 
             } else {
-                activeMenu = (activeMenu == clickedMenu) ? ActiveMenu::None : clickedMenu;
-                lastDropdownIndex = (activeMenu == ActiveMenu::None) ? -1 : 0;
+                activeMenuIndex = (activeMenuIndex == i) ? -1 : i;
+                lastDropdownIndex = (activeMenuIndex == -1) ? -1 : 0;
             }
             
             updateLayout();
@@ -175,7 +168,7 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     btnBack.draw();
     for (auto& btn : mainButtons) btn.draw();
     
-    if (activeMenu != ActiveMenu::None && activeMenu != ActiveMenu::Clean) {
+    if (activeMenuIndex != -1 && !isInstantAction(activeMenuIndex)) {
         window.draw(panelBg);
         for (auto& input : activeInputs) input.draw();
         for (auto& btn : activeSubButtons) btn.draw();
@@ -222,10 +215,6 @@ void DSAMenuBase::updateLayout() {
     float buttonHeight = 60.f;
 
     std::vector<std::string> labels = getMainButtonLabels();
-    std::vector<ActiveMenu> enums = {
-        ActiveMenu::Create, ActiveMenu::Insert, ActiveMenu::Remove, 
-        ActiveMenu::Search, ActiveMenu::Update, ActiveMenu::Clean
-    };
 
     if (mainButtons.empty()) {
         for (const auto& label : labels) {
@@ -233,9 +222,9 @@ void DSAMenuBase::updateLayout() {
         }
     }
 
-    for (size_t i = 0; i < mainButtons.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(mainButtons.size()); ++i) {
         auto& b = mainButtons[i];
-        bool isActive = (activeMenu == enums[i]);
+        bool isActive = (activeMenuIndex == i);
         b.setPosition({mainX + (buttonWidth + gapMain) * static_cast<float>(i), mainY});
         
         if (isActive) {
@@ -249,21 +238,18 @@ void DSAMenuBase::updateLayout() {
     activeInputs.clear();
     dropdownAction.reset();
 
-    if (activeMenu == ActiveMenu::None || activeMenu == ActiveMenu::Clean) return;
+    if (activeMenuIndex == -1 || isInstantAction(activeMenuIndex)) return;
 
     float boxX = 30.f;
     float boxY = mainY + buttonHeight + 15.f;
-    for (size_t i = 0; i < mainButtons.size(); ++i) {
-        if (activeMenu == enums[i]) {
-            sf::Vector2f btnPos  = mainButtons[i].getPosition();
-            sf::Vector2f btnSize = mainButtons[i].getSize();
-            boxX = btnPos.x;
-            boxY = btnPos.y + btnSize.y + 15.f;
-            break;
-        }
+    if (activeMenuIndex >= 0 && activeMenuIndex < static_cast<int>(mainButtons.size())) {
+        sf::Vector2f btnPos  = mainButtons[activeMenuIndex].getPosition();
+        sf::Vector2f btnSize = mainButtons[activeMenuIndex].getSize();
+        boxX = btnPos.x;
+        boxY = btnPos.y + btnSize.y + 15.f;
     }
 
-    renderSubMenu(boxX, boxY, activeMenu);
+    renderSubMenu(boxX, boxY, activeMenuIndex);
 }
 
 bool DSAMenuBase::consumeGoClicked() {
@@ -291,7 +277,7 @@ bool DSAMenuBase::consumeSkipClicked() {
 }
 
 void DSAMenuBase::resetMenu() {
-    activeMenu = ActiveMenu::None;
+    activeMenuIndex = -1;
     lastDropdownIndex = -1;
     updateLayout();
 }
