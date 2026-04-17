@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <cstddef>
 
 namespace UI::DSA {
 
@@ -59,6 +60,10 @@ namespace UI::DSA {
 
         // setter
         void setNodeValueRaw(int index, const std::string& newVal);
+
+        void swapNodePointers(int i, int j);
+
+        size_t getNodeCount() const {return nodes.size();}
     };
 
 } // namespace UI::DSA

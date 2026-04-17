@@ -418,6 +418,12 @@ bool DSAMenuBase::consumeCancelClicked() {
     return false; 
 }
 
+int DSAMenuBase::consumeClickedSubButtonIndex() {
+    int temp = clickedSubButtonIndex;
+    clickedSubButtonIndex = -1;
+    return temp;
+}
+
 void DSAMenuBase::resetMenu() {
     activeMenu = ActiveMenu::None;
     lastDropdownIndex = -1;

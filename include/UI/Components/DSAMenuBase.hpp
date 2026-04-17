@@ -74,6 +74,7 @@ namespace UI::Widgets {
         bool isBackClicked(const sf::Event& event) { return btnBack.isClicked(event); }
         bool consumeGoClicked(); // Returns true if Go was clicked, then resets it
         bool consumeCancelClicked();
+        int consumeClickedSubButtonIndex();
 
         ActiveMenu getActiveMenu() const { return activeMenu; }
         int getDropdownSelection() const { return lastDropdownIndex; }

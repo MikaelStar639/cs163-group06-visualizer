@@ -1,27 +1,51 @@
 #pragma once
+
 #include <vector>
+#include <functional>
 
-namespace Core::DSA {
+namespace Core {
+    namespace DSA {
 
-    class Heap {
-    private:
-        std::vector<int> pool;
+        enum class HeapAction {
+            Compare,
+            Swap,
+            Update,
+            Insert,
+            Remove,
+            Focus
+        };
 
-        int parent(int i) const { return (i - 1) / 2; }
-        int leftChild(int i) const { return 2 * i + 1; }
-        int rightChild(int i) const { return 2 * i + 2; }
-        void heapifyUp(int index);
-        void heapifyDown(int index);
+        class Heap {
+        private:
+            std::vector<int> pool;
+            std::function<void(HeapAction, int, int, int)> onAction;
 
-    public:
-        Heap();
-        void clear();
-        void insert(int val);
-        bool deleteValue(int val);
-        bool updateValue(int oldVal, int newVal);
-        int search(int val) const;
-        std::vector<int> getLogicalList() const;
-        const std::vector<int>& getPool() const { return pool; }
-    };
+            int parent(int i);
+            int leftChild(int i);
+            int rightChild(int i);
+            void notify(HeapAction action, int i = -1, int j = -1, int val = 0);
 
-}
+        public:
+            Heap();
+            void clear();
+            void loadRawData(const std::vector<int>& data);
+            
+            void setObserver(std::function<void(HeapAction, int, int, int)> callback);
+
+            // Core Logic
+            void heapifyUp(int index);
+            void heapifyDown(int index);
+
+            // High-level operations
+            void insert(int val);
+            void removeRoot();
+            void buildHeap(const std::vector<int>& data);
+            int top();
+
+            // Utilities
+            const std::vector<int>& getPool() const { return pool; }
+            int size() const { return static_cast<int>(pool.size()); }
+        };
+
+    } // namespace DSA
+} // namespace Core

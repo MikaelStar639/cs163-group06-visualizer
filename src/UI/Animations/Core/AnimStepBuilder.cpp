@@ -56,6 +56,37 @@ namespace UI::Animations {
         return *this;
     }
 
+    AnimStepBuilder& AnimStepBuilder::nodeSwap(UI::DSA::Node* a, UI::DSA::Node* b, float duration) {
+        if (a && b) {
+            sequence->add(std::make_unique<NodeSwapAnimation>(a, b, duration));
+        }
+        return *this;
+    }
+
+    AnimStepBuilder& AnimStepBuilder::nodesHighlight(UI::DSA::Node* a, UI::DSA::Node* b, float duration) {
+        auto parallel = std::make_unique<ParallelAnimation>();
+        
+        if (a) parallel->add(std::make_unique<NodeHighlightAnimation>(a, duration));
+        if (b) parallel->add(std::make_unique<NodeHighlightAnimation>(b, duration));
+        
+        // By adding the parallel object to the sequence, 
+        // both highlights will start and finish at the same time.
+        sequence->add(std::move(parallel));
+        
+        return *this;
+    }
+
+    AnimStepBuilder& AnimStepBuilder::nodesUnhighlight(UI::DSA::Node* a, UI::DSA::Node* b, float duration) {
+        auto parallel = std::make_unique<ParallelAnimation>();
+        
+        if (a) parallel->add(std::make_unique<NodeUnhighlightAnimation>(a, duration));
+        if (b) parallel->add(std::make_unique<NodeUnhighlightAnimation>(b, duration));
+        
+        sequence->add(std::move(parallel));
+        
+        return *this;
+    }
+
     AnimStepBuilder& AnimStepBuilder::callback(std::function<void()> fn) {
         sequence->add(std::make_unique<CallbackAnimation>(std::move(fn)));
         return *this;

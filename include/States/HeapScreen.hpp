@@ -6,6 +6,7 @@
 #include <States/Screen.hpp>
 #include <States/DSAScreenBase.hpp>
 #include <UI/Components/HeapMenu.hpp>
+#include <UI/Widgets/PseudoCodeViewer.hpp>
 #include <UI/DSA/Graph.hpp>
 #include <vector>
 #include <string>
@@ -14,10 +15,13 @@
 class HeapScreen : public DSAScreenBase {
 private:
     UI::Widgets::HeapMenu uiMenu;
+    UI::Widgets::PseudoCodeViewer codeViewer;
     Core::DSA::Heap model;
     Controllers::HeapController controller;
 
-    void handleMenuAction();
+    bool isRawData; // Added to track the "Create" vs "Heapify" state
+
+    void handleMenuAction(int subBtnIndex);
 
 public:
     explicit HeapScreen(AppContext& context);

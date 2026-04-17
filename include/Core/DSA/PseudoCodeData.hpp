@@ -150,4 +150,49 @@ namespace Core::DSA::PseudoCode {
 
     } // namespace LinkedList
 
+    // ===== HEAP =====
+    namespace Heap {
+
+        inline PseudoCodeDef insert() {
+            return { "Insert", {
+                { "pool.push_back(val)",           "insert_at_end",    0 },
+                { "heapifyUp(last_index)",         "heapify_up",       0 },
+                { "while index > 0:",              "loop_cond",        1 },
+                { "  if val > parent:",            "compare_parent",   2 },
+                { "    swap(val, parent)",         "swap_with_parent", 3 },
+                { "  else: break",                 "break_loop",       2 },
+            }};
+        }
+
+        inline PseudoCodeDef removeRoot() {
+            return { "Remove Root", {
+                { "if empty: return",              "check_empty",      0 },
+                { "swap(root, last_element)",      "swap_root",        0 },
+                { "pool.pop_back()",               "remove_last",      0 },
+                { "heapifyDown(0)",                "heapify_down",     0 },
+                { "while leftChild exists:",       "loop_cond",        1 },
+                { "  target = larger child",       "find_max_child",   2 },
+                { "  if target > val:",            "compare_child",    2 },
+                { "    swap(val, target)",         "swap_with_child",  3 },
+                { "  else: break",                 "break_loop",       2 },
+            }};
+        }
+
+        inline PseudoCodeDef buildHeap() {
+            return { "Build Heap", {
+                { "for i = (size/2)-1 down to 0:", "loop_outer",       0 },
+                { "  heapifyDown(i)",              "call_heapify",     1 },
+            }};
+        }
+
+        inline PseudoCodeDef returnRoot() {
+        return { "Return Root", {
+            { "if pool.empty(): return null", "check_empty", 0 },
+            { "root = pool[0]",               "access_root", 0 },
+            { "return root",                  "return_val",  0 },
+        }};
+    }
+
+    } // namespace Heap
+
 } // namespace Core::DSA::PseudoCode

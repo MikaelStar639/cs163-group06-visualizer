@@ -18,7 +18,13 @@ namespace UI::DSA::LayoutEngine {
     );
 
     // Heap:
-    // ...
+    std::unique_ptr<Animations::ParallelAnimation> asHeap(
+        const Graph& graph,
+        float startX,
+        float startY,
+        float spacing,
+        float duration = 0.5f
+    );
 
     // Trie:
     // ...

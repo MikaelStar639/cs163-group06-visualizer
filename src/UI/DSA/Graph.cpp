@@ -258,5 +258,10 @@ namespace UI::DSA {
         nodes[index]->setLabel(newVal);
     }
 
+    void Graph::swapNodePointers(int i, int j) {
+        if (i < nodes.size() && j < nodes.size()) {
+            std::swap(nodes[i], nodes[j]);
+        }
+    }
     
 } // namespace UI::DSA
