@@ -296,44 +296,54 @@ namespace Controllers {
         ctx.animManager.addAnimation(b.build());
     }
 
+    // ==================== REMOVE ROOT (POP) ====================
     void HeapController::handleRemoveRoot() {
         using Builder = UI::Animations::AnimStepBuilder;
         auto codeDef = Core::DSA::PseudoCode::Heap::removeRoot();
         Builder b(codeDef, codeViewer);
 
-        model.setObserver([this, &b](Core::DSA::HeapAction action, int i, int j, int v) {
+        // [KHIÊN BẢO VỆ]: Mảng theo dõi con trỏ đồng bộ với Model ngầm
+        // Mảng này sẽ "ảo hóa" các thao tác swap trước khi graph kịp chạy animation
+        std::vector<UI::DSA::Node*> currentPointers;
+        for (int k = 0; k < (int)graph.getNodeCount(); ++k) {
+            currentPointers.push_back(graph.getNode(k));
+        }
+
+        model.setObserver([this, &b, currentPointers](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             
-            // 1. First Swap (Animate movement + Logical pointer sync)
+            // 1. Hoán đổi vị trí của Root và Node cuối cùng
             if (action == Core::DSA::HeapAction::Update && i == 0) {
-                int lastIdx = (int)graph.getNodeCount() - 1;
-                auto* rootNode = graph.getNode(0);
-                auto* lastNode = graph.getNode(lastIdx);
+                int lastIdx = (int)currentPointers.size() - 1;
+                
+                // Lấy con trỏ từ tracker thay vì graph
+                auto* rootNode = currentPointers[0];
+                auto* lastNode = currentPointers[lastIdx];
 
                 if (rootNode && lastNode) {
+                    // Cập nhật tracker ĐỒNG BỘ với logic
+                    std::swap(currentPointers[0], currentPointers[lastIdx]);
+
                     b.highlight("swap_root")
                     .nodesHighlight(rootNode, lastNode, 0.4f)
                     .wait(0.2f)
                     .callback([this, lastIdx]() {
-                        // Sync graph pointers so 'lastNode' is logically at index 0
+                        // Graph đảo thật sự khi Animation chạy tới đây
                         graph.swapNodePointers(0, lastIdx);
                         syncGraphEdges();
                     })
                     .nodeSwap(rootNode, lastNode, 0.8f)
                     .wait(0.8f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    // IMPORTANT: These nodes must finish unhighlighting 
-                    // BEFORE the removal callback runs.
                     .nodesUnhighlight(rootNode, lastNode, 0.2f)
                     .wait(0.2f); 
                 }
                 return;
             }
 
-            // 2. Physical Removal (The "Segfault Zone")
+            // 2. Physical Removal (Cắt bỏ Node cuối cùng)
             if (action == Core::DSA::HeapAction::Remove) {
                 b.highlight("remove_last")
                 .callback([this, i]() {
-                    // Check if the node actually exists before deleting
                     if (i >= 0 && i < (int)graph.getNodeCount()) {
                         graph.removeNodeAt(i);
                     }
@@ -344,12 +354,17 @@ namespace Controllers {
                 return;
             }
 
-            // 3. Heapify Down Swaps
+            // 3. Heapify Down Swaps (Chìm xuống)
             if (action == Core::DSA::HeapAction::Swap) {
-                auto* nodeA = graph.getNode(i);
-                auto* nodeB = graph.getNode(j);
+                
+                // LẤY CON TRỎ TỪ MẢNG THEO DÕI ĐÃ ĐƯỢC CẬP NHẬT Ở BƯỚC 1
+                auto* nodeA = currentPointers[i];
+                auto* nodeB = currentPointers[j];
 
                 if (nodeA && nodeB) {
+                    // Cập nhật tracker
+                    std::swap(currentPointers[i], currentPointers[j]);
+
                     b.highlight("swap_with_child")
                     .nodesHighlight(nodeA, nodeB, 0.3f)
                     .wait(0.1f)
@@ -361,7 +376,7 @@ namespace Controllers {
                     .wait(0.6f)
                     .callback([this]() { triggerLayout(0.0f); })
                     .nodesUnhighlight(nodeA, nodeB, 0.2f)
-                    .wait(0.1f); // Brief wait to clear animation references
+                    .wait(0.1f); 
                 }
             }
         });
@@ -371,7 +386,7 @@ namespace Controllers {
         b.finish();
         ctx.animManager.addAnimation(b.build());
     }
-
+    
     void HeapController::handleReturnRoot() {
         using Builder = UI::Animations::AnimStepBuilder;
 
