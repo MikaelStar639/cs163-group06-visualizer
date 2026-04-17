@@ -588,20 +588,14 @@ namespace Controllers {
     void TrieController::handleClearAll() {
         if (codeViewer) codeViewer->hide();
 
-        if (graph.isAnimating()) {
-            model.clear();
-            graph.clear(); 
-        }
-
+        model.clear();
+        graph.clear(); 
         poolToGraphMap.clear();
-        graph.clearEdges();
-        int currentSize = graph.getNodes().size();
-        for (int i = 0; i < currentSize; ++i) {
-            graph.removeNodeAt(0); 
-        }
 
         graph.addNode("Root", {startX, startY});
         poolToGraphMap[model.getRootIndex()] = 0; 
+        
+        triggerLayout(0.f); 
     }
 
 } // namespace Controllers
