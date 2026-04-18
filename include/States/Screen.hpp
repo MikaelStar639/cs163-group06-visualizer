@@ -11,6 +11,7 @@ enum ScreenState{
     Trie,
     MST,
     Settings,
+    GraphInputTest,
     Exit
 };
 
