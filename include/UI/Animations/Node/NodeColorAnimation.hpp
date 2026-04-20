@@ -21,6 +21,9 @@ namespace UI::Animations {
                        sf::Color startFill, sf::Color endFill, 
                        sf::Color startText, sf::Color endText, 
                        float duration);
+
+        NodeColorAnimation(UI::DSA::Node* node, sf::Color targetFill, sf::Color targetText, float duration)
+            : NodeColorAnimation(node, node->getFillColor(), targetFill, node->getLabelColor(), targetText, duration) {}
                        
         void update(float dt) override;
         bool isFinished() const override;

@@ -15,6 +15,7 @@
 #include <string>
 #include <optional>
 
+#include <unordered_map>
 namespace UI::Widgets {
 
     class DSAMenuBase {
@@ -59,6 +60,13 @@ namespace UI::Widgets {
 
         // Flag for prev button
         bool cancelClicked = false;
+        bool skipClicked = false;
+
+        std::unordered_map<std::string, std::vector<std::string>> inputTextCache;
+
+        std::string makeInputCacheKey() const;
+        void saveCurrentInputsToCache();
+        void restoreInputsFromCache();
 
     public:
         DSAMenuBase(AppContext& context, const std::string& titleText);
@@ -72,6 +80,7 @@ namespace UI::Widgets {
         bool isBackClicked(const sf::Event& event) { return btnBack.isClicked(event); }
         bool consumeGoClicked(); // Returns true if Go was clicked, then resets it
         bool consumeCancelClicked();
+        bool consumeSkipClicked();
 
         int getActiveMenuIndex() const { return activeMenuIndex; }
         int getDropdownSelection() const { return lastDropdownIndex; }
@@ -82,6 +91,12 @@ namespace UI::Widgets {
         void clearInputs();
 
         void setMainButtonEnabled(int index, bool enabled);
+        void setCachedInputsForState(int menuIndex, int dropdownIndex, const std::vector<std::string>& values);
+
+        std::vector<InputBar>& getInputsMutable() { return activeInputs; }
+
+        
+        
     };
 
 }

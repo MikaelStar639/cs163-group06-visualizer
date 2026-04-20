@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 #include <cstddef>
+#include <unordered_map>
+#include <unordered_set> 
 
 namespace UI::DSA {
 
@@ -18,11 +20,17 @@ namespace UI::DSA {
         std::vector<std::unique_ptr<Edge>> edges;
         std::vector<Node*> drawOrder;
 
+        std::unordered_map<Node*, sf::Vector2f> velocities;
+        std::unordered_set<Node*> lockedNodes;
+
         Node* draggedNode = nullptr;
         sf::Vector2f dragOffset;
 
         bool isDirected;
         bool isDraggable; 
+
+        bool hasDragged = false;
+        sf::Vector2f initialClickPos;
 
     public:
         Graph(AppContext& context, bool directed = false);
@@ -66,6 +74,8 @@ namespace UI::DSA {
         void setIsDirected(bool Directed);
 
         size_t getNodeCount() const {return nodes.size();}
+        bool isNodeLocked(Node* node) const;
+        void setNodeLocked(Node* node, bool locked);
     };
 
 } // namespace UI::DSA

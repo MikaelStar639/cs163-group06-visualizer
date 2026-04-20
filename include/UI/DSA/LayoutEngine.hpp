@@ -1,6 +1,7 @@
 #pragma once
 #include "UI/DSA/Graph.hpp"
 #include "UI/Animations/Core/ParallelAnimation.hpp"
+#include "Core/DSA/Trie.hpp"
 #include <memory>
 
 namespace UI::DSA::LayoutEngine {
@@ -27,7 +28,16 @@ namespace UI::DSA::LayoutEngine {
     );
 
     // Trie:
-    // ...
+    std::unique_ptr<Animations::ParallelAnimation> asTrie(
+        const Graph& graph, 
+        const Core::DSA::Trie& model,
+        const std::unordered_map<int, int>& poolToGraphMap,
+        float startX, 
+        float startY, 
+        float hSpacing, 
+        float vSpacing,
+        float duration = 0.5f
+    );
 
     // MST:
     // ...

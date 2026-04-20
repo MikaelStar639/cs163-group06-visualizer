@@ -69,7 +69,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
                 activeMenuIndex = (activeMenuIndex == i) ? -1 : i;
                 lastDropdownIndex = (activeMenuIndex == -1) ? -1 : 0;
             }
-            
+
             updateLayout();
         }
     }
@@ -77,6 +77,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // 3. Dropdown Handling
     if (dropdownAction && dropdownAction->isClicked(event)) {
         if (dropdownAction->getSelectedIndex() != lastDropdownIndex) {
+            saveCurrentInputsToCache();
              dropdownAction->setLabel(dropdownAction->getSelectedText());
              lastDropdownIndex = dropdownAction->getSelectedIndex();
              updateLayout();
@@ -85,22 +86,22 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
 
     // 4. Input and Enter Key Handling
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
-        bool enterPressed = false;
-        if (const auto* keyEvent = event.getIf<sf::Event::KeyPressed>()) {
-            if (keyEvent->code == sf::Keyboard::Key::Enter) {
-                enterPressed = true;
-            }
-        }
-
         bool allInputsValid = true;
+        bool submitted = false;
+
         for (auto& input : activeInputs) {
             input.handleEvent(event);
+
             if (!input.valid()) {
                 allInputsValid = false;
             }
+
+            if (input.isSubmitted(event)) {
+                submitted = true;
+            }
         }
 
-        if (enterPressed && allInputsValid && !activeSubButtons.empty()) {
+        if (submitted && allInputsValid && !activeSubButtons.empty()) {
             goClicked = true;
             clickedSubButtonIndex = static_cast<int>(activeSubButtons.size() - 1);
             activeSubButtons[clickedSubButtonIndex].animateClick();
@@ -259,6 +260,8 @@ void DSAMenuBase::updateLayout() {
     }
 
     renderSubMenu(boxX, boxY, activeMenuIndex);
+
+    restoreInputsFromCache();
 }
 
 bool DSAMenuBase::consumeGoClicked() {
@@ -272,6 +275,14 @@ bool DSAMenuBase::consumeGoClicked() {
 bool DSAMenuBase::consumeCancelClicked() { 
     if (cancelClicked) { 
         cancelClicked = false; 
+        return true; 
+    } 
+    return false; 
+}
+
+bool DSAMenuBase::consumeSkipClicked() { 
+    if (skipClicked) { 
+        skipClicked = false; 
         return true; 
     } 
     return false; 
@@ -310,6 +321,45 @@ void DSAMenuBase::setMainButtonEnabled(int index, bool enabled) {
             Config::UI::Colors::ButtonText
         );
     }
+std::string DSAMenuBase::makeInputCacheKey() const {
+    return std::to_string(activeMenuIndex) + ":" + std::to_string(lastDropdownIndex);
+}
+
+void DSAMenuBase::saveCurrentInputsToCache() {
+    if (activeMenuIndex == -1) return;
+
+    std::vector<std::string> values;
+    values.reserve(activeInputs.size());
+
+    for (const auto& input : activeInputs) {
+        values.push_back(input.getText());
+    }
+
+    inputTextCache[makeInputCacheKey()] = std::move(values);
+}
+
+void DSAMenuBase::restoreInputsFromCache() {
+    auto it = inputTextCache.find(makeInputCacheKey());
+    if (it == inputTextCache.end()) return;
+
+    const auto& values = it->second;
+    for (size_t i = 0; i < activeInputs.size() && i < values.size(); ++i) {
+        activeInputs[i].setText(values[i]);
+    }
+}
+
+void DSAMenuBase::setCachedInputsForState(int menuIndex, int dropdownIndex, const std::vector<std::string>& values) {
+    std::string key = std::to_string(menuIndex) + ":" + std::to_string(dropdownIndex);
+    inputTextCache[key] = values;
+
+    // nếu đang đứng đúng submenu đó thì update luôn input đang hiển thị
+    if (activeMenuIndex == menuIndex && lastDropdownIndex == dropdownIndex) {
+        for (size_t i = 0; i < activeInputs.size() && i < values.size(); ++i) {
+            activeInputs[i].setText(values[i]);
+        }
+    }
+}
+
 }
 
 }

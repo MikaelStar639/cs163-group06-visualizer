@@ -1,8 +1,8 @@
 #include "States/DSAScreenBase.hpp"
 #include <algorithm>
 
-DSAScreenBase::DSAScreenBase(AppContext& context) 
-    : ctx(context), myGraph(context, true) 
+DSAScreenBase::DSAScreenBase(AppContext& context, bool directed) 
+    : ctx(context), myGraph(context, directed) 
 {
     graphView = ctx.window.getDefaultView();
 }
@@ -85,3 +85,4 @@ void DSAScreenBase::draw(){
     
     ctx.window.setView(ctx.window.getDefaultView());
 }
+
