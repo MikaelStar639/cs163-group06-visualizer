@@ -2,6 +2,7 @@
 #include "UI/Widgets/Dropdown.hpp"
 #include "States/LinkedListScreen.hpp"
 #include "States/MSTScreen.hpp"
+#include "States/TrieScreen.hpp"
 
 
 App::App(): font("assets/fonts/SpaceMono.ttf"),
@@ -59,14 +60,11 @@ void App::changeScreen(ScreenState nextState) {
         case ScreenState::LinkedList:
             currentScreen = std::make_unique<LinkedListScreen>(context);
             break;
-        // case ScreenState::Heap:
-        //     currentScreen = std::make_unique<MenuScreen>(context);
-        //     break;
-        // case ScreenState::Trie:
-        //     currentScreen = std::make_unique<MenuScreen>(context);
-        //     break;
         case ScreenState::MST:
             currentScreen = std::make_unique<MSTScreen>(context);
+            break;
+        case ScreenState::Trie:
+            currentScreen = std::make_unique<TrieScreen>(context);
             break;
 
         case ScreenState::Exit:

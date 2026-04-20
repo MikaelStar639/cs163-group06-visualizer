@@ -59,6 +59,7 @@ namespace UI::Widgets {
 
         // Flag for prev button
         bool cancelClicked = false;
+        bool skipClicked = false;
 
         std::unordered_map<std::string, std::vector<std::string>> inputTextCache;
 
@@ -78,6 +79,7 @@ namespace UI::Widgets {
         bool isBackClicked(const sf::Event& event) { return btnBack.isClicked(event); }
         bool consumeGoClicked(); // Returns true if Go was clicked, then resets it
         bool consumeCancelClicked();
+        bool consumeSkipClicked();
 
         int getActiveMenuIndex() const { return activeMenuIndex; }
         int getDropdownSelection() const { return lastDropdownIndex; }
