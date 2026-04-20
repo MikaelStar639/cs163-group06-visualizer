@@ -509,8 +509,12 @@ namespace Controllers {
 
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
-                if (nu) seq->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(nu, 0.16f));
-                if (nv) seq->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(nv, 0.16f));
+                if (nu || nv) {
+                    auto par = std::make_unique<UI::Animations::ParallelAnimation>();
+                    if (nu) par->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(nu, 0.16f));
+                    if (nv) par->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(nv, 0.16f));
+                    seq->add(std::move(par));
+                }
 
                 addCode("check_cycle");
                 seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
@@ -542,8 +546,12 @@ namespace Controllers {
 
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
-                if (nu) seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nu, 0.10f));
-                if (nv) seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nv, 0.10f));
+                if (nu || nv) {
+                    auto par = std::make_unique<UI::Animations::ParallelAnimation>();
+                    if (nu) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nu, 0.10f));
+                    if (nv) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nv, 0.10f));
+                    seq->add(std::move(par));
+                }
             }
             else if (st.type == Core::DSA::MSTStep::Type::RejectEdge) {
                 addCode("reject");
@@ -571,8 +579,12 @@ namespace Controllers {
 
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
-                if (nu) seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nu, 0.10f));
-                if (nv) seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nv, 0.10f));
+                if (nu || nv) {
+                    auto par = std::make_unique<UI::Animations::ParallelAnimation>();
+                    if (nu) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nu, 0.10f));
+                    if (nv) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nv, 0.10f));
+                    seq->add(std::move(par));
+                }
             }
             else if (st.type == Core::DSA::MSTStep::Type::Finish) {
                 addCode("finish");
