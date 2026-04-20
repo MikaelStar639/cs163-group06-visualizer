@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <cstddef>
 #include <unordered_map>
 #include <unordered_set> 
 
@@ -65,6 +66,14 @@ namespace UI::DSA {
         
         bool getIsDirected() const;
 
+        // setter
+        void setNodeValueRaw(int index, const std::string& newVal);
+
+        void swapNodePointers(int i, int j);
+
+        void setIsDirected(bool Directed);
+
+        size_t getNodeCount() const {return nodes.size();}
         bool isNodeLocked(Node* node) const;
         void setNodeLocked(Node* node, bool locked);
     };

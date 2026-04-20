@@ -5,7 +5,7 @@
 
 #include "Core/AppContext.hpp"
 #include "Core/Constants.hpp"
-#include "States/Screen"
+#include "States/Screen.hpp"
 
 
 class App{

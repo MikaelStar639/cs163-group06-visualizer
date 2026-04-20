@@ -43,6 +43,7 @@ namespace UI::Widgets {
 
         // Widget containers
         std::vector<Button> mainButtons;
+        std::vector<bool> mainButtonsEnabled;
         std::vector<Button> activeSubButtons;
         std::vector<InputBar> activeInputs;
         std::optional<Dropdown> dropdownAction;
@@ -88,6 +89,8 @@ namespace UI::Widgets {
         
         void resetMenu();
         void clearInputs();
+
+        void setMainButtonEnabled(int index, bool enabled);
         void setCachedInputsForState(int menuIndex, int dropdownIndex, const std::vector<std::string>& values);
 
         std::vector<InputBar>& getInputsMutable() { return activeInputs; }

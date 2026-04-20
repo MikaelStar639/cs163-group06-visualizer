@@ -2,8 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
-//all states of screen
-enum ScreenState{
+// all states of screen
+enum ScreenState {
     None,
     MainMenu,
     LinkedList,
@@ -14,9 +14,8 @@ enum ScreenState{
     Exit
 };
 
-
-//abstract class for screen
-class Screen{
+// abstract class for screen
+class Screen {
 public:
     virtual ~Screen() = default;
     virtual void handleEvent(const sf::Event& event) = 0;

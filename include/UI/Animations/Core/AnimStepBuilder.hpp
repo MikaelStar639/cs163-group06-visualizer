@@ -2,8 +2,10 @@
 #include "UI/Animations/Core/SequenceAnimation.hpp"
 #include "UI/Animations/Core/CallbackAnimation.hpp"
 #include "UI/Animations/Core/WaitAnimation.hpp"
+#include "UI/Animations/Core/ParallelAnimation.hpp"
 #include "UI/Animations/Node/NodeColorAnimation.hpp"
 #include "UI/Animations/Node/NodeScaleAnimation.hpp"
+#include "UI/Animations/Node/NodeSwapAnimation.hpp"
 #include "UI/Widgets/PseudoCodeViewer.hpp"
 #include "Core/DSA/PseudoCodeData.hpp"
 #include <memory>
@@ -40,7 +42,10 @@ namespace UI::Animations {
         AnimStepBuilder& nodeHighlight(UI::DSA::Node* node, float duration = 0.3f);
         AnimStepBuilder& nodeUnhighlight(UI::DSA::Node* node, float duration = 0.1f);
         AnimStepBuilder& nodeScale(UI::DSA::Node* node, float from, float to, float duration = 0.2f);
+        AnimStepBuilder& nodeSwap(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
 
+        AnimStepBuilder& nodesHighlight(const std::vector<UI::DSA::Node*>& nodes, float duration);
+        AnimStepBuilder& nodesUnhighlight(const std::vector<UI::DSA::Node*>& nodes, float duration);
         // --- Callbacks ---
 
         AnimStepBuilder& callback(std::function<void()> fn);

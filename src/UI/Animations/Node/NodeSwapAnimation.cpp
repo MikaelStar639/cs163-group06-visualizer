@@ -6,16 +6,16 @@ namespace UI::Animations{
 
     NodeSwapAnimation::NodeSwapAnimation(UI::DSA::Node* a, UI::DSA::Node* b, float duration)
             : nodeA(a), nodeB(b), totalDuration(duration), elapsedTime(0.f) 
-    {
-        if (nodeA && nodeB) {
-            startPosA = nodeA->getPosition();
-            startPosB = nodeB->getPosition();
-        }
-    }
+    {}
 
     void NodeSwapAnimation::update(float dt) {
             if (!nodeA || !nodeB || isFinished()) return;
 
+            if (elapsedTime == 0.f) {
+                startPosA = nodeA->getPosition();
+                startPosB = nodeB->getPosition();
+            }
+            
             elapsedTime += dt;
             float t = std::min(elapsedTime / totalDuration, 1.0f);
 

@@ -49,13 +49,18 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 }
 
 void DSAMenuBase::handleEvent(const sf::Event& event) {
-    // btnBack handling is done via public API isBackClicked
-    
-    std::vector<std::string> labels = getMainButtonLabels();
+    // 1. Initialize enabled state vector if not already done
+    if (mainButtonsEnabled.size() != mainButtons.size()) {
+        mainButtonsEnabled.assign(mainButtons.size(), true);
+    }
 
+    // 2. Main Button Handling with Locking Guard
     for (int i = 0; i < static_cast<int>(mainButtons.size()); ++i) {
         if (mainButtons[i].isClicked(event)) {
-            saveCurrentInputsToCache();
+            // THE LOCK: If disabled, ignore the click entirely
+            if (!mainButtonsEnabled[i]) {
+                continue; 
+            }
 
             if (isInstantAction(i)) {
                 activeMenuIndex = i;
@@ -69,6 +74,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 3. Dropdown Handling
     if (dropdownAction && dropdownAction->isClicked(event)) {
         if (dropdownAction->getSelectedIndex() != lastDropdownIndex) {
             saveCurrentInputsToCache();
@@ -78,6 +84,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 4. Input and Enter Key Handling
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
         bool allInputsValid = true;
         bool submitted = false;
@@ -101,6 +108,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 5. Sub-button (Execute/Go) Handling
     if (!activeSubButtons.empty()) {
         for (size_t i = 0; i < activeSubButtons.size(); ++i) {
             if (activeSubButtons[i].isClicked(event)) {
@@ -111,10 +119,10 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
     }
 
+    // 6. Timeline and Speed Controls
     speedSlider.handleEvent(event);
 
     if (!ctx.animManager.empty()) {
-        
         if (btnPlay.isClicked(event)) {
             ctx.animManager.togglePause();   
         }
@@ -128,7 +136,6 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
             ctx.animManager.clearAll();
             ctx.animManager.setPaused(false);
             std::cout << "[INFO] Animation Cancelled.\n";
-
             cancelClicked = true;
         }
     } 
@@ -289,6 +296,31 @@ void DSAMenuBase::resetMenu() {
 
 void DSAMenuBase::clearInputs() {
     for (auto& input : activeInputs) input.clear();
+}
+
+
+void DSAMenuBase::setMainButtonEnabled(int index, bool enabled) {
+    // 1. Ensure the state vector is synchronized with the buttons
+    if (mainButtonsEnabled.size() != mainButtons.size()) {
+        mainButtonsEnabled.assign(mainButtons.size(), true);
+    }
+
+    if (index < 0 || index >= static_cast<int>(mainButtons.size())) return;
+
+    mainButtonsEnabled[index] = enabled;
+
+    // 2. Apply visual feedback immediately
+    if (!enabled) {
+        sf::Color grey(70, 70, 70);
+        mainButtons[index].setColors(grey, grey, grey, Config::UI::Colors::ButtonText);
+    } else {
+        mainButtons[index].setColors(
+            Config::UI::Colors::ButtonIdle, 
+            Config::UI::Colors::ButtonHover, 
+            Config::UI::Colors::ButtonPressed, 
+            Config::UI::Colors::ButtonText
+        );
+    }
 }
 
 std::string DSAMenuBase::makeInputCacheKey() const {

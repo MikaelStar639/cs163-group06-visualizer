@@ -358,6 +358,22 @@ namespace UI::DSA {
 
     bool Graph::getIsDirected() const  { return isDirected; }
 
+
+    void Graph::setNodeValueRaw(int index, const std::string& newVal) {
+        if (index < 0 || index >= nodes.size()) return;
+        nodes[index]->setLabel(newVal);
+    }
+
+    void Graph::swapNodePointers(int i, int j) {
+        if (i < nodes.size() && j < nodes.size()) {
+            std::swap(nodes[i], nodes[j]);
+        }
+    }
+
+    void Graph::setIsDirected(bool Directed){
+        isDirected = Directed;
+    }
+    
     bool Graph::isNodeLocked(Node* node) const {
         return lockedNodes.find(node) != lockedNodes.end();
     }

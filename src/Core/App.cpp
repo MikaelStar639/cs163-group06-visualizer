@@ -1,6 +1,9 @@
 #include "Core/App.hpp"
 #include "UI/Widgets/Dropdown.hpp"
+#include "States/MenuScreen.hpp"
 #include "States/LinkedListScreen.hpp"
+#include "States/HeapScreen.hpp"
+
 #include "States/MSTScreen.hpp"
 #include "States/TrieScreen.hpp"
 
@@ -59,6 +62,9 @@ void App::changeScreen(ScreenState nextState) {
             break;
         case ScreenState::LinkedList:
             currentScreen = std::make_unique<LinkedListScreen>(context);
+            break;
+        case ScreenState::Heap:
+            currentScreen = std::make_unique<HeapScreen>(context);
             break;
         case ScreenState::MST:
             currentScreen = std::make_unique<MSTScreen>(context);
