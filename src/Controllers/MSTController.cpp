@@ -614,7 +614,7 @@ namespace Controllers {
         }
 
         graph.resetVisuals();
-        interruptRunning("Restarting with Kruskal");
+        interruptRunning("Restarting with Prim");
         if (model.getNodeCount() <= 0 || model.getEdges().empty()) return;
 
         const auto& values = model.getNodeValues();
@@ -661,8 +661,14 @@ namespace Controllers {
         liveSelectedEdgeCount = 0;
         running = true;
 
+        // [BƯỚC 1]: KHAI BÁO MẢNG THEO DÕI NGAY TRƯỚC VÒNG LẶP
+        std::vector<bool> isVisited(graph.getNodes().size(), false);
+
         for (const auto& st : steps) {
             if (st.type == Core::DSA::MSTStep::Type::VisitNode) {
+                // [BƯỚC 2]: CẬP NHẬT MẢNG THEO DÕI
+                isVisited[st.node] = true; 
+                
                 addCode(st.codeLabel);
 
                 seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
@@ -740,6 +746,9 @@ namespace Controllers {
                 seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
             }
             else if (st.type == Core::DSA::MSTStep::Type::AcceptEdge) {
+                // [BƯỚC 3]: ĐÁNH DẤU CHẮC CHẮN NODE NÀY ĐÃ THUỘC MST
+                isVisited[st.v] = true;
+                
                 addCode("accept");
                 seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
                     [this, st]() {
@@ -799,8 +808,15 @@ namespace Controllers {
                 }
 
                 auto* to = graph.getNode(st.v);
-                if (to && to->getFillColor() != MST_NODE_VISITED) {
-                    seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(to, 0.10f));
+                if (to) {
+                    if (isVisited[st.v]) {
+                        seq->add(std::make_unique<UI::Animations::NodeColorAnimation>(
+                            to, MST_NODE_VISITED, MST_NODE_VISITED_TEXT, 0.10f
+                        ));
+                    } else {
+                        // Chưa thuộc MST mới xài NodeUnhighlightAnimation về màu mặc định
+                        seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(to, 0.10f));
+                    }
                 }
             }
             else if (st.type == Core::DSA::MSTStep::Type::Finish) {
