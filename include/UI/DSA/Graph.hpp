@@ -63,6 +63,8 @@ namespace UI::DSA {
 
         void swapNodePointers(int i, int j);
 
+        void setIsDirected(bool Directed);
+
         size_t getNodeCount() const {return nodes.size();}
     };
 

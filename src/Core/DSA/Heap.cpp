@@ -29,17 +29,27 @@ namespace Core {
         }
 
         void Heap::heapifyUp(int index) {
-            while (index > 0) {
-                int p = parent(index);
-                notify(HeapAction::Compare, p, index);
+        while (index > 0) {
+            int p = parent(index);
+            
+            // 1. Determine winner SILENTLY
+            // If child > parent, child is winner (index). Otherwise, parent is winner (p).
+            int maxIdx = (pool[index] > pool[p]) ? index : p;
 
-                if (pool[p] < pool[index]) {
-                    std::swap(pool[p], pool[index]);
-                    notify(HeapAction::Swap, p, index);
-                    index = p;
-                } else break;
+            // 2. Notify with the winner in the 'val' parameter
+            notify(HeapAction::Compare, p, index, maxIdx);
+
+            if (pool[p] < pool[index]) {
+                std::swap(pool[p], pool[index]);
+                notify(HeapAction::Swap, p, index);
+                index = p;
+            } else {
+                // 3. No swap: notify Unfocus to clean up the highlighted winner
+                notify(HeapAction::Unfocus, maxIdx, -1);
+                break;
             }
         }
+    }
 
         void Heap::heapifyDown(int index) {
             int n = static_cast<int>(pool.size());
@@ -48,20 +58,30 @@ namespace Core {
                 int l = leftChild(index);
                 int r = rightChild(index);
 
-                if (l < n) {
-                    notify(HeapAction::Compare, index, l);
-                    if (pool[l] > pool[maxIdx]) maxIdx = l;
+                // 1. Determine the winner across all available family members SILENTLY
+                if (l < n && pool[l] > pool[maxIdx]) {
+                    maxIdx = l;
                 }
-                if (r < n) {
-                    notify(HeapAction::Compare, maxIdx, r);
-                    if (pool[r] > pool[maxIdx]) maxIdx = r;
+                if (r < n && pool[r] > pool[maxIdx]) {
+                    maxIdx = r;
                 }
 
+                // 2. NOW Notify once for the whole trio. 
+                // We use 'index' as parent, 'l' as child start, and 'maxIdx' as the winner (val).
+                // If l >= n, it's a leaf, but we only notify if there's actually a comparison to show.
+                if (l < n) {
+                    notify(HeapAction::Compare, index, l, maxIdx);
+                }
+
+                // 3. Perform the swap if the parent isn't the winner
                 if (maxIdx != index) {
                     std::swap(pool[index], pool[maxIdx]);
                     notify(HeapAction::Swap, index, maxIdx);
                     index = maxIdx;
-                } else break;
+                } else {
+                    notify(HeapAction::Unfocus, maxIdx, -1);
+                    break;
+                }
             }
         }
 
@@ -82,7 +102,6 @@ namespace Core {
 
             int lastIdx = static_cast<int>(pool.size()) - 1;
             if (lastIdx > 0) {
-                notify(HeapAction::Compare, 0, lastIdx);
                 pool[0] = pool[lastIdx];
                 notify(HeapAction::Update, 0, -1, pool[0]);
             }

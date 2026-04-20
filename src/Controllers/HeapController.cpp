@@ -14,7 +14,9 @@ namespace Controllers {
 
     HeapController::HeapController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Heap& m, 
                                    UI::Widgets::PseudoCodeViewer* viewer)
-        : ctx(context), graph(g), model(m), codeViewer(viewer) {}
+        : ctx(context), graph(g), model(m), codeViewer(viewer) {
+            g.setIsDirected(false);
+        }
 
     void HeapController::syncGraphEdges() {
         graph.clearEdges();
@@ -75,6 +77,40 @@ namespace Controllers {
         
         // Smoothly transition all nodes from the center to their heap positions
         triggerLayout(0.6f);
+    }
+
+    void HeapController::handlePreHeapifiedRandom(int size) {
+        if (codeViewer) codeViewer->hide();
+        
+        // 1. Reset state
+        model.clear();
+        graph.clear();
+
+        // 2. Generate random data
+        std::vector<int> data;
+        for (int i = 0; i < size; ++i) {
+            data.push_back(std::rand() % 100);
+        }
+
+        // 3. SILENT HEAPIFY
+        // We load the raw data, then call buildHeap.
+        // Since no observer is set, no animation steps are recorded yet.
+        model.loadRawData(data);
+        model.buildHeap(model.getPool()); 
+
+        // 4. SYNC VISUALS
+        // Now that the model's internal 'pool' is a heap, we create the nodes
+        // in that specific order so they appear pre-heapified.
+        const auto& heapifiedData = model.getPool();
+        for (int i = 0; i < (int)heapifiedData.size(); ++i) {
+            graph.insertNodeAt(i, std::to_string(heapifiedData[i]), {startX, startY});
+        }
+
+        // 5. Connect edges and position nodes
+        syncGraphEdges();
+        
+        // Use a slightly longer layout time to make the "pop-in" feel intentional
+        triggerLayout(0.8f);
     }
 
     void HeapController::handleCreateFromFile() {
@@ -180,6 +216,95 @@ namespace Controllers {
         triggerLayout(0.6f);
     }
 
+    void HeapController::handlePreHeapifiedFromFile() {
+        if (codeViewer) codeViewer->hide();
+
+        std::string dirPath = "user_data";
+        std::string filePath = dirPath + "/HeapData.txt";
+
+        // 1. Ensure file exists (Standard boilerplate from your original function)
+        if (!std::filesystem::exists(dirPath)) {
+            std::filesystem::create_directories(dirPath);
+        }
+
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            std::ofstream outFile(filePath);
+            if (outFile.is_open()) {
+                outFile << "# --- HEAP VISUALIZER DATA ---\n"
+                        << "# 1. Type number of elements 'n' first.\n"
+                        << "# 2. Type 'n' integers (-999 to 999).\n"
+                        << "# -----------------------------------\n";
+                outFile.close();
+            }
+            std::system(("start notepad " + filePath).c_str());
+            return;
+        }
+
+        // 2. Parse the numbers
+        std::string line;
+        std::vector<int> allNumbers;
+        while (std::getline(file, line)) {
+            size_t startPos = line.find_first_not_of(" \t\r\n");
+            if (startPos != std::string::npos && line[startPos] == '#') continue; 
+
+            std::stringstream ss(line);
+            std::string token;
+            while (ss >> token) {
+                try { allNumbers.push_back(std::stoi(token)); } catch (...) {}
+            }
+        }
+        file.close();
+
+        // 3. Validation
+        std::string errorMsg = "";
+        std::vector<int> parsedData;
+        if (allNumbers.empty()) {
+            errorMsg = "# [WARNING] Could not read 'n'.\n";
+        } else {
+            int n = allNumbers[0];
+            if (n < 0 || n > 15) {
+                errorMsg = "# [WARNING] Invalid size (Max 15).\n";
+            } else if ((int)allNumbers.size() - 1 < n) {
+                errorMsg = "# [WARNING] Not enough elements found.\n";
+            } else {
+                for (int i = 1; i <= n; ++i) {
+                    if (allNumbers[i] < -999 || allNumbers[i] > 999) {
+                        errorMsg = "# [WARNING] Value out of range.\n";
+                        break;
+                    }
+                    parsedData.push_back(allNumbers[i]);
+                }
+            }
+        }
+
+        if (!errorMsg.empty()) {
+            std::system(("start notepad " + filePath).c_str());
+            return;
+        }
+
+        // --- START PRE-HEAPIFY LOGIC ---
+
+        // 4. Load state and Clear visuals
+        model.clear();
+        graph.clear();
+
+        // 5. Silent Heapify: Order the data BEFORE creating nodes
+        model.loadRawData(parsedData);
+        model.buildHeap(model.getPool()); 
+
+        // 6. Create Visual Nodes based on the HEAPIFIED pool
+        const auto& heapifiedData = model.getPool();
+        for (int i = 0; i < (int)heapifiedData.size(); ++i) {
+            // Create nodes in the order they exist in the Max-Heap
+            graph.insertNodeAt(i, std::to_string(heapifiedData[i]), {startX, startY});
+        }
+
+        // 7. Finalize layout
+        syncGraphEdges();
+        triggerLayout(0.8f);
+    }
+
     void HeapController::handleEditDataFile() {
         std::string dirPath = "user_data";
         // Change 1: Update filename to match HeapController's data source
@@ -232,15 +357,12 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Heap::insert();
         Builder b(codeDef, codeViewer);
 
-        // 1. Logically add the node to the graph IMMEDIATELY (no animation yet)
-        // This gives us a valid pointer to Node(100) before any swaps happen.
+        // 1. Logically add the node to the graph
         int insertIdx = (int)graph.getNodeCount();
-        
-        // We create the node at the "hidden" start position
         graph.addNode(std::to_string(val), {startX, startY + 200.f});
         auto* newNodePtr = graph.getNode(insertIdx);
 
-        // 2. Prepare the tracker - it's now perfectly in sync with the model
+        // 2. Prepare the tracker
         std::vector<UI::DSA::Node*> currentPointers;
         for (int k = 0; k < (int)graph.getNodeCount(); ++k) {
             currentPointers.push_back(graph.getNode(k));
@@ -249,22 +371,46 @@ namespace Controllers {
         model.setObserver([this, &b, currentPointers, newNodePtr](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             
             if (action == Core::DSA::HeapAction::Insert) {
+                // Line: pool.push_back(val)
                 b.highlight("insert_at_end")
                 .callback([this, newNodePtr]() {
-                    // The node is already in the graph, we just trigger the 
-                    // "pop-in" animation manually or via a helper.
-                    // If you MUST use insertNodeAt, call it here, but it might 
-                    // duplicate the node. Instead, just scale it in:
                     newNodePtr->setScale(0.0f);
                 })
-                .nodeScale(newNodePtr, 1.0f, 0.2f) // Custom "Insert" pop
+                .nodeScale(newNodePtr, 1.0f, 0.2f)
                 .wait(0.3f)
                 .callback([this]() {
                     syncGraphEdges();
                     triggerLayout(0.5f);
                 })
+                // Line: heapifyUp(last_index)
+                .highlight("heapify_up")
                 .wait(0.5f);
                 return;
+            }
+
+            if (action == Core::DSA::HeapAction::Compare) {
+                UI::DSA::Node* parent = currentPointers[i];
+                UI::DSA::Node* child = currentPointers[j];
+                UI::DSA::Node* winnerNode = (v >= 0 && v < (int)currentPointers.size()) ? currentPointers[v] : nullptr;
+
+                if (parent && child) {
+                    // Line: while index > 0
+                    b.highlight("loop_cond").wait(0.3f)
+                    // Line: if val > parent
+                    .highlight("compare_parent")
+                    .nodesHighlight({parent, child}, 0.3f)
+                    .wait(0.5f);
+
+                    std::vector<UI::DSA::Node*> losers;
+                    if (parent != winnerNode) losers.push_back(parent);
+                    if (child != winnerNode) losers.push_back(child);
+
+                    if (!losers.empty()) {
+                        b.nodesUnhighlight(losers, 0.3f);
+                    }
+
+                    b.wait(0.5f);
+                }
             }
 
             if (action == Core::DSA::HeapAction::Swap) {
@@ -272,12 +418,10 @@ namespace Controllers {
                 UI::DSA::Node* nodeB = currentPointers[j];
 
                 if (nodeA && nodeB) {
-                    // Update tracker immediately so next notification is correct
                     std::swap(currentPointers[i], currentPointers[j]);
 
+                    // Line: swap(val, parent)
                     b.highlight("swap_with_parent")
-                    .nodesHighlight(nodeA, nodeB, 0.4f)
-                    .wait(0.2f)
                     .callback([this, i, j]() {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
@@ -285,7 +429,20 @@ namespace Controllers {
                     .nodeSwap(nodeA, nodeB, 0.8f)
                     .wait(0.8f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight(nodeA, nodeB, 0.2f);
+                    .nodesUnhighlight({nodeA, nodeB}, 0.3f)
+                    .wait(0.2f);
+                }
+            }
+
+            if (action == Core::DSA::HeapAction::Unfocus) {
+                if (i >= 0 && i < (int)currentPointers.size()) {
+                    UI::DSA::Node* winnerNode = currentPointers[i];
+                    if (winnerNode) {
+                        // Line: else: break
+                        b.highlight("break_loop")
+                        .nodesUnhighlight({winnerNode}, 0.3f)
+                        .wait(0.4f);
+                    }
                 }
             }
         });
@@ -302,8 +459,6 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Heap::removeRoot();
         Builder b(codeDef, codeViewer);
 
-        // [KHIÊN BẢO VỆ]: Mảng theo dõi con trỏ đồng bộ với Model ngầm
-        // Mảng này sẽ "ảo hóa" các thao tác swap trước khi graph kịp chạy animation
         std::vector<UI::DSA::Node*> currentPointers;
         for (int k = 0; k < (int)graph.getNodeCount(); ++k) {
             currentPointers.push_back(graph.getNode(k));
@@ -311,37 +466,39 @@ namespace Controllers {
 
         model.setObserver([this, &b, currentPointers](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             
-            // 1. Hoán đổi vị trí của Root và Node cuối cùng
+            // 1. Swap Root with Last Node
             if (action == Core::DSA::HeapAction::Update && i == 0) {
                 int lastIdx = (int)currentPointers.size() - 1;
-                
-                // Lấy con trỏ từ tracker thay vì graph
                 auto* rootNode = currentPointers[0];
                 auto* lastNode = currentPointers[lastIdx];
 
                 if (rootNode && lastNode) {
-                    // Cập nhật tracker ĐỒNG BỘ với logic
                     std::swap(currentPointers[0], currentPointers[lastIdx]);
 
+                    // Line: swap(root, last_element)
                     b.highlight("swap_root")
-                    .nodesHighlight(rootNode, lastNode, 0.4f)
+                    .nodesHighlight({rootNode, lastNode}, 0.4f)
                     .wait(0.2f)
                     .callback([this, lastIdx]() {
-                        // Graph đảo thật sự khi Animation chạy tới đây
                         graph.swapNodePointers(0, lastIdx);
                         syncGraphEdges();
                     })
                     .nodeSwap(rootNode, lastNode, 0.8f)
                     .wait(0.8f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight(rootNode, lastNode, 0.2f)
+                    .nodesUnhighlight({rootNode, lastNode}, 0.2f)
                     .wait(0.2f); 
                 }
                 return;
             }
 
-            // 2. Physical Removal (Cắt bỏ Node cuối cùng)
+            // 2. Physical Removal
             if (action == Core::DSA::HeapAction::Remove) {
+                if (i >= 0 && i < (int)currentPointers.size()) {
+                    currentPointers.erase(currentPointers.begin() + i);
+                }
+
+                // Line: pool.pop_back()
                 b.highlight("remove_last")
                 .callback([this, i]() {
                     if (i >= 0 && i < (int)graph.getNodeCount()) {
@@ -350,33 +507,78 @@ namespace Controllers {
                     syncGraphEdges();
                     triggerLayout(0.5f);
                 })
+                .wait(0.5f)
+                // Line: heapifyDown(0)
+                .highlight("heapify_down")
                 .wait(0.5f);
                 return;
             }
 
-            // 3. Heapify Down Swaps (Chìm xuống)
-            if (action == Core::DSA::HeapAction::Swap) {
+            // 3. Comparison Logic (Trio Highlight)
+            else if (action == Core::DSA::HeapAction::Compare) {
+                int leftChildIdx = j;
+                int rightChildIdx = j + 1;
+
+                std::vector<UI::DSA::Node*> trio;
+                if (i < (int)currentPointers.size()) trio.push_back(currentPointers[i]);
+                if (leftChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[leftChildIdx]);
+                if (rightChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[rightChildIdx]);
+
+                UI::DSA::Node* winnerNode = (v < (int)currentPointers.size()) ? currentPointers[v] : nullptr;
                 
-                // LẤY CON TRỎ TỪ MẢNG THEO DÕI ĐÃ ĐƯỢC CẬP NHẬT Ở BƯỚC 1
-                auto* nodeA = currentPointers[i];
-                auto* nodeB = currentPointers[j];
+                std::vector<UI::DSA::Node*> losers;
+                for (auto* node : trio) {
+                    if (node != winnerNode) losers.push_back(node);
+                }
+
+                // Line: while leftChild exists
+                b.highlight("loop_cond").wait(0.3f)
+                // Line: target = larger child
+                .highlight("find_max_child")
+                .nodesHighlight(trio, 0.3f)
+                .wait(0.5f)
+                // Line: if target > val
+                .highlight("compare_child")
+                .wait(0.3f);
+
+                if (!losers.empty()) {
+                    b.nodesUnhighlight(losers, 0.3f);
+                }
+
+                b.wait(0.5f);
+            }
+
+            // 4. Swap Logic
+            else if (action == Core::DSA::HeapAction::Swap) {
+                UI::DSA::Node* nodeA = currentPointers[i]; // Parent
+                UI::DSA::Node* nodeB = currentPointers[j]; // Winner Child
 
                 if (nodeA && nodeB) {
-                    // Cập nhật tracker
                     std::swap(currentPointers[i], currentPointers[j]);
 
+                    // Line: swap(val, target)
                     b.highlight("swap_with_child")
-                    .nodesHighlight(nodeA, nodeB, 0.3f)
-                    .wait(0.1f)
                     .callback([this, i, j]() {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
                     })
-                    .nodeSwap(nodeA, nodeB, 0.6f)
-                    .wait(0.6f)
+                    .nodeSwap(nodeA, nodeB, 0.8f)
+                    .wait(0.8f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight(nodeA, nodeB, 0.2f)
-                    .wait(0.1f); 
+                    .nodesUnhighlight({nodeA, nodeB}, 0.3f)
+                    .wait(0.2f);
+                }
+            }
+
+            // 5. Termination
+            else if (action == Core::DSA::HeapAction::Unfocus) {
+                if (i >= 0 && i < (int)currentPointers.size()) {
+                    UI::DSA::Node* winnerNode = currentPointers[i];
+                    if (winnerNode) {
+                        // Line: else: break
+                        b.highlight("break_loop")
+                        .nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f);
+                    }
                 }
             }
         });
@@ -393,23 +595,26 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Heap::returnRoot();
         Builder b(codeDef, codeViewer);
 
-        int currentSize = static_cast<int>(graph.getNodes().size());
+        int currentSize = static_cast<int>(graph.getNodeCount());
 
         // 1. Check if heap is empty
-        b.highlight("check_empty");
+        b.highlight("check_empty").wait(0.3f);
+        
         if (currentSize == 0) {
-            // You could add a log here if needed
             b.finish();
         } else {
+            auto* rootNode = graph.getNode(0);
+            
             // 2. Access the root (index 0)
+            // Highlight the root node using the vector-based call
             b.highlight("access_root")
-            .nodeHighlight(graph.getNode(0), 0.5f) // Visual flash/highlight on the root node
-            .wait(0.3f);
+            .nodesHighlight({rootNode}, 0.5f) 
+            .wait(0.5f);
 
             // 3. Return value phase
             b.highlight("return_val")
             .wait(0.5f)
-            .nodeUnhighlight(graph.getNode(0), 0.2f)
+            .nodesUnhighlight({rootNode}, 0.2f)
             .finish();
         }
 
@@ -422,8 +627,6 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Heap::buildHeap();
         Builder b(codeDef, codeViewer);
 
-        // This vector tracks the CURRENT logical state of the graph
-        // as notifications pour in from the model.
         std::vector<UI::DSA::Node*> currentPointers;
         for (int k = 0; k < (int)data.size(); ++k) {
             currentPointers.push_back(graph.getNode(k));
@@ -432,11 +635,36 @@ namespace Controllers {
         model.setObserver([this, &b, currentPointers](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             if (action == Core::DSA::HeapAction::Insert) return;
 
+            // Line: for i = (size/2)-1 down to 0
             if (action == Core::DSA::HeapAction::Focus) {
                 b.highlight("loop_outer").wait(0.6f);
             }
             else if (action == Core::DSA::HeapAction::Compare) {
-                b.highlight("call_heapify").wait(0.5f);
+                int leftChildIdx = j;
+                int rightChildIdx = j + 1;
+
+                std::vector<UI::DSA::Node*> trio;
+                if (i >= 0 && i < (int)currentPointers.size()) trio.push_back(currentPointers[i]);
+                if (leftChildIdx >= 0 && leftChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[leftChildIdx]);
+                if (rightChildIdx >= 0 && rightChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[rightChildIdx]);
+
+                UI::DSA::Node* winnerNode = (v >= 0 && v < (int)currentPointers.size()) ? currentPointers[v] : nullptr;
+                
+                std::vector<UI::DSA::Node*> losers;
+                for (auto* node : trio) {
+                    if (node != winnerNode) losers.push_back(node);
+                }
+
+                // Line: heapifyDown(i)
+                b.highlight("call_heapify")
+                .nodesHighlight(trio, 0.3f)
+                .wait(0.5f);
+
+                if (!losers.empty()) {
+                    b.nodesUnhighlight(losers, 0.3f);
+                }
+
+                b.wait(0.5f);
             }
             else if (action == Core::DSA::HeapAction::Swap) {
                 UI::DSA::Node* nodeA = currentPointers[i];
@@ -445,21 +673,27 @@ namespace Controllers {
                 if (nodeA && nodeB) {
                     std::swap(currentPointers[i], currentPointers[j]);
 
-                    b.nodesHighlight(nodeA, nodeB, 0.4f) // Both turn orange together
-                    .wait(0.2f)
+                    b.highlight("call_heapify") // Keep highlighting the call line
                     .callback([this, i, j]() {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
                     })
-                    .nodeSwap(nodeA, nodeB, 1.0f) // Circular movement
-                    .wait(1.0f)
-                    .callback([this]() {
-                        triggerLayout(0.0f); // Final coordinate sync
-                    })
-                    .nodesUnhighlight(nodeA, nodeB, 0.2f); // Both fade out together
+                    .nodeSwap(nodeA, nodeB, 0.8f)
+                    .wait(0.8f)
+                    .callback([this]() { triggerLayout(0.0f); })
+                    .nodesUnhighlight({nodeA, nodeB}, 0.3f)
+                    .wait(0.2f);
                 }
             }
-        });
+            else if (action == Core::DSA::HeapAction::Unfocus) {
+                if (i >= 0 && i < (int)currentPointers.size()) {
+                    UI::DSA::Node* winnerNode = currentPointers[i];
+                    if (winnerNode) {
+                        b.nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f);
+                    }
+                }
+            }
+        }); // Closure of Lambda
 
         model.buildHeap(data);
         model.setObserver(nullptr);

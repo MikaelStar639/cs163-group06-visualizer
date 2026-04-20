@@ -63,27 +63,33 @@ namespace UI::Animations {
         return *this;
     }
 
-    AnimStepBuilder& AnimStepBuilder::nodesHighlight(UI::DSA::Node* a, UI::DSA::Node* b, float duration) {
+    AnimStepBuilder& AnimStepBuilder::nodesHighlight(const std::vector<UI::DSA::Node*>& nodes, float duration) {
         auto parallel = std::make_unique<ParallelAnimation>();
-        
-        if (a) parallel->add(std::make_unique<NodeHighlightAnimation>(a, duration));
-        if (b) parallel->add(std::make_unique<NodeHighlightAnimation>(b, duration));
-        
-        // By adding the parallel object to the sequence, 
-        // both highlights will start and finish at the same time.
+
+        for (auto* node : nodes) {
+            if (node) {
+                parallel->add(std::make_unique<NodeHighlightAnimation>(node, duration));
+            }
+        }
+
+        // Adding the parallel object to the sequence ensures 
+        // all nodes in the vector highlight simultaneously.
         sequence->add(std::move(parallel));
-        
+
         return *this;
     }
 
-    AnimStepBuilder& AnimStepBuilder::nodesUnhighlight(UI::DSA::Node* a, UI::DSA::Node* b, float duration) {
+    AnimStepBuilder& AnimStepBuilder::nodesUnhighlight(const std::vector<UI::DSA::Node*>& nodes, float duration) {
         auto parallel = std::make_unique<ParallelAnimation>();
-        
-        if (a) parallel->add(std::make_unique<NodeUnhighlightAnimation>(a, duration));
-        if (b) parallel->add(std::make_unique<NodeUnhighlightAnimation>(b, duration));
-        
+
+        for (auto* node : nodes) {
+            if (node) {
+                parallel->add(std::make_unique<NodeUnhighlightAnimation>(node, duration));
+            }
+        }
+
         sequence->add(std::move(parallel));
-        
+
         return *this;
     }
 

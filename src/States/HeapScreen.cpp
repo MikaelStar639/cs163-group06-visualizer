@@ -67,32 +67,60 @@ void HeapScreen::handleMenuAction() {
     if (menuIndex == 0) { // Create
         if (sel == 0) { // Random
             int subBtn = uiMenu.getClickedSubButtonIndex();
-            if (subBtn == 0) { // Create
+            if (subBtn == 0) { // Create (Raw)
                 std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
                 if (sizeStr.empty()) return;
                 controller.handleCreateRandom(std::stoi(sizeStr));
+                
                 isRawData = true;
                 uiMenu.setMainButtonEnabled(1, false);
                 uiMenu.setMainButtonEnabled(2, false);
                 uiMenu.setMainButtonEnabled(3, false);
-            } else if (subBtn == 1) { // Heapify
+            } 
+            else if (subBtn == 1) { // Heapify
                 controller.handleBuildHeap(model.getPool());
                 isRawData = false;
                 uiMenu.setMainButtonEnabled(1, true);
                 uiMenu.setMainButtonEnabled(2, true);
                 uiMenu.setMainButtonEnabled(3, true);
             }
-        } else if (sel == 1) { // File
+            else if (subBtn == 2) { // Create Pre-Heapified (NEW)
+                std::string sizeStr = !inputs.empty() ? inputs[0].getText() : "";
+                if (sizeStr.empty()) return;
+                
+                // Call the new instant function
+                controller.handlePreHeapifiedRandom(std::stoi(sizeStr));
+                
+                // It's already heapified, so we set raw to false and enable everything
+                isRawData = false;
+                uiMenu.setMainButtonEnabled(1, true);
+                uiMenu.setMainButtonEnabled(2, true);
+                uiMenu.setMainButtonEnabled(3, true);
+            }
+        } else if (sel == 1) { // File selection
             int subBtn = uiMenu.getClickedSubButtonIndex();
-            if (subBtn == 0) controller.handleEditDataFile();
-            else if (subBtn == 1) { // Create
+            
+            if (subBtn == 0) { // Edit
+                controller.handleEditDataFile();
+            } 
+            else if (subBtn == 1) { // Create (Raw)
                 controller.handleCreateFromFile();
                 isRawData = true;
                 uiMenu.setMainButtonEnabled(1, false);
                 uiMenu.setMainButtonEnabled(2, false);
                 uiMenu.setMainButtonEnabled(3, false);
-            } else if (subBtn == 2) { // Heapify
+            } 
+            else if (subBtn == 2) { // Heapify
                 controller.handleBuildHeap(model.getPool());
+                isRawData = false;
+                uiMenu.setMainButtonEnabled(1, true);
+                uiMenu.setMainButtonEnabled(2, true);
+                uiMenu.setMainButtonEnabled(3, true);
+            }
+            else if (subBtn == 3) { // Create Pre-Heapified (NEW)
+                controller.handlePreHeapifiedFromFile();
+                
+                // Data is ready for use
                 isRawData = false;
                 uiMenu.setMainButtonEnabled(1, true);
                 uiMenu.setMainButtonEnabled(2, true);

@@ -12,7 +12,8 @@ namespace Core {
             Update,
             Insert,
             Remove,
-            Focus
+            Focus,
+            Unfocus
         };
 
         class Heap {

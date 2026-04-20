@@ -44,8 +44,8 @@ namespace UI::Animations {
         AnimStepBuilder& nodeScale(UI::DSA::Node* node, float from, float to, float duration = 0.2f);
         AnimStepBuilder& nodeSwap(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
 
-        AnimStepBuilder& nodesHighlight(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
-        AnimStepBuilder& nodesUnhighlight(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
+        AnimStepBuilder& nodesHighlight(const std::vector<UI::DSA::Node*>& nodes, float duration);
+        AnimStepBuilder& nodesUnhighlight(const std::vector<UI::DSA::Node*>& nodes, float duration);
         // --- Callbacks ---
 
         AnimStepBuilder& callback(std::function<void()> fn);

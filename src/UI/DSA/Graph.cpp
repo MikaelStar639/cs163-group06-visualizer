@@ -263,5 +263,9 @@ namespace UI::DSA {
             std::swap(nodes[i], nodes[j]);
         }
     }
+
+    void Graph::setIsDirected(bool Directed){
+        isDirected = Directed;
+    }
     
 } // namespace UI::DSA

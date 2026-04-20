@@ -33,6 +33,9 @@ namespace Controllers {
         void handleCreateRandom(int size);
         void handleCreateFromFile();
         void handleEditDataFile();
+
+        void handlePreHeapifiedRandom(int size);
+        void handlePreHeapifiedFromFile();
         
         // Heap Specific Operations
         void handleInsert(int val);
