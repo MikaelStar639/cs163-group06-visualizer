@@ -110,7 +110,7 @@ void MSTMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {
             float bottomMargin = 30.f;
             float graphBoxH = std::max(260.f, windowH - graphBoxY - bottomMargin);
 
-            createInput("Each line: x   or   u v w",
+            createInput("x or u v w",
                         graphBoxX, graphBoxY, graphBoxW, graphBoxH, InputType::EdgeTriple);
 
 
