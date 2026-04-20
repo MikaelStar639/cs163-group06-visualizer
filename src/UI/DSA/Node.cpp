@@ -36,6 +36,10 @@ void Node::setScale(float scaleFactor) {
     text.setScale(sf::Vector2f(scaleFactor, scaleFactor));
 }
 
+void Node::setOutlineThickness(float thickness) { 
+    shape.setOutlineThickness(thickness); 
+}
+
 // --- Setters ---
 void Node::setPosition(sf::Vector2f pos) { 
     shape.setPosition(pos); 

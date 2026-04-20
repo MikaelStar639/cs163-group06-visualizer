@@ -24,6 +24,7 @@ public:
     void setOutlineColor(sf::Color color);
     void setLabelColor(sf::Color color);
     void setScale(float scaleFactor);
+    void setOutlineThickness(float thickness);
 
     // Getters
     sf::Vector2f getPosition() const;
