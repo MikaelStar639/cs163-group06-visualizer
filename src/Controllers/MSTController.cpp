@@ -172,8 +172,16 @@ namespace Controllers {
     void MSTController::rebuildGraphFromModel() {
         // 1. Lưu vị trí node cũ (để nếu user đang kéo thả thì không bị reset)
         std::unordered_map<std::string, sf::Vector2f> oldPositions;
+        std::unordered_set<std::string> oldLockedLabels;
         for (const auto& nodePtr : graph.getNodes()) {
-            if (nodePtr) oldPositions[nodePtr->getLabel()] = nodePtr->getPosition();
+            if (nodePtr) {
+                std::string label = nodePtr->getLabel();
+                oldPositions[label] = nodePtr->getPosition();
+                
+                if (graph.isNodeLocked(nodePtr.get())) {
+                    oldLockedLabels.insert(label);
+                }
+            }
         }
 
         graph.clear();
@@ -248,7 +256,12 @@ namespace Controllers {
 
         // 4. Lắp ráp Node và Edge đã chuẩn bị sẵn vào Graph
         for (int i = 0; i < n; ++i) {
-            graph.addNode(std::to_string(nodeValues[i]), positions[i]);
+            std::string label = std::to_string(nodeValues[i]);
+            graph.addNode(label, positions[i]);
+            
+            if (oldLockedLabels.find(label) != oldLockedLabels.end()) {
+                graph.setNodeLocked(graph.getNodes().back().get(), true);
+            }
         }
         for (const auto& e : model.getEdges()) {
             graph.addEdge(e.u, e.v, std::to_string(e.w));
@@ -265,6 +278,8 @@ namespace Controllers {
     }
 
     void MSTController::handleCreateRandom(int nodeCount, int edgeCount) {
+        graph.clear();
+        model.clear();
         if (codeViewer) codeViewer->hide();
         if (nodeCount <= 0) return;
 

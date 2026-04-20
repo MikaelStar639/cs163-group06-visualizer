@@ -358,4 +358,20 @@ namespace UI::DSA {
 
     bool Graph::getIsDirected() const  { return isDirected; }
 
+    bool Graph::isNodeLocked(Node* node) const {
+        return lockedNodes.find(node) != lockedNodes.end();
+    }
+
+    void Graph::setNodeLocked(Node* node, bool locked) {
+        if (!node) return;
+        if (locked) {
+            lockedNodes.insert(node);
+            velocities[node] = {0.f, 0.f};
+            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS * 2.5f); // Làm viền dày lên
+        } else {
+            lockedNodes.erase(node);
+            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS); // Trả về bình thường
+        }
+    }
+
 } // namespace UI::DSA

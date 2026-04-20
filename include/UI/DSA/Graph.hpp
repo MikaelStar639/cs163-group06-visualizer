@@ -64,6 +64,9 @@ namespace UI::DSA {
         sf::FloatRect getGraphBounds() const;
         
         bool getIsDirected() const;
+
+        bool isNodeLocked(Node* node) const;
+        void setNodeLocked(Node* node, bool locked);
     };
 
 } // namespace UI::DSA
