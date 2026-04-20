@@ -4,6 +4,7 @@
 #include "UI/Animations/Edge/EdgeScaleAnimation.hpp"
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 namespace UI::DSA {
 
@@ -46,6 +47,10 @@ namespace UI::DSA {
         std::unique_ptr<Node> dyingNodePtr = std::move(nodes[index]);
         Node* nodeToDelete = dyingNodePtr.get();
         
+        // Dọn dẹp bộ nhớ vật lý và khóa
+        velocities.erase(nodeToDelete);
+        lockedNodes.erase(nodeToDelete);
+
         nodes.erase(nodes.begin() + index); 
         dyingNodes.push_back(std::move(dyingNodePtr)); 
 
@@ -85,10 +90,9 @@ namespace UI::DSA {
     }
 
     void Graph::removeLastNode() {
-    if (nodes.empty()) return;
-    
-    removeNodeAt(nodes.size() - 1); 
-}
+        if (nodes.empty()) return;
+        removeNodeAt(nodes.size() - 1); 
+    }
 
     void Graph::addEdge(int srcIndex, int destIndex, const std::string& weight) {
         if (srcIndex < 0 || srcIndex >= nodes.size() || 
@@ -126,6 +130,8 @@ namespace UI::DSA {
         edges.clear();
         nodes.clear();
         drawOrder.clear();
+        velocities.clear(); 
+        lockedNodes.clear(); 
         draggedNode = nullptr;
     }
 
@@ -136,15 +142,25 @@ namespace UI::DSA {
     void Graph::resetVisuals(){
         for (auto& node : nodes) {
             node->setFillColor(Config::UI::Colors::NodeFill);
-            node->setOutlineColor(Config::UI::Colors::NodeOutline);
+            // Chỉ reset outline nếu node không bị khóa
+            if (lockedNodes.find(node.get()) == lockedNodes.end()) {
+                node->setOutlineColor(Config::UI::Colors::NodeOutline);
+            }
             node->setScale(1.f);
             node->setLabelColor(Config::UI::Colors::NodeText);
+        }
+
+        for (auto& edge : edges) {
+            if (!edge) continue;
+            edge->setColor(Config::UI::Colors::EdgeFill);
+            edge->setThickness(Config::UI::EDGE_THICKNESS);
         }
     }
 
     void Graph::handleEvent(const sf::Event& event, sf::Vector2f mousePos) {
         if (!isDraggable) return;
 
+        // BẮT SỰ KIỆN NHẤN CHUỘT
         if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonPressed>()) {
             if (mouseEvent->button == sf::Mouse::Button::Left) {
                 for (int i = drawOrder.size() - 1; i >= 0; --i) {
@@ -152,6 +168,10 @@ namespace UI::DSA {
                     if (node->contains(mousePos)) {
                         draggedNode = node;
                         dragOffset = node->getPosition() - mousePos;
+                        
+                        // Lưu lại vị trí ban đầu và reset cờ Drag
+                        initialClickPos = mousePos; 
+                        hasDragged = false;         
                         
                         drawOrder.erase(drawOrder.begin() + i);
                         drawOrder.push_back(node);
@@ -161,40 +181,126 @@ namespace UI::DSA {
             }
         }
 
+        // BẮT SỰ KIỆN NHẢ CHUỘT
         if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonReleased>()) {
             if (mouseEvent->button == sf::Mouse::Button::Left) {
-                draggedNode = nullptr;
+                if (draggedNode && !hasDragged) {
+                    if (lockedNodes.find(draggedNode) != lockedNodes.end()) {
+                        // Mở khóa (Xóa màu đỏ ở đây đi)
+                        lockedNodes.erase(draggedNode); 
+                    } else {
+                        // Khóa lại (Xóa màu đỏ ở đây đi)
+                        lockedNodes.insert(draggedNode); 
+                        velocities[draggedNode] = {0.f, 0.f};
+                    }
+                }
+                draggedNode = nullptr; 
             }
         }
     }
 
     void Graph::update(sf::Vector2f mouseWorldPos) {
-        if (draggedNode != nullptr && isDraggable) {
-            draggedNode->setPosition(mouseWorldPos + dragOffset);
-            draggedNode->onHover(); 
-        } else {
-            Node* hoveredNode = nullptr;
-            for (int i = drawOrder.size() - 1; i >= 0; --i) {
-                auto node = drawOrder[i];
-                if (node->contains(mouseWorldPos)) {
-                    hoveredNode = node; 
-                    break; 
+        // CHỈ CHẠY TƯƠNG TÁC VÀ VẬT LÝ KHI ĐỒ THỊ ĐƯỢC PHÉP KÉO (isDraggable == true)
+        if (isDraggable) {
+            // CÁC HẰNG SỐ VẬT LÝ
+            float safeDistance = 140.f;  
+            float accelRate = 8.0f;      
+            float friction = 0.85f;      
+            float springLength = 250.f;   
+            float springTension = 0.1f;  
+
+            // 1. Tính LỰC ĐẨY
+            std::unordered_map<Node*, sf::Vector2f> forces;
+            for (auto& node1 : nodes) {
+                Node* n1 = node1.get();
+                for (auto& node2 : nodes) {
+                    if (node1 == node2) continue;
+                    Node* n2 = node2.get();
+
+                    sf::Vector2f delta = n1->getPosition() - n2->getPosition();
+                    float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+
+                    if (dist < safeDistance && dist > 0.001f) {
+                        float pushFactor = (safeDistance - dist) / safeDistance;
+                        forces[n1] += (delta / dist) * pushFactor * accelRate;
+                    }
                 }
             }
-            for (const auto &node: drawOrder){
-                if (node == hoveredNode){
-                    node->onHover();
-                } else{
-                    node->onIdle();
+
+            // 2. Tính LỰC HÚT
+            for (const auto& edge : edges) {
+                if (!edge) continue;
+                Node* u = edge->getSource();
+                Node* v = edge->getDest();
+                if (!u || !v) continue;
+
+                sf::Vector2f delta = v->getPosition() - u->getPosition();
+                float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+
+                if (dist > springLength) {
+                    float pullFactor = (dist - springLength) * springTension;
+                    sf::Vector2f pullForce = (delta / dist) * pullFactor;
+                    forces[u] += pullForce; 
+                    forces[v] -= pullForce; 
+                }
+            }
+
+            // 3. TÌM NODE ĐANG HOVER
+            Node* hoveredNode = nullptr;
+            if (draggedNode == nullptr) {
+                for (int i = drawOrder.size() - 1; i >= 0; --i) {
+                    if (drawOrder[i]->contains(mouseWorldPos)) {
+                        hoveredNode = drawOrder[i]; 
+                        break; 
+                    }
+                }
+            }
+
+            // 4. ÁP DỤNG VẬT LÝ & KIỂM SOÁT GIAO DIỆN
+            for (auto& nodePtr : nodes) {
+                Node* n = nodePtr.get();
+                
+                n->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS);
+                n->setOutlineColor(Config::UI::Colors::NodeOutline);
+
+                // TRẠNG THÁI KÉO
+                if (n == draggedNode) {
+                    sf::Vector2f deltaMouse = mouseWorldPos - initialClickPos;
+                    if (std::sqrt(deltaMouse.x * deltaMouse.x + deltaMouse.y * deltaMouse.y) > 3.0f) {
+                        hasDragged = true;
+                    }
+                    velocities[n] = {0.f, 0.f}; 
+                    n->setPosition(mouseWorldPos + dragOffset);
+                    n->onHover();
+                } 
+                // TRẠNG THÁI KHÓA
+                else if (lockedNodes.find(n) != lockedNodes.end()) {
+                    velocities[n] = {0.f, 0.f}; 
+                    n->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS * 2.5f); 
+                }
+                // TRẠNG THÁI VẬT LÝ BÌNH THƯỜNG
+                else {
+                    velocities[n] += forces[n];                       
+                    n->setPosition(n->getPosition() + velocities[n]); 
+                    velocities[n] *= friction;                        
+                    
+                    if (std::abs(velocities[n].x) < 0.1f) velocities[n].x = 0.f;
+                    if (std::abs(velocities[n].y) < 0.1f) velocities[n].y = 0.f;
+                }
+
+                // TRẠNG THÁI HOVER
+                if (n == hoveredNode) {
+                    n->onHover(); 
                 }
             }
         }
 
+        // 5. LUÔN CẬP NHẬT CẠNH (EDGES)
+        // Dù đang chạy thuật toán (không drag) hay chạy vật lý, cạnh vẫn phải luôn bám sát theo node
         for (auto& edge : edges) {
             edge->update();
         }
     }
-
     void Graph::draw() {
         for (auto& edge : edges) {
             edge->draw();
@@ -252,5 +358,20 @@ namespace UI::DSA {
 
     bool Graph::getIsDirected() const  { return isDirected; }
 
-    
+    bool Graph::isNodeLocked(Node* node) const {
+        return lockedNodes.find(node) != lockedNodes.end();
+    }
+
+    void Graph::setNodeLocked(Node* node, bool locked) {
+        if (!node) return;
+        if (locked) {
+            lockedNodes.insert(node);
+            velocities[node] = {0.f, 0.f};
+            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS * 2.5f); // Làm viền dày lên
+        } else {
+            lockedNodes.erase(node);
+            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS); // Trả về bình thường
+        }
+    }
+
 } // namespace UI::DSA

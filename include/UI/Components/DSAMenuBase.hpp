@@ -15,6 +15,7 @@
 #include <string>
 #include <optional>
 
+#include <unordered_map>
 namespace UI::Widgets {
 
     class DSAMenuBase {
@@ -60,6 +61,12 @@ namespace UI::Widgets {
         bool cancelClicked = false;
         bool skipClicked = false;
 
+        std::unordered_map<std::string, std::vector<std::string>> inputTextCache;
+
+        std::string makeInputCacheKey() const;
+        void saveCurrentInputsToCache();
+        void restoreInputsFromCache();
+
     public:
         DSAMenuBase(AppContext& context, const std::string& titleText);
         virtual ~DSAMenuBase() = default;
@@ -81,6 +88,12 @@ namespace UI::Widgets {
         
         void resetMenu();
         void clearInputs();
+        void setCachedInputsForState(int menuIndex, int dropdownIndex, const std::vector<std::string>& values);
+
+        std::vector<InputBar>& getInputsMutable() { return activeInputs; }
+
+        
+        
     };
 
 }

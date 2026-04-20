@@ -150,6 +150,7 @@ namespace Core::DSA::PseudoCode {
 
     } // namespace LinkedList
 
+
     // ===== TRIE =====
     namespace Trie {
 
@@ -190,4 +191,38 @@ namespace Core::DSA::PseudoCode {
         }
     } // namespace Trie
 
+        // ===== MST =====
+    namespace MST {
+
+        inline PseudoCodeDef kruskal() {
+            return { "Kruskal", {
+                { "sort edges by weight",                "sort_edges",   0 },
+                { "for each edge (u, v, w):",            "loop",         0 },
+                { "consider current edge",               "consider",     1 },
+                { "if find(u) != find(v):",              "check_cycle",  1 },
+                { "add edge to MST",                     "accept",       2 },
+                { "union(u, v)",                         "union",        2 },
+                { "else: skip edge",                     "reject",       1 },
+                { "finish",                              "finish",       0 },
+            }};
+        }
+
+        inline PseudoCodeDef prim() {
+            return { "Prim", {
+                { "mark start node visited",             "visit_start",  0 },
+                { "push all outgoing edges",             "push_edge",    0 },
+                { "while priority queue not empty:",     "loop",         0 },
+                { "consider minimum edge",               "consider",     1 },
+                { "if target already visited:",          "check_used",   1 },
+                { "skip edge",                           "reject",       2 },
+                { "else add edge to MST",                "accept",       1 },
+                { "mark new node visited",               "visit_node",   1 },
+                { "push outgoing edges of new node",     "push_edge",    1 },
+                { "finish",                              "finish",       0 },
+            }};
+        }
+
+    } // namespace MST
+
 } // namespace Core::DSA::PseudoCode
+

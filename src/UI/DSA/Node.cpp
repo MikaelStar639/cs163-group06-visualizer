@@ -36,6 +36,10 @@ void Node::setScale(float scaleFactor) {
     text.setScale(sf::Vector2f(scaleFactor, scaleFactor));
 }
 
+void Node::setOutlineThickness(float thickness) { 
+    shape.setOutlineThickness(thickness); 
+}
+
 // --- Setters ---
 void Node::setPosition(sf::Vector2f pos) { 
     shape.setPosition(pos); 
@@ -57,7 +61,9 @@ sf::Vector2f Node::getPosition() const {
     return shape.getPosition(); 
 }
 
-float Node::getRadius() const { return shape.getRadius(); }
+float Node::getRadius() const {
+    return shape.getRadius() * shape.getScale().x;
+}
 const std::string& Node::getLabel() const { return label; }
 sf::Color Node::getFillColor() const { return shape.getFillColor(); }
 sf::Color Node::getOutlineColor() const { return shape.getOutlineColor(); }
@@ -65,12 +71,12 @@ sf::Color Node::getLabelColor() const { return text.getFillColor(); }
 float Node::getScale() const { return shape.getScale().x; }
 
 bool Node::contains(sf::Vector2f point) const {
-    float r = shape.getRadius();
-    sf::Vector2f center = shape.getPosition(); 
-    
+    float r = getRadius();
+    sf::Vector2f center = shape.getPosition();
+
     float dx = point.x - center.x;
     float dy = point.y - center.y;
-    
+
     return (dx * dx + dy * dy <= r * r);
 }
 
