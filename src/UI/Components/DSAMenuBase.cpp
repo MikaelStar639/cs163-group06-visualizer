@@ -321,6 +321,8 @@ void DSAMenuBase::setMainButtonEnabled(int index, bool enabled) {
             Config::UI::Colors::ButtonText
         );
     }
+}
+
 std::string DSAMenuBase::makeInputCacheKey() const {
     return std::to_string(activeMenuIndex) + ":" + std::to_string(lastDropdownIndex);
 }
@@ -358,8 +360,6 @@ void DSAMenuBase::setCachedInputsForState(int menuIndex, int dropdownIndex, cons
             activeInputs[i].setText(values[i]);
         }
     }
-}
-
 }
 
 }
