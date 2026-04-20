@@ -150,4 +150,44 @@ namespace Core::DSA::PseudoCode {
 
     } // namespace LinkedList
 
+    // ===== TRIE =====
+    namespace Trie {
+
+        inline PseudoCodeDef insert() {
+            return { "Insert Word", {
+                { "curr = root",                  "init_curr",    0 },
+                { "for char c in word:",          "loop_char",    0 },
+                { "if curr.children[c] == null:", "check_null",   1 },
+                { "curr.children[c] = new Node",  "create_node",  2 },
+                { "curr = curr.children[c]",      "advance",      1 },
+                { "curr.isEndOfWord = true",      "set_end",      0 },
+            }};
+        }
+
+        inline PseudoCodeDef search() {
+            return { "Search Word", {
+                { "curr = root",                  "init_curr",    0 },
+                { "for char c in word:",          "loop_char",    0 },
+                { "if curr.children[c] == null:", "check_null",   1 },
+                { "return NOT FOUND",             "not_found",    2 },
+                { "curr = curr.children[c]",      "advance",      1 },
+                { "if curr.isEndOfWord:",         "check_end",    0 },
+                { "return FOUND",                 "found",        1 },
+                { "else: return NOT FOUND",       "not_found_end",0 },
+            }};
+        }
+
+        inline PseudoCodeDef deleteWord() {
+            return { "Delete Word", {
+                { "curr = root",                          "init_curr",  0 },
+                { "for char c in word:",                  "loop_char",  0 },
+                { "if curr.children[c] == null:",         "check_null", 1 },
+                { "return NOT FOUND",                     "not_found",  2 },
+                { "curr = curr.children[c]",              "advance",    1 },
+                { "curr.isEndOfWord = false",             "unmark_end", 0 },
+                { "if curr has no children: delete node", "delete",     0 },
+            }};
+        }
+    } // namespace Trie
+
 } // namespace Core::DSA::PseudoCode

@@ -60,35 +60,16 @@ namespace Controllers {
         std::string filePath = dirPath + "/LinkedListData.txt";
 
         if (!std::filesystem::exists(dirPath)) {
-            std::filesystem::create_directories(dirPath);
-        }
-
-        std::ifstream file(filePath);
-        if (!file.is_open()) {
-            // File does not exist, initialize it
-            std::ofstream outFile(filePath);
-            if (outFile.is_open()) {
-                outFile << "# --- LINKED LIST VISUALIZER DATA ---\n"
-                        << "# DETAILED INSTRUCTIONS:\n"
-                        << "# 1. Type the number of elements 'n' first.\n"
-                        << "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
-                        << "#    (Max n is 15. Values must be between -999 and 999).\n"
-                        << "# 3. Do NOT use commas (,) or other punctuation marks.\n"
-                        << "# 4. When you are done:\n"
-                        << "#    - Save this file by pressing Ctrl + S\n"
-                        << "#    - Go back to the Application and click the 'Go' button.\n"
-                        << "# -----------------------------------\n";
-                outFile.close();
-            }
-            std::cout << "[UI LOG] File not found. Created an empty file and opened Notepad for data entry.\n";
-            std::system(("start notepad " + filePath).c_str());
+            handleEditDataFile();
+            std::cout << "[UI LOG] File not found. Created an empty file and opened Notepad.\n";
             return;
         }
 
-        // Smart Parser
+        std::ifstream file(filePath);
         std::string line;
-        std::vector<int> allNumbers;
+        std::vector<std::string> rawTokens;
 
+        // Smart Parser
         while (std::getline(file, line)) {
             size_t startPos = line.find_first_not_of(" \t\r\n");
             if (startPos != std::string::npos && line[startPos] == '#') {
@@ -98,68 +79,84 @@ namespace Controllers {
             std::stringstream ss(line);
             std::string token;
             while (ss >> token) {
-                try {
-                    int val = std::stoi(token);
-                    allNumbers.push_back(val);
-                } catch (...) {
-                    // Ignore valid text
-                }
+                rawTokens.push_back(token);
             }
         }
         file.close();
 
-        std::string errorMsg = "";
         int n = -1;
-        std::vector<int> parsedData;
+        std::vector<int> finalData;
+        std::vector<std::string> warnings;
 
-        if (allNumbers.empty()) {
-            errorMsg = "# [WARNING] Could not read 'n'. Please enter the number of elements first.\n";
+        if (rawTokens.empty()) {
+            warnings.push_back("# [WARNING] Expected the first value to be an integer 'n' (number of elements).\n");
         } else {
-            n = allNumbers[0];
-            if (n < 0) {
-                errorMsg = "# [WARNING] Invalid size 'n' = " + std::to_string(n) + " (must be >= 0).\n";
-            } else if (n > 15) {
-                errorMsg = "# [WARNING] Size 'n' = " + std::to_string(n) + " is too large. Maximum allowed is 15.\n";
-            } else if (allNumbers.size() - 1 < static_cast<size_t>(n)) {
-                errorMsg = "# [WARNING] Expected " + std::to_string(n) + " elements, but found only " + std::to_string(allNumbers.size() - 1) + ".\n";
-            } else {
-                for (int i = 1; i <= n; ++i) {
-                    if (allNumbers[i] < -999 || allNumbers[i] > 999) {
-                        errorMsg = "# [WARNING] Value " + std::to_string(allNumbers[i]) + " has more than 3 digits (must be between -999 and 999).\n";
-                        break;
+            try {
+                n = std::stoi(rawTokens[0]);
+                if (n < 0 || n > 15) {
+                    warnings.push_back("# [WARNING] Size 'n' = " + std::to_string(n) + " is invalid. Allowed range: 0 to 15.\n");
+                } 
+                
+                if (n >= 0) {
+                    int actualCount = rawTokens.size() - 1;
+                    if (actualCount < n) {
+                        warnings.push_back("# [WARNING] Expected n=" + std::to_string(n) + " elements, but found only " + std::to_string(actualCount) + " values.\n");
+                    } else if (actualCount > n) {
+                        warnings.push_back("# [WARNING] Expected n=" + std::to_string(n) + " elements, but found " + std::to_string(actualCount) + ". Extra values will be ignored.\n");
                     }
-                    parsedData.push_back(allNumbers[i]);
+                }
+            } catch (...) {
+                warnings.push_back("# [WARNING] Expected the first value to be an integer 'n' (number of elements).\n");
+            }
+
+            // Always validate all elements to report invalid strings or out-of-bounds
+            for (size_t i = 1; i < rawTokens.size(); ++i) {
+                try {
+                    int val = std::stoi(rawTokens[i]);
+                    // Only check bounds and add to payload if it's within intended `n`
+                    if (n >= 0 && i <= static_cast<size_t>(n)) {
+                        if (val < -999 || val > 999) {
+                            warnings.push_back("# [WARNING] Element '" + std::to_string(val) + "' is invalid. Must be between -999 and 999.\n");
+                        } else {
+                            finalData.push_back(val);
+                        }
+                    }
+                } catch (...) {
+                    warnings.push_back("# [WARNING] Value '" + rawTokens[i] + "' is not a valid integer.\n");
                 }
             }
         }
 
-        if (!errorMsg.empty()) {
+        // Reconstruct file if there are warnings (or empty dataset)
+        // Ensure finalData has strictly n valid items, else fail.
+        if (!warnings.empty() || (n >= 0 && finalData.size() < static_cast<size_t>(n))) {
             std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
+            std::string header = "# --- LINKED LIST VISUALIZER DATA ---\n"
+                                 "# DETAILED INSTRUCTIONS:\n"
+                                 "# 1. Type the number of elements 'n' first.\n"
+                                 "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
+                                 "#    (Max n is 15. Values must be between -999 and 999).\n"
+                                 "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                                 "# 4. When you are done:\n"
+                                 "#    - Save this file by pressing Ctrl + S\n"
+                                 "#    - Go back to the Application and click the 'Go' button.\n"
+                                 "# -----------------------------------\n";
             
-            // Read file again to preserve content but inject warning
-            std::ifstream inFileForErr(filePath);
-            std::string contentWithWarning = "";
-            bool warningInserted = false;
-
-            if (inFileForErr.is_open()) {
-                std::string l;
-                while (std::getline(inFileForErr, l)) {
-                    // Prevent piling up old warnings
-                    if (l.find("# [WARNING]") != std::string::npos) continue;
-                    
-                    contentWithWarning += l + "\n";
-
-                    if (!warningInserted && l.find("# -----------------------------------") != std::string::npos) {
-                        contentWithWarning += errorMsg;
-                        warningInserted = true;
-                    }
+            std::string contentWithWarning = header;
+            // Distinct warnings avoiding duplicates
+            std::vector<std::string> uniqueWarnings;
+            for (const std::string& w : warnings) {
+                if (std::find(uniqueWarnings.begin(), uniqueWarnings.end(), w) == uniqueWarnings.end()) {
+                    uniqueWarnings.push_back(w);
+                    contentWithWarning += w;
                 }
-                inFileForErr.close();
             }
-
-            if (!warningInserted) {
-                contentWithWarning = errorMsg + contentWithWarning;
+            
+            for (size_t i = 0; i < rawTokens.size(); ++i) {
+                contentWithWarning += rawTokens[i];
+                if (i < rawTokens.size() - 1) contentWithWarning += " ";
             }
+            contentWithWarning += "\n";
 
             std::ofstream outFileErr(filePath);
             if (outFileErr.is_open()) {
@@ -174,7 +171,7 @@ namespace Controllers {
         model.clear();
         graph.clear();
 
-        for (int val : parsedData) {
+        for (int val : finalData) {
             model.insertTail(val);
             graph.addNode(std::to_string(val), {startX, startY});
         }
