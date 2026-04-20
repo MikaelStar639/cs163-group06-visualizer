@@ -34,8 +34,6 @@ namespace Controllers {
         int liveSelectedEdgeCount = 0;
         bool running = false;
 
-        void applyMSTNodeScale(float scale = 2.f / 3.f);
-
     public:
         MSTController(AppContext& context,
                       UI::DSA::Graph& g,

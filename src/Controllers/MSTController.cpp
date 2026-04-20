@@ -248,11 +248,6 @@ namespace Controllers {
 
         auto seq = std::make_unique<UI::Animations::SequenceAnimation>();
         seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.40f));
-        seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-            [this]() {
-                applyMSTNodeScale(2.f / 3.f);
-            }
-        ));
         ctx.animManager.addAnimation(std::move(seq));
     }
 
@@ -846,8 +841,12 @@ namespace Controllers {
         lastAlgorithm = "None";
         lastTotalWeight = 0;
         lastSelectedEdgeCount = 0;
+        graph.clearEdges();
+        int currentSize = graph.getNodes().size();
+        for (int i = 0; i < currentSize; ++i) {
+            graph.removeNodeAt(0); 
+        }
         model.clear();
-        graph.clear();
     }
 
     void MSTController::interruptRunning(const std::string& reason) {
@@ -861,12 +860,4 @@ namespace Controllers {
             codeViewer->hide();
         }
     }
-    void MSTController::applyMSTNodeScale(float scale) {
-        for (const auto& nodePtr : graph.getNodes()) {
-            if (nodePtr) {
-                nodePtr->setScale(scale);
-            }
-        }
-    }
-
 } // namespace Controllers
