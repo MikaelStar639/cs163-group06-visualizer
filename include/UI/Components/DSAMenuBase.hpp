@@ -15,6 +15,7 @@
 #include <string>
 #include <optional>
 
+#include <unordered_map>
 namespace UI::Widgets {
 
     class DSAMenuBase {
@@ -58,6 +59,12 @@ namespace UI::Widgets {
 
         // Flag for prev button
         bool cancelClicked = false;
+
+        std::unordered_map<std::string, std::vector<std::string>> inputTextCache;
+
+        std::string makeInputCacheKey() const;
+        void saveCurrentInputsToCache();
+        void restoreInputsFromCache();
 
     public:
         DSAMenuBase(AppContext& context, const std::string& titleText);

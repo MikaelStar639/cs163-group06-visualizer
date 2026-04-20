@@ -55,6 +55,8 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
 
     for (int i = 0; i < static_cast<int>(mainButtons.size()); ++i) {
         if (mainButtons[i].isClicked(event)) {
+            saveCurrentInputsToCache();
+
             if (isInstantAction(i)) {
                 activeMenuIndex = i;
                 goClicked = true; 
@@ -62,13 +64,14 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
                 activeMenuIndex = (activeMenuIndex == i) ? -1 : i;
                 lastDropdownIndex = (activeMenuIndex == -1) ? -1 : 0;
             }
-            
+
             updateLayout();
         }
     }
 
     if (dropdownAction && dropdownAction->isClicked(event)) {
         if (dropdownAction->getSelectedIndex() != lastDropdownIndex) {
+            saveCurrentInputsToCache();
              dropdownAction->setLabel(dropdownAction->getSelectedText());
              lastDropdownIndex = dropdownAction->getSelectedIndex();
              updateLayout();
@@ -250,6 +253,8 @@ void DSAMenuBase::updateLayout() {
     }
 
     renderSubMenu(boxX, boxY, activeMenuIndex);
+
+    restoreInputsFromCache();
 }
 
 bool DSAMenuBase::consumeGoClicked() {
@@ -276,6 +281,33 @@ void DSAMenuBase::resetMenu() {
 
 void DSAMenuBase::clearInputs() {
     for (auto& input : activeInputs) input.clear();
+}
+
+std::string DSAMenuBase::makeInputCacheKey() const {
+    return std::to_string(activeMenuIndex) + ":" + std::to_string(lastDropdownIndex);
+}
+
+void DSAMenuBase::saveCurrentInputsToCache() {
+    if (activeMenuIndex == -1) return;
+
+    std::vector<std::string> values;
+    values.reserve(activeInputs.size());
+
+    for (const auto& input : activeInputs) {
+        values.push_back(input.getText());
+    }
+
+    inputTextCache[makeInputCacheKey()] = std::move(values);
+}
+
+void DSAMenuBase::restoreInputsFromCache() {
+    auto it = inputTextCache.find(makeInputCacheKey());
+    if (it == inputTextCache.end()) return;
+
+    const auto& values = it->second;
+    for (size_t i = 0; i < activeInputs.size() && i < values.size(); ++i) {
+        activeInputs[i].setText(values[i]);
+    }
 }
 
 }

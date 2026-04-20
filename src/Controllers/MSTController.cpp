@@ -652,6 +652,12 @@ namespace Controllers {
         };
 
         auto steps = model.runPrim(startNode);
+        std::set<int> visitedNodes;
+        for (const auto& st : steps) {
+            if (st.type == Core::DSA::MSTStep::Type::VisitNode && st.node >= 0) {
+                visitedNodes.insert(st.node);
+            }
+        }
 
         lastAlgorithm = "Prim";
         lastTotalWeight = 0;
