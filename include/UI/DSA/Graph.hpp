@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set> 
 
 namespace UI::DSA {
 
@@ -17,11 +19,17 @@ namespace UI::DSA {
         std::vector<std::unique_ptr<Edge>> edges;
         std::vector<Node*> drawOrder;
 
+        std::unordered_map<Node*, sf::Vector2f> velocities;
+        std::unordered_set<Node*> lockedNodes;
+
         Node* draggedNode = nullptr;
         sf::Vector2f dragOffset;
 
         bool isDirected;
         bool isDraggable; 
+
+        bool hasDragged = false;
+        sf::Vector2f initialClickPos;
 
     public:
         Graph(AppContext& context, bool directed = false);

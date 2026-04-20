@@ -147,39 +147,6 @@ namespace Controllers {
         return es[edgeId].get();
     }
 
-    void MSTController::triggerCircularLayout(float duration) {
-        auto animGroup = std::make_unique<UI::Animations::ParallelAnimation>();
-
-        int n = static_cast<int>(graph.getNodes().size());
-        if (n == 0) return;
-
-        if (n == 1) {
-            auto* node = graph.getNode(0);
-            if (node) {
-                animGroup->add(std::make_unique<UI::Animations::NodeMoveAnimation>(
-                    node, sf::Vector2f(centerX, centerY), duration
-                ));
-            }
-        } else {
-            for (int i = 0; i < n; ++i) {
-                float angle = -3.14159265f / 2.f + i * 2.f * 3.14159265f / n;
-                sf::Vector2f target{
-                    centerX + radius * std::cos(angle),
-                    centerY + radius * std::sin(angle)
-                };
-
-                auto* node = graph.getNode(i);
-                if (node) {
-                    animGroup->add(std::make_unique<UI::Animations::NodeMoveAnimation>(
-                        node, target, duration
-                    ));
-                }
-            }
-        }
-
-        ctx.animManager.addAnimation(std::move(animGroup));
-    }
-
     void MSTController::forceSnapLayout() {
         int n = static_cast<int>(graph.getNodes().size());
         if (n == 0) return;
@@ -203,51 +170,97 @@ namespace Controllers {
     }
 
     void MSTController::rebuildGraphFromModel() {
-        // Lưu vị trí node cũ theo label
+        // 1. Lưu vị trí node cũ (để nếu user đang kéo thả thì không bị reset)
         std::unordered_map<std::string, sf::Vector2f> oldPositions;
         for (const auto& nodePtr : graph.getNodes()) {
-            if (nodePtr) {
-                oldPositions[nodePtr->getLabel()] = nodePtr->getPosition();
-            }
+            if (nodePtr) oldPositions[nodePtr->getLabel()] = nodePtr->getPosition();
         }
 
         graph.clear();
 
         const auto& nodeValues = model.getNodeValues();
         int n = static_cast<int>(nodeValues.size());
+        if (n <= 0) return;
 
-        auto defaultPosForIndex = [&](int i) -> sf::Vector2f {
-            if (n <= 0) return {centerX, centerY};
-            if (n == 1) return {centerX, centerY};
-
-            float angle = -3.14159265f / 2.f + i * 2.f * 3.14159265f / n;
-            return {
-                centerX + radius * std::cos(angle),
-                centerY + radius * std::sin(angle)
-            };
-        };
-
+        // 2. Khởi tạo vị trí nháp: Xếp vòng tròn để lò xo có đà bung ra
+        std::vector<sf::Vector2f> positions(n);
         for (int i = 0; i < n; ++i) {
             std::string label = std::to_string(nodeValues[i]);
-
-            sf::Vector2f pos = defaultPosForIndex(i);
-
             auto it = oldPositions.find(label);
             if (it != oldPositions.end()) {
-                // node cũ: giữ nguyên vị trí đã kéo
-                pos = it->second;
+                positions[i] = it->second; 
+            } else {
+                float angle = -3.14159265f / 2.f + i * 2.f * 3.14159265f / n;
+                positions[i] = { centerX + radius * std::cos(angle), centerY + radius * std::sin(angle) };
             }
-
-            graph.addNode(label, pos);
         }
 
-        const auto& edges = model.getEdges();
-        for (const auto& e : edges) {
+        // 3. Chạy thuật toán Lực "Ngầm" (Không Animation)
+        if (n > 1) {
+            const int ITERATIONS = 150;
+            const float L = 140.f;              // Cạnh dài hơn một chút
+            const float K_repel = L * L * 1.5f; // Lực đẩy mạnh hơn chống dính
+            const float K_attract = 1.0f / L;
+            float temperature = 100.f;
+
+            const auto& edges = model.getEdges();
+
+            for (int step = 0; step < ITERATIONS; ++step) {
+                std::vector<sf::Vector2f> forces(n, {0.f, 0.f});
+
+                // Lực Đẩy (Repulsion)
+                for (int i = 0; i < n; ++i) {
+                    for (int j = i + 1; j < n; ++j) {
+                        sf::Vector2f delta = positions[i] - positions[j];
+                        float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+                        if (dist < 0.1f) dist = 0.1f;
+                        float repulse = K_repel / dist;
+                        sf::Vector2f f = (delta / dist) * repulse;
+                        forces[i] += f;
+                        forces[j] -= f;
+                    }
+                }
+
+                // Lực Hút theo Cạnh (Attraction)
+                for (const auto& e : edges) {
+                    sf::Vector2f delta = positions[e.v] - positions[e.u];
+                    float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
+                    if (dist < 0.1f) dist = 0.1f;
+                    float attract = dist * dist * K_attract;
+                    sf::Vector2f f = (delta / dist) * attract;
+                    forces[e.u] += f;
+                    forces[e.v] -= f;
+                }
+
+                // Cập nhật tọa độ
+                for (int i = 0; i < n; ++i) {
+                    float fMag = std::sqrt(forces[i].x * forces[i].x + forces[i].y * forces[i].y);
+                    if (fMag > 0) {
+                        positions[i] += (forces[i] / fMag) * std::min(fMag, temperature);
+                    }
+                    // Giới hạn để node không rớt ra ngoài cửa sổ
+                    positions[i].x = std::max(centerX - 450.f, std::min(centerX + 450.f, positions[i].x));
+                    positions[i].y = std::max(centerY - 280.f, std::min(centerY + 280.f, positions[i].y));
+                }
+                temperature *= 0.95f;
+            }
+        }
+
+        // 4. Lắp ráp Node và Edge đã chuẩn bị sẵn vào Graph
+        for (int i = 0; i < n; ++i) {
+            graph.addNode(std::to_string(nodeValues[i]), positions[i]);
+        }
+        for (const auto& e : model.getEdges()) {
             graph.addEdge(e.u, e.v, std::to_string(e.w));
         }
 
+        // Ép đồ thị tự thu nhỏ lại 66% để nhìn thoáng hơn
+        for (const auto& nodePtr : graph.getNodes()) {
+            if (nodePtr) nodePtr->setScale(2.f / 3.f);
+        }
+
         auto seq = std::make_unique<UI::Animations::SequenceAnimation>();
-        seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.40f));
+        seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.20f));
         ctx.animManager.addAnimation(std::move(seq));
     }
 

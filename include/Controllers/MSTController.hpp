@@ -22,7 +22,6 @@ namespace Controllers {
         float radius  = 260.f;
 
         void rebuildGraphFromModel();
-        void triggerCircularLayout(float duration = 0.5f);
         UI::DSA::Edge* getEdgeById(int edgeId) const;
 
         int lastTotalWeight = 0;
