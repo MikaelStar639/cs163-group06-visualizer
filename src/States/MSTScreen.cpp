@@ -87,6 +87,7 @@ void MSTScreen::handleMenuAction() {
             int edgeCount = std::stoi(inputs[1].getText());
 
             controller.handleCreateRandom(nodeCount, edgeCount);
+            syncGraphToManualCache();
             clearManualPreviewCache();
         }
         else if (sel == 1) { // File
@@ -95,6 +96,7 @@ void MSTScreen::handleMenuAction() {
                 controller.handleEditDataFile();
             } else if (subBtn == 1) {
                 controller.handleCreateFromFile();
+                syncGraphToManualCache();
                 clearManualPreviewCache();
             }
         }
@@ -113,6 +115,8 @@ void MSTScreen::handleMenuAction() {
             controller.handleCreateManual(static_cast<int>(nodeValues.size()),
                                         nodeValues,
                                         rawEdges);
+            
+            syncGraphToManualCache();
 
             lastPreviewNodeValues = nodeValues;
             lastPreviewEdges = rawEdges;
@@ -130,6 +134,7 @@ void MSTScreen::handleMenuAction() {
     }
     else if (action == MSTMenu::Action::Clean) {
         controller.handleClearAll();
+        syncGraphToManualCache();
         clearManualPreviewCache();
     }
 }
@@ -236,4 +241,45 @@ void MSTScreen::updateManualPreview() {
     lastPreviewNodeValues = nodeValues;
     lastPreviewEdges = rawEdges;
     hasPreviewCache = true;
+}
+
+
+std::string MSTScreen::buildManualTextFromModel() const {
+    std::string result;
+
+    const auto& nodeValues = model.getNodeValues();
+    const auto& edges = model.getEdges();
+
+    // node labels
+    for (int val : nodeValues) {
+        result += std::to_string(val) + "\n";
+    }
+
+    // edges theo label node, không phải index
+    for (const auto& e : edges) {
+        if (e.u >= 0 && e.u < static_cast<int>(nodeValues.size()) &&
+            e.v >= 0 && e.v < static_cast<int>(nodeValues.size())) {
+            result += std::to_string(nodeValues[e.u]) + " "
+                   +  std::to_string(nodeValues[e.v]) + " "
+                   +  std::to_string(e.w) + "\n";
+        }
+    }
+
+    // bỏ newline cuối nếu muốn
+    if (!result.empty() && result.back() == '\n') {
+        result.pop_back();
+    }
+
+    return result;
+}
+
+void MSTScreen::syncGraphToManualCache() {
+    int createMenuIndex = static_cast<int>(UI::Widgets::MSTMenu::Action::Create);
+    int manualDropdownIndex = 2; // Random=0, File=1, Manual=2
+
+    std::vector<std::string> values;
+    values.push_back(std::to_string(model.getNodeCount())); // ô node count
+    values.push_back(buildManualTextFromModel());           // ô manual multiline
+
+    uiMenu.setCachedInputsForState(createMenuIndex, manualDropdownIndex, values);
 }

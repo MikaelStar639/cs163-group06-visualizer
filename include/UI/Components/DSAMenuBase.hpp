@@ -86,8 +86,12 @@ namespace UI::Widgets {
         
         void resetMenu();
         void clearInputs();
+        void setCachedInputsForState(int menuIndex, int dropdownIndex, const std::vector<std::string>& values);
 
         std::vector<InputBar>& getInputsMutable() { return activeInputs; }
+
+        
+        
     };
 
 }

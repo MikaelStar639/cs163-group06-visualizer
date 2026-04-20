@@ -310,4 +310,16 @@ void DSAMenuBase::restoreInputsFromCache() {
     }
 }
 
+void DSAMenuBase::setCachedInputsForState(int menuIndex, int dropdownIndex, const std::vector<std::string>& values) {
+    std::string key = std::to_string(menuIndex) + ":" + std::to_string(dropdownIndex);
+    inputTextCache[key] = values;
+
+    // nếu đang đứng đúng submenu đó thì update luôn input đang hiển thị
+    if (activeMenuIndex == menuIndex && lastDropdownIndex == dropdownIndex) {
+        for (size_t i = 0; i < activeInputs.size() && i < values.size(); ++i) {
+            activeInputs[i].setText(values[i]);
+        }
+    }
+}
+
 }

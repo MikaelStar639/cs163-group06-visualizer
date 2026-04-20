@@ -33,6 +33,9 @@ private:
 
     sf::Text liveText;
 
+    void syncGraphToManualCache();
+    std::string buildManualTextFromModel() const;
+
 public:
     explicit MSTScreen(AppContext& context);
 
