@@ -89,6 +89,20 @@ private:
     int getCurrentLineCount() const;
     int getMaxVisibleLines() const;
 
+    float scrollOffsetY = 0.f;
+    float getMaxScrollY() const;
+    void clampScroll();
+    void ensureCaretVisible();
+
+    sf::RectangleShape scrollTrack;
+    sf::RectangleShape scrollThumb;
+    bool isDraggingScrollbar = false;
+    float scrollbarDragOffsetY = 0.f;
+
+    bool needsScrollbar() const;
+    void updateScrollbar();
+    void setScrollFromThumb(float thumbTopY);
+
 public:
     InputBar(AppContext& context,
              sf::Vector2f pos,

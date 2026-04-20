@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <map>
 #include <cmath>
+#include <algorithm>
+#include <cmath>
 
 namespace UI::Widgets {
 
@@ -49,6 +51,9 @@ InputBar::InputBar(AppContext& context,
 
     cursor.setSize({2.f, text.getCharacterSize() + 5.f});
     cursor.setFillColor(sf::Color::White);
+
+    scrollTrack.setFillColor(sf::Color(70, 70, 70, 180));
+    scrollThumb.setFillColor(sf::Color(180, 180, 180, 220));
 
     setType(inputType);
     updateTextPositions();
@@ -255,17 +260,25 @@ void InputBar::updateTextPositions() {
     }
 
     if (isMultiline()) {
+        ensureCaretVisible();
+        clampScroll();
+
+        text.setCharacterSize(Config::UI::FONT_SIZE_BUTTON);
+        placeholderText.setCharacterSize(Config::UI::FONT_SIZE_BUTTON);
+
+        text.setPosition({pos.x + paddingX, pos.y + paddingY - scrollOffsetY});
+        placeholderText.setPosition({pos.x + paddingX, pos.y + paddingY});
+
         text.setOrigin({0.f, 0.f});
         placeholderText.setOrigin({0.f, 0.f});
 
-        text.setPosition({pos.x + paddingX, pos.y + paddingY});
-        placeholderText.setPosition({pos.x + paddingX, pos.y + paddingY});
+        fitTextToBox(placeholderText, 28.f, 10.f);
 
         float lineHeight = ctx.font.getLineSpacing(text.getCharacterSize());
 
         sf::Vector2f caretPixelPos;
         if (content.empty()) {
-            caretPixelPos = text.getPosition();
+            caretPixelPos = {pos.x + paddingX, pos.y + paddingY};
         } else {
             caretPixelPos = text.findCharacterPos(caretPos);
         }
@@ -310,29 +323,86 @@ void InputBar::updateTextPositions() {
     }
 
     errorText.setPosition({pos.x + 4.f, pos.y + size.y + 4.f});
+    updateScrollbar();
 }
 
 void InputBar::handleEvent(const sf::Event& event) {
     if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>()) {
-        if (mousePressed->button == sf::Mouse::Button::Left) {
-            sf::Vector2f mousePos(
-                static_cast<float>(mousePressed->position.x),
-                static_cast<float>(mousePressed->position.y)
-            );
+    if (mousePressed->button == sf::Mouse::Button::Left) {
+        sf::Vector2f mousePos(
+            static_cast<float>(mousePressed->position.x),
+            static_cast<float>(mousePressed->position.y)
+        );
 
-            isFocused = box.getGlobalBounds().contains(mousePos);
-
-            if (isFocused) {
-                moveCaretToMouse(mousePos);
-                updateTextPositions();
+        // ƯU TIÊN SCROLLBAR
+        if (isMultiline() && needsScrollbar()) {
+            if (scrollThumb.getGlobalBounds().contains(mousePos)) {
+                isFocused = true;
+                isDraggingScrollbar = true;
+                scrollbarDragOffsetY = mousePos.y - scrollThumb.getPosition().y;
                 cursorClock.restart();
                 showCursor = true;
+                return;
+            }
+
+            if (scrollTrack.getGlobalBounds().contains(mousePos)) {
+                isFocused = true;
+                float newThumbTop = mousePos.y - scrollThumb.getSize().y / 2.f;
+                setScrollFromThumb(newThumbTop);
+                return;
             }
         }
+
+        isFocused = box.getGlobalBounds().contains(mousePos);
+
+        if (isFocused) {
+            moveCaretToMouse(mousePos);
+            updateTextPositions();
+            cursorClock.restart();
+            showCursor = true;
+        }
     }
+}
 
     if (!isFocused) return;
     if (readOnly) return;
+    if (const auto* mousePressed = event.getIf<sf::Event::MouseButtonPressed>()) {
+    if (mousePressed->button == sf::Mouse::Button::Left && isMultiline() && needsScrollbar()) {
+        sf::Vector2f mousePos(
+            static_cast<float>(mousePressed->position.x),
+            static_cast<float>(mousePressed->position.y)
+        );
+
+        if (scrollThumb.getGlobalBounds().contains(mousePos)) {
+            isDraggingScrollbar = true;
+            scrollbarDragOffsetY = mousePos.y - scrollThumb.getPosition().y;
+            return;
+        }
+
+        if (scrollTrack.getGlobalBounds().contains(mousePos)) {
+            float newThumbTop = mousePos.y - scrollThumb.getSize().y / 2.f;
+            setScrollFromThumb(newThumbTop);
+            return;
+        }
+    }
+}
+
+if (const auto* mouseReleased = event.getIf<sf::Event::MouseButtonReleased>()) {
+    if (mouseReleased->button == sf::Mouse::Button::Left) {
+        if (isDraggingScrollbar) {
+            isDraggingScrollbar = false;
+            return;
+        }
+    }
+}
+if (const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>()) {
+    if (isDraggingScrollbar && isMultiline()) {
+        float newThumbTop = static_cast<float>(mouseMoved->position.y) - scrollbarDragOffsetY;
+        setScrollFromThumb(newThumbTop);
+        return;
+    }
+}
+    
 
     if (const auto* textEntered = event.getIf<sf::Event::TextEntered>()) {
         char32_t unicode = textEntered->unicode;
@@ -353,7 +423,7 @@ void InputBar::handleEvent(const sf::Event& event) {
         }
 
         if ((unicode == 13 || unicode == 10) && isMultiline()) {
-            if (content.size() < maxLength && getCurrentLineCount() < getMaxVisibleLines()) {
+            if (content.size() < maxLength) {
                 content.insert(caretPos, 1, '\n');
                 ++caretPos;
                 preferredColumn = -1;
@@ -401,6 +471,7 @@ void InputBar::handleEvent(const sf::Event& event) {
 
             case sf::Keyboard::Key::Up:
                 moveCaretUp();
+                ensureCaretVisible();
                 updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
@@ -408,6 +479,7 @@ void InputBar::handleEvent(const sf::Event& event) {
 
             case sf::Keyboard::Key::Down:
                 moveCaretDown();
+                ensureCaretVisible();
                 updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
@@ -415,6 +487,7 @@ void InputBar::handleEvent(const sf::Event& event) {
 
             case sf::Keyboard::Key::Home:
                 moveCaretHome();
+                ensureCaretVisible();
                 updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
@@ -422,6 +495,7 @@ void InputBar::handleEvent(const sf::Event& event) {
 
             case sf::Keyboard::Key::End:
                 moveCaretEnd();
+                ensureCaretVisible();
                 updateTextPositions();
                 cursorClock.restart();
                 showCursor = true;
@@ -433,6 +507,7 @@ void InputBar::handleEvent(const sf::Event& event) {
                     preferredColumn = -1;
                     text.setString(content);
                     validateContent();
+                    ensureCaretVisible();
                     updateTextPositions();
                     cursorClock.restart();
                     showCursor = true;
@@ -475,16 +550,55 @@ void InputBar::update() {
 void InputBar::draw() {
     ctx.window.draw(box);
 
-    if (content.empty()) ctx.window.draw(placeholderText);
-    else ctx.window.draw(text);
+    sf::View oldView = ctx.window.getView();
 
-    if (isFocused && showCursor) {
+    sf::FloatRect clip = box.getGlobalBounds();
+    float inset = 2.f;
+    clip.position.x += inset;
+    clip.position.y += inset;
+    clip.size.x -= 2.f * inset;
+    clip.size.y -= 2.f * inset;
+
+    sf::Vector2u winSize = ctx.window.getSize();
+
+    sf::View clipView;
+    clipView.setSize({clip.size.x, clip.size.y});
+    clipView.setCenter({
+        clip.position.x + clip.size.x / 2.f,
+        clip.position.y + clip.size.y / 2.f
+    });
+
+    clipView.setViewport(sf::FloatRect(
+        {clip.position.x / static_cast<float>(winSize.x),
+         clip.position.y / static_cast<float>(winSize.y)},
+        {clip.size.x / static_cast<float>(winSize.x),
+         clip.size.y / static_cast<float>(winSize.y)}
+    ));
+
+    ctx.window.setView(clipView);
+
+    if (content.empty()) {
+        ctx.window.draw(placeholderText);
+    } else {
+        ctx.window.draw(text);
+    }
+
+    if (isFocused && showCursor && !readOnly) {
         ctx.window.draw(cursor);
+    }
+
+    ctx.window.setView(oldView);
+
+    if (needsScrollbar()) {
+        ctx.window.draw(scrollTrack);
+        ctx.window.draw(scrollThumb);
     }
 
     if (!errorMessage.empty()) {
         ctx.window.draw(errorText);
     }
+
+
 }
 
 void InputBar::setPosition(sf::Vector2f pos) {
@@ -506,6 +620,7 @@ void InputBar::setText(const std::string& value) {
     content = value;
     caretPos = content.size();
     preferredColumn = -1;
+    scrollOffsetY = 0.f;
     text.setString(content);
     validateContent();
     updateTextPositions();
@@ -591,6 +706,7 @@ void InputBar::clear() {
     content.clear();
     caretPos = 0;
     preferredColumn = -1;
+    scrollOffsetY = 0.f;
     text.setString(content);
     errorMessage.clear();
     errorText.setString("");
@@ -851,14 +967,15 @@ void InputBar::moveCaretToMouse(sf::Vector2f mousePos) {
 
         caretPos = bestPos;
         preferredColumn = -1;
-        updateTextPositions();
-        cursorClock.restart();
-        showCursor = true;
         return;
     }
 
+    // ===== MULTILINE + SCROLL =====
     float lineHeight = ctx.font.getLineSpacing(text.getCharacterSize());
-    int targetLine = static_cast<int>((mousePos.y - (pos.y + paddingY)) / lineHeight);
+
+    
+    float contentY = (mousePos.y - (pos.y + paddingY)) + scrollOffsetY;
+    int targetLine = static_cast<int>(std::floor(contentY / lineHeight));
     if (targetLine < 0) targetLine = 0;
 
     auto lines = getLines(false);
@@ -875,7 +992,7 @@ void InputBar::moveCaretToMouse(sf::Vector2f mousePos) {
     temp.setOrigin({0.f, 0.f});
     temp.setPosition({
         pos.x + paddingX,
-        pos.y + paddingY + targetLine * lineHeight
+        pos.y + paddingY + targetLine * lineHeight - scrollOffsetY
     });
 
     int bestCol = 0;
@@ -1009,6 +1126,104 @@ int InputBar::getMaxVisibleLines() const {
     int maxLines = static_cast<int>(std::floor(usableHeight / lineHeight));
 
     return std::max(1, maxLines);
+}
+
+float InputBar::getMaxScrollY() const {
+    if (!isMultiline()) return 0.f;
+
+    float paddingY = 10.f;
+    float usableHeight = box.getSize().y - 2.f * paddingY;
+    float contentHeight = getCurrentLineCount() * getLineHeight();
+
+    return std::max(0.f, contentHeight - usableHeight);
+}
+
+void InputBar::clampScroll() {
+    scrollOffsetY = std::clamp(scrollOffsetY, 0.f, getMaxScrollY());
+}
+
+void InputBar::ensureCaretVisible() {
+    if (!isMultiline()) return;
+
+    float paddingY = 10.f;
+    float visibleHeight = box.getSize().y - 2.f * paddingY;
+    float lineHeight = getLineHeight();
+
+    int line = getLineOfPos(caretPos);
+
+    float lineTop = line * lineHeight;
+    float lineBottom = lineTop + lineHeight;
+
+    
+    if (lineTop <= scrollOffsetY) {
+        scrollOffsetY = lineTop;
+    }
+    else if (lineBottom >= scrollOffsetY + visibleHeight) {
+        scrollOffsetY = lineBottom - visibleHeight;
+    }
+
+    clampScroll();
+}
+
+bool InputBar::needsScrollbar() const {
+    return isMultiline() && getMaxScrollY() > 0.f;
+}
+
+void InputBar::updateScrollbar() {
+    if (!isMultiline()) return;
+
+    float padding = 6.f;
+    float trackWidth = 10.f;
+
+    sf::Vector2f pos = box.getPosition();
+    sf::Vector2f size = box.getSize();
+
+    float trackX = pos.x + size.x - trackWidth - padding;
+    float trackY = pos.y + padding;
+    float trackH = size.y - 2.f * padding;
+
+    scrollTrack.setPosition({trackX, trackY});
+    scrollTrack.setSize({trackWidth, trackH});
+
+    float maxScroll = getMaxScrollY();
+    if (maxScroll <= 0.f) {
+        scrollThumb.setPosition({trackX, trackY});
+        scrollThumb.setSize({trackWidth, trackH});
+        return;
+    }
+
+    float paddingY = 10.f;
+    float visibleHeight = size.y - 2.f * paddingY;
+    float contentHeight = getCurrentLineCount() * getLineHeight();
+
+    float thumbH = std::max(28.f, trackH * (visibleHeight / contentHeight));
+    float travel = trackH - thumbH;
+    float thumbY = trackY + (scrollOffsetY / maxScroll) * travel;
+
+    scrollThumb.setPosition({trackX, thumbY});
+    scrollThumb.setSize({trackWidth, thumbH});
+}
+
+void InputBar::setScrollFromThumb(float thumbTopY) {
+    if (!isMultiline()) return;
+
+    float trackY = scrollTrack.getPosition().y;
+    float trackH = scrollTrack.getSize().y;
+    float thumbH = scrollThumb.getSize().y;
+
+    float travel = trackH - thumbH;
+    if (travel <= 0.f) {
+        scrollOffsetY = 0.f;
+        return;
+    }
+
+    float local = thumbTopY - trackY;
+    local = std::clamp(local, 0.f, travel);
+
+    float ratio = local / travel;
+    scrollOffsetY = ratio * getMaxScrollY();
+    clampScroll();
+    updateTextPositions();
 }
 
 }
