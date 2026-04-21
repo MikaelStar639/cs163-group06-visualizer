@@ -11,6 +11,8 @@
 #include <memory>
 #include <functional>
 
+namespace UI::DSA { class Node; class Edge; }
+
 namespace UI::Animations {
 
     // Builder pattern for constructing animation sequences synced with pseudocode.
@@ -47,6 +49,12 @@ namespace UI::Animations {
 
         AnimStepBuilder& nodesHighlight(const std::vector<UI::DSA::Node*>& nodes, float duration);
         AnimStepBuilder& nodesUnhighlight(const std::vector<UI::DSA::Node*>& nodes, float duration);
+
+        AnimStepBuilder& nodeColor(UI::DSA::Node* node, sf::Color fill, sf::Color text, float duration);
+        
+        AnimStepBuilder& edgeColor(UI::DSA::Edge* edge, sf::Color from, sf::Color to, float duration);
+        AnimStepBuilder& edgeScale(UI::DSA::Edge* edge, float from, float to, float duration);
+
         // --- Callbacks ---
 
         AnimStepBuilder& callback(std::function<void()> fn);

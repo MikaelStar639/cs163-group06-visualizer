@@ -1,4 +1,6 @@
 #include "UI/Animations/Core/AnimStepBuilder.hpp"
+#include "UI/Animations/Edge/EdgeColorAnimation.hpp"
+#include "UI/Animations/Edge/EdgeScaleAnimation.hpp"
 #include <iostream>
 
 namespace UI::Animations {
@@ -86,6 +88,27 @@ namespace UI::Animations {
         }
 
         currentSequence->add(std::move(parallel));
+        return *this;
+    }
+
+    AnimStepBuilder& AnimStepBuilder::nodeColor(UI::DSA::Node* node, sf::Color fill, sf::Color text, float duration) {
+        if (node) {
+            currentSequence->add(std::make_unique<NodeColorAnimation>(node, fill, text, duration));
+        }
+        return *this;
+    }
+
+    AnimStepBuilder& AnimStepBuilder::edgeColor(UI::DSA::Edge* edge, sf::Color from, sf::Color to, float duration) {
+        if (edge) {
+            currentSequence->add(std::make_unique<EdgeColorAnimation>(edge, from, to, duration));
+        }
+        return *this;
+    }
+
+    AnimStepBuilder& AnimStepBuilder::edgeScale(UI::DSA::Edge* edge, float from, float to, float duration) {
+        if (edge) {
+            currentSequence->add(std::make_unique<EdgeScaleAnimation>(edge, from, to, duration));
+        }
         return *this;
     }
 

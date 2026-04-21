@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+namespace UI::Animations { class AnimStepBuilder; }
+
 namespace Controllers {
 
     class MSTController {
@@ -23,6 +25,7 @@ namespace Controllers {
 
         void rebuildGraphFromModel();
         UI::DSA::Edge* getEdgeById(int edgeId) const;
+        void submitAnimation(UI::Animations::AnimStepBuilder& b);
 
         int lastTotalWeight = 0;
         int lastSelectedEdgeCount = 0;
