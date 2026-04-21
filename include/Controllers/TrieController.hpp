@@ -7,6 +7,8 @@
 #include <string>
 #include <unordered_map>
 
+namespace UI::Animations { class AnimStepBuilder; }
+
 namespace Controllers {
 
     class TrieController {
@@ -25,6 +27,7 @@ namespace Controllers {
 
         void syncGraph();
         void triggerLayout(float duration = 0.5f);
+        void submitAnimation(UI::Animations::AnimStepBuilder& b);
 
     public:
         TrieController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Trie& m,

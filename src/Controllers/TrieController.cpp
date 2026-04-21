@@ -103,6 +103,18 @@ namespace Controllers {
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
+    void TrieController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.stepNavigator.clear();
+        auto steps = b.buildSteps();
+        for (auto& step : steps) {
+            ctx.stepNavigator.addStep(std::move(step));
+        }
+        ctx.stepNavigator.playNext();
+        if (ctx.isStepByStep) {
+            ctx.animManager.setPaused(true);
+        }
+    }
+
     void TrieController::forceSnapLayout() {
         syncGraph(); 
 
@@ -367,7 +379,7 @@ namespace Controllers {
 
         model.insert(word); 
 
-        b.highlight("init_curr");
+        b.highlight("init_curr").nextStep();
         int currPoolIdx = model.getRootIndex();
         
         for (int i = 0; i < word.length(); ++i) {
@@ -375,18 +387,18 @@ namespace Controllers {
             int charIndex = c - 'a';
             int nextPoolIdx = model.getPool()[currPoolIdx].children[charIndex];
 
-            b.highlight("loop_char");
+            b.highlight("loop_char").nextStep();
             
-            b.callback([this, currPoolIdx]() {
-                if (poolToGraphMap.count(currPoolIdx)) {
-                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                        n->setFillColor(Config::UI::Colors::NodeHighlight); 
-                        n->setLabelColor(Config::UI::Colors::LabelHighlight);
-                    }
-                }
-            }).wait(0.2f);
+            UI::DSA::Node* uiNode = nullptr;
+            if (poolToGraphMap.count(currPoolIdx)) {
+                uiNode = graph.getNode(poolToGraphMap[currPoolIdx]);
+            }
+
+            if (uiNode) {
+                b.nodeHighlight(uiNode, 0.3f).wait(0.1f);
+            }
             
-            b.highlight("check_null");
+            b.highlight("check_null").nextStep();
             
             if (i >= existingChars) {
                 b.highlight("create_node")
@@ -395,7 +407,7 @@ namespace Controllers {
                      int parentUiIdx = poolToGraphMap[currPoolIdx];
                      auto* parentNode = graph.getNode(parentUiIdx);
                      
-                     if (!parentNode) return; // KHIÊN BẢO VỆ CHỐNG CRASH TỌA ĐỘ
+                     if (!parentNode) return; 
                      sf::Vector2f parentPos = parentNode->getPosition();
                      
                      graph.addNode(std::string(1, c), parentPos); 
@@ -405,22 +417,21 @@ namespace Controllers {
                      graph.addEdge(parentUiIdx, newUiIdx, "");
                      triggerLayout();
                  })
-                 .wait(0.4f);
+                 .wait(0.4f).nextStep();
             }
             
             b.highlight("advance")
-             .callback([this, currPoolIdx]() {
-                if (poolToGraphMap.count(currPoolIdx)) {
-                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                        n->setLabelColor(Config::UI::Colors::NodeText);
-                        if (model.getPool()[currPoolIdx].isEndOfWord) {
-                            n->setFillColor(sf::Color(70, 160, 100)); 
-                        } else {
-                            n->setFillColor(Config::UI::Colors::NodeFill); 
-                        }
+             .callback([this, uiNode, currPoolIdx]() {
+                if (uiNode) {
+                    uiNode->setLabelColor(Config::UI::Colors::NodeText);
+                    if (model.getPool()[currPoolIdx].isEndOfWord) {
+                        uiNode->setFillColor(sf::Color(70, 160, 100)); 
+                    } else {
+                        uiNode->setFillColor(Config::UI::Colors::NodeFill); 
                     }
                 }
-             }).wait(0.1f);
+             })
+             .nodeUnhighlight(uiNode, 0.2f).wait(0.1f).nextStep();
              
             currPoolIdx = nextPoolIdx;
         }
@@ -434,9 +445,9 @@ namespace Controllers {
              }
              triggerLayout(0.2f);
          })
-         .finish();
+         .nextStep().finish();
 
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
     // ==================== SEARCH ====================
     void TrieController::handleSearch(const std::string& word, bool isPrefix) {
@@ -444,13 +455,13 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Trie::search();
         Builder b(codeDef, codeViewer);
 
-        b.highlight("init_curr");
+        b.highlight("init_curr").nextStep();
 
         int currPoolIdx = model.getRootIndex();
         bool broken = false;
 
         for (char c : word) {
-            b.highlight("loop_char");
+            b.highlight("loop_char").nextStep();
             
             int charIndex = c - 'a';
             int nextPoolIdx = model.getPool()[currPoolIdx].children[charIndex];
@@ -458,70 +469,73 @@ namespace Controllers {
             int uiIdx = poolToGraphMap[currPoolIdx];
             auto* uiNode = graph.getNode(uiIdx);
             
-            b.nodeHighlight(uiNode, 0.2f);
+            b.nodeHighlight(uiNode, 0.3f).wait(0.1f);
 
-            b.highlight("check_null");
+            b.highlight("check_null").nextStep();
             if (nextPoolIdx == -1) {
-                b.highlight("not_found");
-                b.callback([this, currPoolIdx]() {
-                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                        n->setLabelColor(Config::UI::Colors::NodeText); 
-                        if (model.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100));
-                        else n->setFillColor(Config::UI::Colors::NodeFill);
+                b.highlight("not_found").nextStep();
+                b.callback([this, uiNode, currPoolIdx]() {
+                    if (uiNode) {
+                        uiNode->setLabelColor(Config::UI::Colors::NodeText); 
+                        if (model.getPool()[currPoolIdx].isEndOfWord) uiNode->setFillColor(sf::Color(70, 160, 100));
+                        else uiNode->setFillColor(Config::UI::Colors::NodeFill);
                     }
-                }).wait(0.1f);
+                }).nodeUnhighlight(uiNode, 0.2f).wait(0.1f);
                 
                 broken = true;
                 break;
             }
 
             b.highlight("advance")
-             .callback([this, currPoolIdx]() {
-                 if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                     n->setLabelColor(Config::UI::Colors::NodeText); 
-                     if (model.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100));
-                     else n->setFillColor(Config::UI::Colors::NodeFill);
+             .callback([this, uiNode, currPoolIdx]() {
+                 if (uiNode) {
+                     uiNode->setLabelColor(Config::UI::Colors::NodeText); 
+                     if (model.getPool()[currPoolIdx].isEndOfWord) uiNode->setFillColor(sf::Color(70, 160, 100));
+                     else uiNode->setFillColor(Config::UI::Colors::NodeFill);
                  }
-             }).wait(0.1f);
+             })
+             .nodeUnhighlight(uiNode, 0.2f).wait(0.1f).nextStep();
 
             currPoolIdx = nextPoolIdx; 
         }
 
         if (!broken) {
-            b.highlight("check_end");
+            b.highlight("check_end").nextStep();
             
             int finalUiIdx = poolToGraphMap[currPoolIdx];
             auto* finalNode = graph.getNode(finalUiIdx);
 
-            if (!model.getPool()[currPoolIdx].isEndOfWord){
-                b.nodeHighlight(finalNode, 0.2f);
+            if (finalNode && !model.getPool()[currPoolIdx].isEndOfWord){
+                b.nodeHighlight(finalNode, 0.3f).wait(0.1f);
             }
 
             if (model.getPool()[currPoolIdx].isEndOfWord || isPrefix) {
                 b.highlight("found")
                  .nodeScale(finalNode, 1.0f, 1.3f, 0.2f)
                  .nodeScale(finalNode, 1.3f, 1.0f, 0.2f)
-                 .callback([this, currPoolIdx]() {
-                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                        n->setLabelColor(Config::UI::Colors::NodeText);
+                 .callback([this, finalNode, currPoolIdx]() {
+                    if (finalNode) {
+                        finalNode->setLabelColor(Config::UI::Colors::NodeText);
                         if (!model.getPool()[currPoolIdx].isEndOfWord){
-                            n->setFillColor(Config::UI::Colors::NodeFill);
+                            finalNode->setFillColor(Config::UI::Colors::NodeFill);
                         }
                     }
-                 });
+                 })
+                 .nodeUnhighlight(finalNode, 0.2f).nextStep();
             } else {
                 b.highlight("not_found_end")
-                 .callback([this, currPoolIdx]() {
-                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                        n->setLabelColor(Config::UI::Colors::NodeText);
-                        n->setFillColor(Config::UI::Colors::NodeFill);
+                 .callback([this, finalNode, currPoolIdx]() {
+                    if (finalNode) {
+                        finalNode->setLabelColor(Config::UI::Colors::NodeText);
+                        finalNode->setFillColor(Config::UI::Colors::NodeFill);
                     }
-                 });
+                 })
+                 .nodeUnhighlight(finalNode, 0.2f).nextStep();
             }
         }
 
         b.finish();
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
 
     // ==================== REMOVE ====================
@@ -530,12 +544,12 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Trie::deleteWord();
         Builder b(codeDef, codeViewer);
 
-        b.highlight("init_curr"); 
+        b.highlight("init_curr").nextStep(); 
         int currPoolIdx = model.getRootIndex();
         bool foundPath = true;
         
         for (char c : word) {
-            b.highlight("loop_char"); 
+            b.highlight("loop_char").nextStep(); 
             
             int charIndex = c - 'a';
             int nextPoolIdx = model.getPool()[currPoolIdx].children[charIndex];
@@ -543,45 +557,48 @@ namespace Controllers {
             int uiIdx = poolToGraphMap[currPoolIdx];
             auto* uiNode = graph.getNode(uiIdx);
             
-            b.nodeHighlight(uiNode, 0.2f); 
+            b.nodeHighlight(uiNode, 0.3f).wait(0.1f); 
             
-            b.highlight("check_null"); 
+            b.highlight("check_null").nextStep(); 
             if (nextPoolIdx == -1) {
-                b.highlight("not_found"); 
+                b.highlight("not_found").nextStep(); 
                 
-                b.callback([this, currPoolIdx]() {
-                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                        n->setLabelColor(Config::UI::Colors::NodeText); 
-                        if (model.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100));
-                        else n->setFillColor(Config::UI::Colors::NodeFill);
+                b.callback([this, uiNode, currPoolIdx]() {
+                    if (uiNode) {
+                        uiNode->setLabelColor(Config::UI::Colors::NodeText); 
+                        if (model.getPool()[currPoolIdx].isEndOfWord) uiNode->setFillColor(sf::Color(70, 160, 100));
+                        else uiNode->setFillColor(Config::UI::Colors::NodeFill);
                     }
-                }).wait(0.1f);
+                }).nodeUnhighlight(uiNode, 0.2f).wait(0.1f);
                 
                 foundPath = false;
                 break;
             }
             
-            b.highlight("advance"); 
-            b.callback([this, currPoolIdx]() {
-                if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                    n->setLabelColor(Config::UI::Colors::NodeText); 
-                    if (model.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100));
-                    else n->setFillColor(Config::UI::Colors::NodeFill);
+            b.highlight("advance").nextStep(); 
+            b.callback([this, uiNode, currPoolIdx]() {
+                if (uiNode) {
+                    uiNode->setLabelColor(Config::UI::Colors::NodeText); 
+                    if (model.getPool()[currPoolIdx].isEndOfWord) uiNode->setFillColor(sf::Color(70, 160, 100));
+                    else uiNode->setFillColor(Config::UI::Colors::NodeFill);
                 }
-            }).wait(0.1f);
+            }).nodeUnhighlight(uiNode, 0.2f).wait(0.1f);
             
             currPoolIdx = nextPoolIdx;
         }
 
         if (foundPath && currPoolIdx != -1) {
-            b.highlight("unmark_end"); 
+            b.highlight("unmark_end").nextStep(); 
             
             int finalUiIdx = poolToGraphMap[currPoolIdx];
-            b.nodeHighlight(graph.getNode(finalUiIdx), 0.2f);
-            b.nodeUnhighlight(graph.getNode(finalUiIdx), 0.2f);
+            auto* finalNode = graph.getNode(finalUiIdx);
+            if (finalNode) {
+                b.nodeHighlight(finalNode, 0.3f).wait(0.1f)
+                 .nodeUnhighlight(finalNode, 0.2f);
+            }
         }
 
-        b.highlight("delete") 
+        b.highlight("delete").nextStep() 
          .callback([this, word]() {
              bool existed = model.search(word); 
              
@@ -594,9 +611,9 @@ namespace Controllers {
                  std::cout << "[UI LOG] Không thể xóa từ: " << word << " (Không tồn tại)\n";
              }
          })
-         .finish();
+         .nextStep().finish();
 
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
     
     // ==================== CLEAR ====================
