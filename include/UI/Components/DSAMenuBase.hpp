@@ -32,6 +32,7 @@ namespace UI::Widgets {
         Button btnPrev;
         Button btnPlay;
         Button btnNext;
+        Button btnToggleStepMode;
         UI::Shapes::PlayIcon iconPlay;
         UI::Shapes::PauseIcon iconPause;
         UI::Shapes::NextIcon iconNext;

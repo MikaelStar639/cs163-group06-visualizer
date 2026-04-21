@@ -15,6 +15,7 @@ namespace UI::Animations {
         void add(std::unique_ptr<AnimationBase> anim);
         void update(float dt) override;
         bool isFinished() const override;
+        bool isEmpty() const { return sequence.empty(); }
     };
 
 } // namespace UI::Animations

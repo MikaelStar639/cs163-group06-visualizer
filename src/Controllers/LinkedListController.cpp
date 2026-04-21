@@ -29,6 +29,20 @@ namespace Controllers {
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
+    void LinkedListController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.stepNavigator.clear();
+        auto steps = b.buildSteps();
+        for (auto& step : steps) {
+            ctx.stepNavigator.addStep(std::move(step));
+        }
+        ctx.stepNavigator.playNext(); // Start the sequence
+        
+        // If we are in Step Mode, ensure we start in a paused state
+        if (ctx.isStepByStep) {
+            ctx.animManager.setPaused(true);
+        }
+    }
+
     void LinkedListController::forceSnapLayout() {
         int numNodes = graph.getNodes().size();
         for (int i = 0; i < numNodes; ++i) {
@@ -234,8 +248,8 @@ namespace Controllers {
             auto codeDef = Core::DSA::PseudoCode::LinkedList::insertHead();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("create_node").wait()
-             .highlight("link_next").wait()
+            b.highlight("create_node").wait(0.3f).nextStep()
+             .highlight("link_next").wait(0.3f).nextStep()
              .highlight("update_head")
              .callback([this, val]() {
                  model.insertHead(val);
@@ -245,7 +259,7 @@ namespace Controllers {
              })
              .finish();
 
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
             return;
         }
 
@@ -255,11 +269,10 @@ namespace Controllers {
         
         // Bounds check for AT POS
         if (sel == 2 && (pos < 0 || pos > currentSize)) {
-            std::cout << "[UI LOG] Invalid position: " << pos << " (size: " << currentSize << ")" << std::endl;
             auto codeDef = Core::DSA::PseudoCode::LinkedList::insertAt();
             Builder b(codeDef, codeViewer);
-            b.highlight("bounds_check").finish();
-            ctx.animManager.addAnimation(b.build());
+            b.highlight("bounds_check").wait(1.0f).nextStep().finish();
+            submitAnimation(b);
             return;
         }
 
@@ -270,12 +283,12 @@ namespace Controllers {
             auto codeDef = Core::DSA::PseudoCode::LinkedList::insertTail();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("check_null");
+            b.highlight("check_null").nextStep();
             if (graph.getNodes().empty()) {
                 b.highlight("insert_empty");
             } else {
-                b.highlight("else")
-                 .highlight("init_curr");
+                b.highlight("else").nextStep()
+                 .highlight("init_curr").nextStep();
             }
 
             // TRAVERSAL
@@ -283,10 +296,10 @@ namespace Controllers {
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond")
-                     .nodeHighlight(uiNode, 0.2f)
-                     .highlight("advance")
-                     .nodeUnhighlight(uiNode, 0.1f);
+                    b.highlight("loop_cond").nextStep()
+                     .nodeHighlight(uiNode, 0.3f)
+                     .highlight("advance").nextStep()
+                     .nodeUnhighlight(uiNode, 0.2f);
                 }
             }
 
@@ -300,31 +313,31 @@ namespace Controllers {
              })
              .finish();
 
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
 
         } else {
             // INSERT AT POS
             auto codeDef = Core::DSA::PseudoCode::LinkedList::insertAt();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("bounds_check")
-             .highlight("check_head")
-             .highlight("else")
-             .highlight("init_pre");
+            b.highlight("bounds_check").nextStep()
+             .highlight("check_head").nextStep()
+             .highlight("else").nextStep()
+             .highlight("init_pre").nextStep();
 
             // TRAVERSAL
             int steps = targetPos - 1;
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond")
-                     .nodeHighlight(uiNode, 0.2f)
-                     .highlight("advance")
-                     .nodeUnhighlight(uiNode, 0.1f);
+                    b.highlight("loop_cond").nextStep()
+                     .nodeHighlight(uiNode, 0.3f)
+                     .highlight("advance").nextStep()
+                     .nodeUnhighlight(uiNode, 0.2f);
                 }
             }
 
-            b.highlight("create_node")
+            b.highlight("create_node").nextStep()
              .callback([this, targetPos, val]() {
                  bool success = model.insertAt(targetPos, val);
                  if (success) {
@@ -333,11 +346,11 @@ namespace Controllers {
                      triggerLayout();
                  }
              })
-             .highlight("link_next").wait(0.3f)
+             .highlight("link_next").wait(0.3f).nextStep()
              .highlight("link_pre")
              .finish();
 
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
         }
     }
 
@@ -350,9 +363,9 @@ namespace Controllers {
             auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteHead();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("check_null")
-             .highlight("save_temp").wait()
-             .highlight("advance").wait()
+            b.highlight("check_null").nextStep()
+             .highlight("save_temp").wait(0.3f).nextStep()
+             .highlight("advance").wait(0.3f).nextStep()
              .highlight("delete")
              .callback([this]() {
                  model.deleteHead();
@@ -362,7 +375,7 @@ namespace Controllers {
              })
              .finish();
 
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
             return;
         }
 
@@ -377,13 +390,13 @@ namespace Controllers {
             if (sel == 1) {
                 auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteTail();
                 Builder b(codeDef, codeViewer);
-                b.highlight("check_null").finish();
-                ctx.animManager.addAnimation(b.build());
+                b.highlight("check_null").wait(1.0f).nextStep().finish();
+                submitAnimation(b);
             } else {
                 auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteAt();
                 Builder b(codeDef, codeViewer);
-                b.highlight("bounds_check").finish();
-                ctx.animManager.addAnimation(b.build());
+                b.highlight("bounds_check").wait(1.0f).nextStep().finish();
+                submitAnimation(b);
             }
             return;
         }
@@ -393,11 +406,11 @@ namespace Controllers {
             auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteTail();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("check_null")
-             .highlight("single_node");
+            b.highlight("check_null").nextStep()
+             .highlight("single_node").nextStep();
             if (currentSize > 1) {
-                b.highlight("else")
-                 .highlight("init_pre");
+                b.highlight("else").nextStep()
+                 .highlight("init_pre").nextStep();
             }
 
             // TRAVERSAL
@@ -405,36 +418,36 @@ namespace Controllers {
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond")
-                     .nodeHighlight(uiNode, 0.2f)
-                     .highlight("advance")
-                     .nodeUnhighlight(uiNode, 0.1f);
+                    b.highlight("loop_cond").nextStep()
+                     .nodeHighlight(uiNode, 0.3f)
+                     .highlight("advance").nextStep()
+                     .nodeUnhighlight(uiNode, 0.2f);
                 }
             }
 
-            b.highlight("save_del")
+            b.highlight("save_del").nextStep()
              .callback([this]() {
                  model.deleteTail();
                  graph.removeNodeAt((int)graph.getNodes().size() - 1);
                  syncGraphEdges();
                  triggerLayout();
              })
-             .highlight("unlink").wait(0.3f)
+             .highlight("unlink").wait(0.3f).nextStep()
              .highlight("delete")
              .finish();
 
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
 
         } else {
             // DELETE AT POS
             auto codeDef = Core::DSA::PseudoCode::LinkedList::deleteAt();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("bounds_check")
-             .highlight("check_head");
+            b.highlight("bounds_check").nextStep()
+             .highlight("check_head").nextStep();
             if (targetPos > 0) {
-                b.highlight("else")
-                 .highlight("init_pre");
+                b.highlight("else").nextStep()
+                 .highlight("init_pre").nextStep();
             }
 
             // TRAVERSAL
@@ -442,25 +455,25 @@ namespace Controllers {
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond")
-                     .nodeHighlight(uiNode, 0.2f)
-                     .highlight("advance")
-                     .nodeUnhighlight(uiNode, 0.1f);
+                    b.highlight("loop_cond").nextStep()
+                     .nodeHighlight(uiNode, 0.3f)
+                     .highlight("advance").nextStep()
+                     .nodeUnhighlight(uiNode, 0.2f);
                 }
             }
 
-            b.highlight("save_del")
+            b.highlight("save_del").nextStep()
              .callback([this, targetPos]() {
                  model.deleteAt(targetPos);
                  graph.removeNodeAt(targetPos);
                  syncGraphEdges();
                  triggerLayout();
              })
-             .highlight("unlink").wait(0.3f)
+             .highlight("unlink").wait(0.3f).nextStep()
              .highlight("delete")
              .finish();
 
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
         }
     }
 
@@ -472,7 +485,7 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::LinkedList::search();
         Builder b(codeDef, codeViewer);
 
-        b.highlight("init_curr");
+        b.highlight("init_curr").nextStep();
 
         int curr = model.getHeadIndex();
         int idx = 0;
@@ -482,20 +495,20 @@ namespace Controllers {
             UI::DSA::Node* uiNode = graph.getNode(idx);
             if (!uiNode) break;
 
-            b.highlight("loop_cond")
+            b.highlight("loop_cond").nextStep()
              .nodeHighlight(uiNode, 0.3f)
-             .highlight("check_val");
+             .highlight("check_val").nextStep();
 
             if (model.getPool()[curr].value == targetValue) {
-                b.highlight("found")
+                b.highlight("found").nextStep()
                  .nodeScale(uiNode, 1.0f, 1.3f, 0.2f)
                  .nodeScale(uiNode, 1.3f, 1.0f, 0.2f)
                  .nodeUnhighlight(uiNode, 0.3f);
                 found = true;
                 break; 
             } else {
-                b.highlight("advance")
-                 .nodeUnhighlight(uiNode, 0.1f);
+                b.highlight("advance").nextStep()
+                 .nodeUnhighlight(uiNode, 0.2f);
             }
             curr = model.getPool()[curr].nextIndex;
             idx++;
@@ -507,7 +520,7 @@ namespace Controllers {
         }
 
         b.finish();
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
 
     // ==================== UPDATE ====================
@@ -523,33 +536,33 @@ namespace Controllers {
                 std::cout << "[UI LOG] Invalid position for update: " << pos << std::endl;
                 auto codeDef = Core::DSA::PseudoCode::LinkedList::updateAt();
                 Builder b(codeDef, codeViewer);
-                b.highlight("bounds_check").finish();
-                ctx.animManager.addAnimation(b.build());
+                b.highlight("bounds_check").wait(1.0f).nextStep().finish();
+                submitAnimation(b);
                 return;
             }
 
             auto codeDef = Core::DSA::PseudoCode::LinkedList::updateAt();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("bounds_check")
-             .highlight("init_curr");
+            b.highlight("bounds_check").nextStep()
+             .highlight("init_curr").nextStep();
 
             // TRAVERSAL
             for (int i = 0; i < pos; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (!uiNode) continue;
-                b.highlight("loop_cond")
+                b.highlight("loop_cond").nextStep()
                  .nodeHighlight(uiNode, 0.2f)
-                 .highlight("advance")
+                 .highlight("advance").nextStep()
                  .nodeUnhighlight(uiNode, 0.1f);
             }
 
             // Target node
             auto* uiNode = graph.getNode(pos);
             if (uiNode) {
-                b.highlight("loop_cond")
+                b.highlight("loop_cond").nextStep()
                  .nodeHighlight(uiNode, 0.2f)
-                 .highlight("update_val")
+                 .highlight("update_val").nextStep()
                  .nodeScale(uiNode, 1.0f, 1.2f, 0.15f)
                  .callback([this, pos, newVal]() {
                      if (model.updateAt(pos, newVal)) {
@@ -561,13 +574,13 @@ namespace Controllers {
             }
 
             b.finish();
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
 
         } else if (sel == 1) { // UPDATE BY VALUE
             auto codeDef = Core::DSA::PseudoCode::LinkedList::updateByValue();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("init_curr");
+            b.highlight("init_curr").nextStep();
 
             int curr = model.getHeadIndex();
             int idx = 0;
@@ -577,25 +590,25 @@ namespace Controllers {
                 UI::DSA::Node* uiNode = graph.getNode(idx);
                 if (!uiNode) break;
 
-                b.highlight("loop_cond")
+                b.highlight("loop_cond").nextStep()
                  .nodeHighlight(uiNode, 0.2f)
-                 .highlight("check_val");
+                 .highlight("check_val").nextStep();
 
                 if (model.getPool()[curr].value == oldVal) {
-                    b.highlight("update_val")
+                    b.highlight("update_val").nextStep()
                      .nodeScale(uiNode, 1.0f, 1.2f, 0.15f)
                      .callback([this, oldVal, newVal, idx]() {
                          if (model.updateValue(oldVal, newVal)) {
                              graph.updateNodeValue(idx, std::to_string(newVal));
                          }
                      })
-                     .highlight("found")
+                     .highlight("found").nextStep()
                      .nodeScale(uiNode, 1.2f, 1.0f, 0.15f)
                      .nodeUnhighlight(uiNode, 0.2f);
                     found = true;
                     break;
                 } else {
-                    b.highlight("advance")
+                    b.highlight("advance").nextStep()
                      .nodeUnhighlight(uiNode, 0.1f);
                 }
                 curr = model.getPool()[curr].nextIndex;
@@ -607,7 +620,7 @@ namespace Controllers {
             }
 
             b.finish();
-            ctx.animManager.addAnimation(b.build());
+            submitAnimation(b);
         }
     }
 

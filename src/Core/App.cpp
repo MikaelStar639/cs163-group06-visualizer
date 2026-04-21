@@ -11,6 +11,7 @@
 App::App(): font("assets/fonts/SpaceMono.ttf"),
             context{window, font, ScreenState::None} 
 {
+    context.stepNavigator.setAnimationManager(&context.animManager);
     sf::ContextSettings settings;
     settings.antiAliasingLevel = 8;
     

@@ -10,6 +10,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
       btnPrev(context, "", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnPlay(context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnNext(context, "", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnToggleStepMode(context, "Step: OFF", {480.f, context.window.getSize().y - 95.f}, {160.f, 40.f}),
       title(context.font, titleText, 24),
       speedSlider(context, 
                   sf::Vector2f{100.f, context.window.getSize().y - 80.f}, 
@@ -28,6 +29,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 
     applyBtnColors(btnBack); 
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
+    applyBtnColors(btnToggleStepMode);
 
     
     sf::Color panelColor(122, 160, 142);
@@ -122,43 +124,68 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // 6. Timeline and Speed Controls
     speedSlider.handleEvent(event);
 
-    if (!ctx.animManager.empty()) {
+    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext()) {
         if (btnPlay.isClicked(event)) {
             ctx.animManager.togglePause();   
         }
 
         if (btnNext.isClicked(event)) {
-            ctx.animManager.skipToEnd();
-            ctx.animManager.setPaused(false);
+            if (ctx.stepNavigator.hasNext()) {
+                ctx.stepNavigator.playNext();
+            } else if (!ctx.isStepByStep) {
+                // Only skip to end if we are in continuous mode
+                ctx.animManager.skipToEnd();
+                ctx.animManager.setPaused(false);
+            }
         }
 
         if (btnPrev.isClicked(event)) {
             ctx.animManager.clearAll();
+            ctx.stepNavigator.clear();
             ctx.animManager.setPaused(false);
             std::cout << "[INFO] Animation Cancelled.\n";
             cancelClicked = true;
         }
     } 
     else {
-        if (ctx.animManager.isPaused()) {
+        // Reset pause state when done, but ONLY if not in Step Mode
+        if (ctx.animManager.isPaused() && !ctx.isStepByStep) {
+            ctx.animManager.setPaused(false);
+        }
+    }
+
+    if (btnBack.isClicked(event)) {
+        ctx.nextState = ScreenState::MainMenu;
+    }
+
+    if (btnToggleStepMode.isClicked(event)) {
+        ctx.isStepByStep = !ctx.isStepByStep;
+        btnToggleStepMode.setLabel(ctx.isStepByStep ? "Step: ON" : "Step: OFF");
+        ctx.stepNavigator.setStepMode(ctx.isStepByStep);
+
+        if (ctx.isStepByStep) {
+            ctx.animManager.setPaused(true);
+        } else {
             ctx.animManager.setPaused(false);
         }
     }
 }
 
 void DSAMenuBase::update(sf::Vector2i mousePos) {
+    ctx.stepNavigator.update(0.f); // Autonomous advancement
     btnBack.update(mousePos);
     for (auto& btn : mainButtons) btn.update(mousePos);
     for (auto& input : activeInputs) input.update();
     for (auto& btn : activeSubButtons) btn.update(mousePos);
     if (dropdownAction) dropdownAction->update(mousePos);
     
-    if (!ctx.animManager.empty()) {
+    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext()) {
         btnPrev.update(mousePos);
         btnPlay.update(mousePos);
         btnNext.update(mousePos);
     }
 
+    btnToggleStepMode.update(mousePos);
     speedSlider.update(mousePos); 
 
     float sliderVal = speedSlider.getValue(); 
@@ -186,7 +213,7 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     }
 
     
-    if (!ctx.animManager.empty()) {
+    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext()) {
         btnPrev.draw();
         btnPlay.draw();
         btnNext.draw();
@@ -214,6 +241,7 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
         if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, -2.f});
     }
 
+    btnToggleStepMode.draw();
     speedSlider.draw();
 }
 

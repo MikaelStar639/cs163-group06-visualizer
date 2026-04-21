@@ -4,7 +4,7 @@
 namespace UI::Animations {
 
     AnimStepBuilder::AnimStepBuilder(const Core::DSA::PseudoCodeDef& def, UI::Widgets::PseudoCodeViewer* viewer)
-        : sequence(std::make_unique<SequenceAnimation>()), viewer(viewer), codeDef(def)
+        : currentSequence(std::make_unique<SequenceAnimation>()), viewer(viewer), codeDef(def)
     {
         // Automatically set the code on the viewer when builder is created
         if (viewer) {
@@ -24,41 +24,41 @@ namespace UI::Animations {
     AnimStepBuilder& AnimStepBuilder::highlightIndex(int index) {
         if (!viewer) return *this;
         auto* v = viewer;
-        sequence->add(std::make_unique<CallbackAnimation>([v, index]() {
+        currentSequence->add(std::make_unique<CallbackAnimation>([v, index]() {
             v->highlightLine(index);
         }));
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::wait(float baseDuration) {
-        sequence->add(std::make_unique<WaitAnimation>(baseDuration));
+        currentSequence->add(std::make_unique<WaitAnimation>(baseDuration));
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::nodeHighlight(UI::DSA::Node* node, float duration) {
         if (node) {
-            sequence->add(std::make_unique<NodeHighlightAnimation>(node, duration));
+            currentSequence->add(std::make_unique<NodeHighlightAnimation>(node, duration));
         }
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::nodeUnhighlight(UI::DSA::Node* node, float duration) {
         if (node) {
-            sequence->add(std::make_unique<NodeUnhighlightAnimation>(node, duration));
+            currentSequence->add(std::make_unique<NodeUnhighlightAnimation>(node, duration));
         }
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::nodeScale(UI::DSA::Node* node, float from, float to, float duration) {
         if (node) {
-            sequence->add(std::make_unique<NodeScaleAnimation>(node, from, to, duration));
+            currentSequence->add(std::make_unique<NodeScaleAnimation>(node, from, to, duration));
         }
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::nodeSwap(UI::DSA::Node* a, UI::DSA::Node* b, float duration) {
         if (a && b) {
-            sequence->add(std::make_unique<NodeSwapAnimation>(a, b, duration));
+            currentSequence->add(std::make_unique<NodeSwapAnimation>(a, b, duration));
         }
         return *this;
     }
@@ -72,10 +72,7 @@ namespace UI::Animations {
             }
         }
 
-        // Adding the parallel object to the sequence ensures 
-        // all nodes in the vector highlight simultaneously.
-        sequence->add(std::move(parallel));
-
+        currentSequence->add(std::move(parallel));
         return *this;
     }
 
@@ -88,29 +85,54 @@ namespace UI::Animations {
             }
         }
 
-        sequence->add(std::move(parallel));
-
+        currentSequence->add(std::move(parallel));
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::callback(std::function<void()> fn) {
-        sequence->add(std::make_unique<CallbackAnimation>(std::move(fn)));
+        currentSequence->add(std::make_unique<CallbackAnimation>(std::move(fn)));
         return *this;
     }
 
     AnimStepBuilder& AnimStepBuilder::finish(float finalWait) {
         if (viewer) {
             auto* v = viewer;
-            sequence->add(std::make_unique<WaitAnimation>(finalWait));
-            sequence->add(std::make_unique<CallbackAnimation>([v]() {
+            currentSequence->add(std::make_unique<WaitAnimation>(finalWait));
+            currentSequence->add(std::make_unique<CallbackAnimation>([v]() {
                 v->hide();
             }));
         }
         return *this;
     }
 
+    AnimStepBuilder& AnimStepBuilder::nextStep() {
+        if (!currentSequence->isEmpty()) {
+            steps.push_back(std::move(currentSequence));
+            currentSequence = std::make_unique<SequenceAnimation>();
+        }
+        return *this;
+    }
+
     std::unique_ptr<SequenceAnimation> AnimStepBuilder::build() {
-        return std::move(sequence);
+        if (steps.empty()) return std::move(currentSequence);
+        
+        // If we have steps, combine them into one sequence
+        auto fullSequence = std::make_unique<SequenceAnimation>();
+        for (auto& step : steps) {
+            fullSequence->add(std::move(step));
+        }
+        if (!currentSequence->isEmpty()) {
+             fullSequence->add(std::move(currentSequence));
+        }
+        return fullSequence;
+    }
+
+    std::vector<std::unique_ptr<AnimationBase>> AnimStepBuilder::buildSteps() {
+        if (!currentSequence->isEmpty()) {
+            steps.push_back(std::move(currentSequence));
+            currentSequence = std::make_unique<SequenceAnimation>();
+        }
+        return std::move(steps);
     }
 
 } // namespace UI::Animations

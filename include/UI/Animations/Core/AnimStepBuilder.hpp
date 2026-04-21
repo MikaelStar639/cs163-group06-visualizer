@@ -17,7 +17,8 @@ namespace UI::Animations {
     // Eliminates magic line numbers and repetitive boilerplate in controllers.
     class AnimStepBuilder {
     private:
-        std::unique_ptr<SequenceAnimation> sequence;
+        std::unique_ptr<SequenceAnimation> currentSequence;
+        std::vector<std::unique_ptr<AnimationBase>> steps;
         UI::Widgets::PseudoCodeViewer* viewer;
         Core::DSA::PseudoCodeDef codeDef;
 
@@ -55,8 +56,14 @@ namespace UI::Animations {
         // Add final wait + hide pseudocode viewer
         AnimStepBuilder& finish(float finalWait = 0.5f);
 
-        // Release the built sequence for use with AnimationManager
+        // Finalize current step and start a new one
+        AnimStepBuilder& nextStep();
+
+        // Release the built sequence (single monolithic animation)
         std::unique_ptr<SequenceAnimation> build();
+
+        // Release the built steps (multiple logical blocks)
+        std::vector<std::unique_ptr<AnimationBase>> buildSteps();
     };
 
 } // namespace UI::Animations
