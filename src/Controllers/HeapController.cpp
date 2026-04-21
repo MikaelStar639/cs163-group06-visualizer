@@ -36,6 +36,18 @@ namespace Controllers {
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
+    void HeapController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.stepNavigator.clear();
+        auto steps = b.buildSteps();
+        for (auto& step : steps) {
+            ctx.stepNavigator.addStep(std::move(step));
+        }
+        ctx.stepNavigator.playNext();
+        if (ctx.isStepByStep) {
+            ctx.animManager.setPaused(true);
+        }
+    }
+
     void HeapController::forceSnapLayout() {
         const auto& nodes = graph.getNodes();
         for (size_t i = 0; i < nodes.size(); ++i) {
@@ -359,8 +371,7 @@ namespace Controllers {
 
         // 1. Logically add the node to the graph
         int insertIdx = (int)graph.getNodeCount();
-        graph.addNode(std::to_string(val), {startX, startY + 200.f});
-        auto* newNodePtr = graph.getNode(insertIdx);
+        auto* newNodePtr = graph.addNodeRaw(std::string(std::to_string(val)), {startX, startY + 200.f});
 
         // 2. Prepare the tracker
         std::vector<UI::DSA::Node*> currentPointers;
@@ -373,18 +384,15 @@ namespace Controllers {
             if (action == Core::DSA::HeapAction::Insert) {
                 // Line: pool.push_back(val)
                 b.highlight("insert_at_end")
-                .callback([this, newNodePtr]() {
-                    newNodePtr->setScale(0.0f);
-                })
-                .nodeScale(newNodePtr, 1.0f, 0.2f)
                 .wait(0.3f)
                 .callback([this]() {
                     syncGraphEdges();
                     triggerLayout(0.5f);
                 })
+                .nextStep();
+
                 // Line: heapifyUp(last_index)
-                .highlight("heapify_up")
-                .wait(0.5f);
+                b.highlight("heapify_up").nextStep();
                 return;
             }
 
@@ -395,11 +403,12 @@ namespace Controllers {
 
                 if (parent && child) {
                     // Line: while index > 0
-                    b.highlight("loop_cond").wait(0.3f)
+                    b.highlight("loop_cond").nextStep();
+
                     // Line: if val > parent
-                    .highlight("compare_parent")
+                    b.highlight("compare_parent")
                     .nodesHighlight({parent, child}, 0.3f)
-                    .wait(0.5f);
+                    .wait(0.2f).nextStep();
 
                     std::vector<UI::DSA::Node*> losers;
                     if (parent != winnerNode) losers.push_back(parent);
@@ -408,8 +417,6 @@ namespace Controllers {
                     if (!losers.empty()) {
                         b.nodesUnhighlight(losers, 0.3f);
                     }
-
-                    b.wait(0.5f);
                 }
             }
 
@@ -426,11 +433,11 @@ namespace Controllers {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
                     })
-                    .nodeSwap(nodeA, nodeB, 0.8f)
-                    .wait(0.8f)
+                    .nodeSwap(nodeA, nodeB, 0.6f)
+                    .wait(0.6f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({nodeA, nodeB}, 0.3f)
-                    .wait(0.2f);
+                    .nodesUnhighlight({nodeA, nodeB}, 0.2f)
+                    .wait(0.1f).nextStep();
                 }
             }
 
@@ -441,7 +448,7 @@ namespace Controllers {
                         // Line: else: break
                         b.highlight("break_loop")
                         .nodesUnhighlight({winnerNode}, 0.3f)
-                        .wait(0.4f);
+                        .wait(0.2f).nextStep();
                     }
                 }
             }
@@ -450,7 +457,7 @@ namespace Controllers {
         model.insert(val);
         model.setObserver(nullptr);
         b.finish();
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
 
     // ==================== REMOVE ROOT (POP) ====================
@@ -477,17 +484,17 @@ namespace Controllers {
 
                     // Line: swap(root, last_element)
                     b.highlight("swap_root")
-                    .nodesHighlight({rootNode, lastNode}, 0.4f)
+                    .nodesHighlight({rootNode, lastNode}, 0.3f)
                     .wait(0.2f)
                     .callback([this, lastIdx]() {
                         graph.swapNodePointers(0, lastIdx);
                         syncGraphEdges();
                     })
-                    .nodeSwap(rootNode, lastNode, 0.8f)
-                    .wait(0.8f)
+                    .nodeSwap(rootNode, lastNode, 0.6f)
+                    .wait(0.6f)
                     .callback([this]() { triggerLayout(0.0f); })
                     .nodesUnhighlight({rootNode, lastNode}, 0.2f)
-                    .wait(0.2f); 
+                    .wait(0.1f).nextStep(); 
                 }
                 return;
             }
@@ -507,10 +514,10 @@ namespace Controllers {
                     syncGraphEdges();
                     triggerLayout(0.5f);
                 })
-                .wait(0.5f)
+                .wait(0.5f).nextStep();
+
                 // Line: heapifyDown(0)
-                .highlight("heapify_down")
-                .wait(0.5f);
+                b.highlight("heapify_down").nextStep();
                 return;
             }
 
@@ -532,20 +539,20 @@ namespace Controllers {
                 }
 
                 // Line: while leftChild exists
-                b.highlight("loop_cond").wait(0.3f)
+                b.highlight("loop_cond").nextStep();
+
                 // Line: target = larger child
-                .highlight("find_max_child")
+                b.highlight("find_max_child")
                 .nodesHighlight(trio, 0.3f)
-                .wait(0.5f)
+                .wait(0.2f).nextStep();
+
                 // Line: if target > val
-                .highlight("compare_child")
-                .wait(0.3f);
+                b.highlight("compare_child")
+                .wait(0.2f).nextStep();
 
                 if (!losers.empty()) {
                     b.nodesUnhighlight(losers, 0.3f);
                 }
-
-                b.wait(0.5f);
             }
 
             // 4. Swap Logic
@@ -562,11 +569,11 @@ namespace Controllers {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
                     })
-                    .nodeSwap(nodeA, nodeB, 0.8f)
-                    .wait(0.8f)
+                    .nodeSwap(nodeA, nodeB, 0.6f)
+                    .wait(0.6f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({nodeA, nodeB}, 0.3f)
-                    .wait(0.2f);
+                    .nodesUnhighlight({nodeA, nodeB}, 0.2f)
+                    .wait(0.1f).nextStep();
                 }
             }
 
@@ -577,7 +584,7 @@ namespace Controllers {
                     if (winnerNode) {
                         // Line: else: break
                         b.highlight("break_loop")
-                        .nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f);
+                        .nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f).nextStep();
                     }
                 }
             }
@@ -586,7 +593,7 @@ namespace Controllers {
         model.removeRoot();
         model.setObserver(nullptr);
         b.finish();
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
     
     void HeapController::handleReturnRoot() {
@@ -598,7 +605,7 @@ namespace Controllers {
         int currentSize = static_cast<int>(graph.getNodeCount());
 
         // 1. Check if heap is empty
-        b.highlight("check_empty").wait(0.3f);
+        b.highlight("check_empty").nextStep();
         
         if (currentSize == 0) {
             b.finish();
@@ -609,16 +616,16 @@ namespace Controllers {
             // Highlight the root node using the vector-based call
             b.highlight("access_root")
             .nodesHighlight({rootNode}, 0.5f) 
-            .wait(0.5f);
+            .wait(0.5f).nextStep();
 
             // 3. Return value phase
             b.highlight("return_val")
             .wait(0.5f)
             .nodesUnhighlight({rootNode}, 0.2f)
-            .finish();
+            .nextStep().finish();
         }
 
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
 
     void HeapController::handleBuildHeap(const std::vector<int>& data) {
@@ -637,7 +644,7 @@ namespace Controllers {
 
             // Line: for i = (size/2)-1 down to 0
             if (action == Core::DSA::HeapAction::Focus) {
-                b.highlight("loop_outer").wait(0.6f);
+                b.highlight("loop_outer").nextStep();
             }
             else if (action == Core::DSA::HeapAction::Compare) {
                 int leftChildIdx = j;
@@ -658,13 +665,11 @@ namespace Controllers {
                 // Line: heapifyDown(i)
                 b.highlight("call_heapify")
                 .nodesHighlight(trio, 0.3f)
-                .wait(0.5f);
+                .wait(0.2f).nextStep();
 
                 if (!losers.empty()) {
                     b.nodesUnhighlight(losers, 0.3f);
                 }
-
-                b.wait(0.5f);
             }
             else if (action == Core::DSA::HeapAction::Swap) {
                 UI::DSA::Node* nodeA = currentPointers[i];
@@ -673,23 +678,24 @@ namespace Controllers {
                 if (nodeA && nodeB) {
                     std::swap(currentPointers[i], currentPointers[j]);
 
-                    b.highlight("call_heapify") // Keep highlighting the call line
+                    // Line: heapifyDown(i) - Swap part
+                    b.highlight("call_heapify") 
                     .callback([this, i, j]() {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
                     })
-                    .nodeSwap(nodeA, nodeB, 0.8f)
-                    .wait(0.8f)
+                    .nodeSwap(nodeA, nodeB, 0.6f)
+                    .wait(0.6f)
                     .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({nodeA, nodeB}, 0.3f)
-                    .wait(0.2f);
+                    .nodesUnhighlight({nodeA, nodeB}, 0.2f)
+                    .wait(0.1f).nextStep();
                 }
             }
             else if (action == Core::DSA::HeapAction::Unfocus) {
                 if (i >= 0 && i < (int)currentPointers.size()) {
                     UI::DSA::Node* winnerNode = currentPointers[i];
                     if (winnerNode) {
-                        b.nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f);
+                        b.nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f).nextStep();
                     }
                 }
             }
@@ -698,7 +704,7 @@ namespace Controllers {
         model.buildHeap(data);
         model.setObserver(nullptr);
         b.finish();
-        ctx.animManager.addAnimation(b.build());
+        submitAnimation(b);
     }
 
     void HeapController::handleClearAll() {

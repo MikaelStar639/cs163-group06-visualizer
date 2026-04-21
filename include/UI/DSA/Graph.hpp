@@ -39,6 +39,7 @@ namespace UI::DSA {
         bool getDraggable() const;
 
         void addNode(const std::string& val, sf::Vector2f pos);
+        Node* addNodeRaw(const std::string& val, sf::Vector2f pos);
         void insertNodeAt(int index, const std::string& val, sf::Vector2f pos); 
         void removeLastNode(); 
         void removeNodeAt(int index); 

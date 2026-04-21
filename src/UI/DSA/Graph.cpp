@@ -28,6 +28,13 @@ namespace UI::DSA {
         );
     }
 
+    Node* Graph::addNodeRaw(const std::string& val, sf::Vector2f pos) {
+        nodes.push_back(std::make_unique<Node>(ctx, val, pos));
+        Node* newNode = nodes.back().get();
+        drawOrder.push_back(newNode);
+        return newNode;
+    }
+
     void Graph::insertNodeAt(int index, const std::string& val, sf::Vector2f pos) {
         if (index < 0 || index > nodes.size()) return;
 

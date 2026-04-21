@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+namespace UI::Animations { class AnimStepBuilder; }
+
 namespace Controllers {
 
     class HeapController {
@@ -22,7 +24,7 @@ namespace Controllers {
 
         void syncGraphEdges();
         void triggerLayout(float duration = 0.5f);
-
+        void submitAnimation(UI::Animations::AnimStepBuilder& b);
     public:
         HeapController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Heap& m, 
                        UI::Widgets::PseudoCodeViewer* viewer = nullptr);

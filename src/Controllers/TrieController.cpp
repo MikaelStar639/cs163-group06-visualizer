@@ -410,7 +410,7 @@ namespace Controllers {
                      if (!parentNode) return; 
                      sf::Vector2f parentPos = parentNode->getPosition();
                      
-                     graph.addNode(std::string(1, c), parentPos); 
+                     auto* newNode = graph.addNodeRaw(std::string(1, c), parentPos); 
                      int newUiIdx = graph.getNodes().size() - 1;
                      poolToGraphMap[nextPoolIdx] = newUiIdx;
                      
