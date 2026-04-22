@@ -41,13 +41,10 @@ namespace Controllers {
     }
 
     void HeapController::triggerLayout(float duration) {
-        // Dynamic spacing: reduce spacing for deeper trees to prevent extreme widths
-        float currentSpacing = spacing;
         int numNodes = static_cast<int>(graph.getNodeCount());
-        if (numNodes > 31) currentSpacing *= 0.5f;
-        if (numNodes > 63) currentSpacing *= 0.5f;
+        if (numNodes == 0) return;
 
-        auto layoutAnim = UI::DSA::LayoutEngine::asHeap(graph, startX, startY, currentSpacing, duration);
+        auto layoutAnim = UI::DSA::LayoutEngine::asHeap(graph, startX, startY, 150.f, duration);
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
@@ -95,30 +92,28 @@ namespace Controllers {
     }
 
     void HeapController::forceSnapLayout() {
-        // Handle dynamic spacing for large trees
-        float currentSpacing = spacing;
-        int numNodes = static_cast<int>(graph.getNodeCount());
-        if (numNodes > 31) currentSpacing *= 0.5f;
-        if (numNodes > 63) currentSpacing *= 0.5f;
+        int numNodes = (int)graph.getNodeCount();
+        if (numNodes == 0) return;
 
-        const auto& nodes = graph.getNodes();
-        int total = static_cast<int>(nodes.size());
-        int maxLevel = (total > 0) ? static_cast<int>(std::floor(std::log2(total))) : 0;
+        int maxLevel = static_cast<int>(std::floor(std::log2(numNodes)));
+        float currentSpacing = 150.f; // Back to original spacing
 
-        for (int i = 0; i < total; ++i) {
+        for (int i = 0; i < numNodes; ++i) {
             int level = static_cast<int>(std::floor(std::log2(i + 1)));
-            int firstIdxInLevel = static_cast<int>(std::pow(2, level)) - 1;
-            int posInLevel = i - firstIdxInLevel;
-            int numNodesAtLevel = static_cast<int>(std::pow(2, level));
-
-            // Perfectly centered layout
-            float levelWidth = (numNodesAtLevel - 1) * currentSpacing * std::pow(2, maxLevel - level);
-            float targetX = startX + (posInLevel * currentSpacing * std::pow(2, maxLevel - level)) - (levelWidth / 2.0f);
-            float targetY = startY + (level * spacing);
-
-            if (nodes[i]) {
-                nodes[i]->setPosition({targetX, targetY});
+            float targetX = startX;
+            int tempIdx = i;
+            
+            for (int l = level; l > 0; --l) {
+                int parentIdx = (tempIdx - 1) / 2;
+                bool isRightChild = (tempIdx % 2 == 0);
+                float hOffset = std::pow(2.f, maxLevel - l) * (currentSpacing / 2.f);
+                targetX += (isRightChild ? 1 : -1) * hOffset;
+                tempIdx = parentIdx;
             }
+
+            float targetY = startY + (level * currentSpacing * 0.8f);
+            auto* node = graph.getNode(i);
+            if (node) node->setPosition({targetX, targetY});
         }
     }
 
