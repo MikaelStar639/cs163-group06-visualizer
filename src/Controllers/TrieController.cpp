@@ -385,21 +385,22 @@ namespace Controllers {
         b.highlight("init_curr").nextStep();
         int currPoolIdx = model.getRootIndex();
         
-        for (int i = 0; i < word.length(); ++i) {
+        for (int i = 0; i < (int)word.length(); ++i) {
             char c = word[i];
             int charIndex = c - 'a';
             int nextPoolIdx = model.getPool()[currPoolIdx].children[charIndex];
 
             b.highlight("loop_char").nextStep();
             
-            UI::DSA::Node* uiNode = nullptr;
-            if (poolToGraphMap.count(currPoolIdx)) {
-                uiNode = graph.getNode(poolToGraphMap[currPoolIdx]);
-            }
-
-            if (uiNode) {
-                b.nodeHighlight(uiNode, 0.3f).wait(0.1f);
-            }
+            // Highlight current node (Parent)
+            b.callback([this, currPoolIdx]() {
+                if (poolToGraphMap.count(currPoolIdx)) {
+                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                        n->setFillColor(Config::UI::Colors::NodeHighlight);
+                        n->setLabelColor(Config::UI::Colors::LabelHighlight);
+                    }
+                }
+            }).wait(0.1f);
             
             b.highlight("check_null").nextStep();
             
@@ -409,12 +410,11 @@ namespace Controllers {
                      if (!poolToGraphMap.count(currPoolIdx)) return; 
                      int parentUiIdx = poolToGraphMap[currPoolIdx];
                      auto* parentNode = graph.getNode(parentUiIdx);
-                     
                      if (!parentNode) return; 
+
                      sf::Vector2f parentPos = parentNode->getPosition();
-                     
-                     auto* newNode = graph.addNodeRaw(std::string(1, c), parentPos); 
-                     int newUiIdx = graph.getNodes().size() - 1;
+                     graph.addNode(std::string(1, c), parentPos); 
+                     int newUiIdx = (int)graph.getNodes().size() - 1;
                      poolToGraphMap[nextPoolIdx] = newUiIdx;
                      
                      graph.addEdge(parentUiIdx, newUiIdx, "");
@@ -423,32 +423,47 @@ namespace Controllers {
                  .wait(0.4f).nextStep();
             }
             
+            // Restore current node color before advancing
             b.highlight("advance")
-             .callback([this, uiNode, currPoolIdx]() {
-                if (uiNode) {
-                    uiNode->setLabelColor(Config::UI::Colors::NodeText);
-                    if (model.getPool()[currPoolIdx].isEndOfWord) {
-                        uiNode->setFillColor(sf::Color(70, 160, 100)); 
-                    } else {
-                        uiNode->setFillColor(Config::UI::Colors::NodeFill); 
+             .callback([this, currPoolIdx]() {
+                if (poolToGraphMap.count(currPoolIdx)) {
+                    if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                        n->setLabelColor(Config::UI::Colors::NodeText);
+                        if (model.getPool()[currPoolIdx].isEndOfWord) {
+                            n->setFillColor(sf::Color(70, 160, 100)); 
+                        } else {
+                            n->setFillColor(Config::UI::Colors::NodeFill); 
+                        }
                     }
                 }
              })
-             .nodeUnhighlight(uiNode, 0.2f).wait(0.1f).nextStep();
+             .wait(0.1f).nextStep();
              
             currPoolIdx = nextPoolIdx;
         }
 
-        b.highlight("set_end")
-         .callback([this, currPoolIdx]() {
-             if (poolToGraphMap.count(currPoolIdx)) {
-                 if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
-                     n->setFillColor(sf::Color(70, 160, 100)); 
-                 }
-             }
-             triggerLayout(0.2f);
-         })
-         .nextStep().finish();
+        b.highlight("set_end").nextStep();
+
+        // Final highlight for the newly completed word
+        b.callback([this, currPoolIdx]() {
+            if (poolToGraphMap.count(currPoolIdx)) {
+                if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                    n->setFillColor(Config::UI::Colors::NodeHighlight);
+                    n->setLabelColor(Config::UI::Colors::LabelHighlight);
+                }
+            }
+        }).wait(0.3f)
+        .callback([this, currPoolIdx]() {
+            if (poolToGraphMap.count(currPoolIdx)) {
+                if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
+                    n->setFillColor(sf::Color(70, 160, 100)); // Final Green
+                    n->setLabelColor(Config::UI::Colors::NodeText);
+                }
+            }
+            triggerLayout(0.2f);
+        }).nextStep();
+
+        b.finish();
 
         submitAnimation(b);
     }
