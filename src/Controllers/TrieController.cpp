@@ -6,6 +6,7 @@
 #include "UI/Animations/Core/CallbackAnimation.hpp"
 #include "UI/Animations/Node/NodeColorAnimation.hpp"
 #include "UI/Animations/Node/NodeScaleAnimation.hpp"
+#include "Core/Platform.hpp"
 #include <iostream>
 #include <vector>
 #include <unordered_set>
@@ -175,7 +176,7 @@ namespace Controllers {
         }
         std::ofstream outFile(filePath);
         if (outFile.is_open()) { outFile << header << userContent; outFile.close(); }
-        std::system(("start notepad " + filePath).c_str());
+        Core::Platform::openTextEditor(filePath);
     }
 
     void TrieController::handleCreateFromFile() {

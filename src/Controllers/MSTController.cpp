@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <unordered_map>
+#include "Core/Platform.hpp"
 #include <map>
 
 #include <unordered_map>
@@ -468,7 +469,7 @@ namespace Controllers {
             outFile.close();
         }
 
-        std::system(("start notepad " + filePath).c_str());
+        Core::Platform::openTextEditor(filePath);
     }
 
     void MSTController::handleCreateFromFile() {
@@ -492,7 +493,7 @@ namespace Controllers {
                         << "# -----------------------------------\n";
                 outFile.close();
             }
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 

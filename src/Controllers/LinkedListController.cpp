@@ -2,6 +2,7 @@
 #include "Core/DSA/PseudoCodeData.hpp"
 #include "UI/DSA/LayoutEngine.hpp"
 #include "UI/Animations/Core/AnimStepBuilder.hpp"
+#include "Core/Platform.hpp"
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -211,7 +212,7 @@ namespace Controllers {
                 outFileErr.close();
             }
 
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -269,7 +270,7 @@ namespace Controllers {
             outFile.close();
         }
         
-        std::system(("start notepad " + filePath).c_str());
+        Core::Platform::openTextEditor(filePath);
     }
 
     // ==================== INSERT ====================

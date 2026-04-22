@@ -2,6 +2,7 @@
 #include "Core/DSA/PseudoCodeData.hpp"
 #include "UI/DSA/LayoutEngine.hpp"
 #include "UI/Animations/Core/AnimStepBuilder.hpp"
+#include "Core/Platform.hpp"
 #include <iostream>
 #include <any>
 #include "UI/Animations/StepByStep/HeapSnapshot.hpp"
@@ -204,7 +205,7 @@ namespace Controllers {
                 outFile.close();
             }
             std::cout << "[UI LOG] File not found. Created HeapData.txt and opening Notepad.\n";
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -257,7 +258,7 @@ namespace Controllers {
         if (!errorMsg.empty()) {
             // Re-inject warning into file (logic same as LL)
             // [System Note: Logic for contentWithWarning injection omitted for brevity but identical to your LL code]
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -304,7 +305,7 @@ namespace Controllers {
                         << "# -----------------------------------\n";
                 outFile.close();
             }
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -346,7 +347,7 @@ namespace Controllers {
         }
 
         if (!errorMsg.empty()) {
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -416,7 +417,7 @@ namespace Controllers {
         }
         
         // Change 3: Ensure we open the correct heap file in Notepad
-        std::system(("start notepad " + filePath).c_str());
+        Core::Platform::openTextEditor(filePath);
     }
 
     void HeapController::handleInsert(int val) {
