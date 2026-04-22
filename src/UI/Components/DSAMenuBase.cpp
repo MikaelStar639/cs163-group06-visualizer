@@ -125,7 +125,19 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     speedSlider.handleEvent(event);
 
     // Allow controls if we are animating OR if we have steps to play/back
-    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext() || ctx.stepNavigator.getTotalSteps() > 0) {
+    bool isAtEnd = !ctx.stepNavigator.hasNext() && ctx.animManager.empty();
+    bool shouldShowControls = !isAtEnd && ctx.stepNavigator.getTotalSteps() > 0;
+    
+    // In Step Mode, allow seeing the bar to step back, but hide if we've reached the very end
+    if (ctx.isStepByStep && ctx.stepNavigator.getTotalSteps() > 0) {
+        if (isAtEnd && ctx.stepNavigator.getCurrentIndex() >= ctx.stepNavigator.getTotalSteps() - 1) {
+            shouldShowControls = false;
+        } else {
+            shouldShowControls = true;
+        }
+    }
+
+    if (shouldShowControls) {
         if (btnPlay.isClicked(event)) {
             ctx.animManager.togglePause();   
         }
@@ -195,7 +207,17 @@ void DSAMenuBase::update(sf::Vector2i mousePos) {
     for (auto& btn : activeSubButtons) btn.update(mousePos);
     if (dropdownAction) dropdownAction->update(mousePos);
     
-    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext() || ctx.stepNavigator.getTotalSteps() > 0) {
+    bool isAtEnd = !ctx.stepNavigator.hasNext() && ctx.animManager.empty();
+    bool shouldShowControls = !isAtEnd && ctx.stepNavigator.getTotalSteps() > 0;
+    if (ctx.isStepByStep && ctx.stepNavigator.getTotalSteps() > 0) {
+        if (isAtEnd && ctx.stepNavigator.getCurrentIndex() >= ctx.stepNavigator.getTotalSteps() - 1) {
+            shouldShowControls = false;
+        } else {
+            shouldShowControls = true;
+        }
+    }
+
+    if (shouldShowControls) {
         btnPrev.update(mousePos);
         btnPlay.update(mousePos);
         btnNext.update(mousePos);
@@ -229,7 +251,17 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     }
 
     
-    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext() || ctx.stepNavigator.getTotalSteps() > 0) {
+    bool isAtEnd = !ctx.stepNavigator.hasNext() && ctx.animManager.empty();
+    bool shouldShowControls = !isAtEnd && ctx.stepNavigator.getTotalSteps() > 0;
+    if (ctx.isStepByStep && ctx.stepNavigator.getTotalSteps() > 0) {
+        if (isAtEnd && ctx.stepNavigator.getCurrentIndex() >= ctx.stepNavigator.getTotalSteps() - 1) {
+            shouldShowControls = false;
+        } else {
+            shouldShowControls = true;
+        }
+    }
+
+    if (shouldShowControls) {
         btnPrev.draw();
         btnPlay.draw();
         btnNext.draw();

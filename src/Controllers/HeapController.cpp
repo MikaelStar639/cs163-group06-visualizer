@@ -18,6 +18,7 @@ namespace Controllers {
                                    UI::Widgets::PseudoCodeViewer* viewer)
         : ctx(context), graph(g), model(m), codeViewer(viewer) {
             g.setIsDirected(false);
+            g.setDraggable(false); // Disable physics to prevent 'bunching'
 
             // Register snapshot handlers
             ctx.stepNavigator.setSnapshotHandlers(
@@ -40,7 +41,13 @@ namespace Controllers {
     }
 
     void HeapController::triggerLayout(float duration) {
-        auto layoutAnim = UI::DSA::LayoutEngine::asHeap(graph, startX, startY, spacing, duration);
+        // Dynamic spacing: reduce spacing for deeper trees to prevent extreme widths
+        float currentSpacing = spacing;
+        int numNodes = static_cast<int>(graph.getNodeCount());
+        if (numNodes > 31) currentSpacing *= 0.5f;
+        if (numNodes > 63) currentSpacing *= 0.5f;
+
+        auto layoutAnim = UI::DSA::LayoutEngine::asHeap(graph, startX, startY, currentSpacing, duration);
         ctx.animManager.addAnimation(std::move(layoutAnim));
     }
 
@@ -57,16 +64,56 @@ namespace Controllers {
         }
     }
 
+    void HeapController::forceVisualSync() {
+        ctx.stepNavigator.clear();
+        masterNodePool.clear();
+
+        const auto& pool = model.getPool();
+        int targetSize = static_cast<int>(pool.size());
+
+        // 1. Sync Node Count
+        while (static_cast<int>(graph.getNodeCount()) < targetSize) {
+            graph.addNode("", {startX, startY});
+        }
+        while (static_cast<int>(graph.getNodeCount()) > targetSize) {
+            graph.removeLastNode();
+        }
+
+        // 2. Sync Labels and Reset Visuals
+        for (int i = 0; i < targetSize; ++i) {
+            if (auto* node = graph.getNode(i)) {
+                node->setLabel(std::to_string(pool[i]));
+            }
+        }
+        graph.resetVisuals();
+
+        // 3. Sync Edges
+        syncGraphEdges();
+
+        // 4. Force Snapshot Layout (Perfect alignment)
+        forceSnapLayout();
+    }
+
     void HeapController::forceSnapLayout() {
+        // Handle dynamic spacing for large trees
+        float currentSpacing = spacing;
+        int numNodes = static_cast<int>(graph.getNodeCount());
+        if (numNodes > 31) currentSpacing *= 0.5f;
+        if (numNodes > 63) currentSpacing *= 0.5f;
+
         const auto& nodes = graph.getNodes();
-        for (size_t i = 0; i < nodes.size(); ++i) {
+        int total = static_cast<int>(nodes.size());
+        int maxLevel = (total > 0) ? static_cast<int>(std::floor(std::log2(total))) : 0;
+
+        for (int i = 0; i < total; ++i) {
             int level = static_cast<int>(std::floor(std::log2(i + 1)));
             int firstIdxInLevel = static_cast<int>(std::pow(2, level)) - 1;
-            int posInLevel = static_cast<int>(i) - firstIdxInLevel;
-            int numNodesInLevel = static_cast<int>(std::pow(2, level));
+            int posInLevel = i - firstIdxInLevel;
+            int numNodesAtLevel = static_cast<int>(std::pow(2, level));
 
-            float levelWidth = (numNodesInLevel - 1) * spacing;
-            float targetX = startX + (posInLevel * spacing) - (levelWidth / 2.0f);
+            // Perfectly centered layout
+            float levelWidth = (numNodesAtLevel - 1) * currentSpacing * std::pow(2, maxLevel - level);
+            float targetX = startX + (posInLevel * currentSpacing * std::pow(2, maxLevel - level)) - (levelWidth / 2.0f);
             float targetY = startY + (level * spacing);
 
             if (nodes[i]) {
@@ -381,26 +428,32 @@ namespace Controllers {
         auto codeDef = Core::DSA::PseudoCode::Heap::insert();
         Builder b(codeDef, codeViewer);
 
-        // 1. Logically add the node to the graph
-        int insertIdx = (int)graph.getNodeCount();
-        auto* newNodePtr = graph.addNodeRaw(std::string(std::to_string(val)), {startX, startY + 200.f});
-
-        // 2. Prepare the tracker
+        // Tracker for the observer to build correct indices
         std::vector<UI::DSA::Node*> currentPointers;
         for (int k = 0; k < (int)graph.getNodeCount(); ++k) {
             currentPointers.push_back(graph.getNode(k));
         }
 
-        model.setObserver([this, &b, currentPointers, newNodePtr](Core::DSA::HeapAction action, int i, int j, int v) mutable {
+        // We use a temporary model to record the animation steps.
+        // This keeps the REAL model in its 'Before' state for the first snapshot.
+        Core::DSA::Heap tempModel = model;
+        tempModel.setObserver([this, &b, currentPointers, val](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             
             if (action == Core::DSA::HeapAction::Insert) {
                 // Line: pool.push_back(val)
                 b.highlight("insert_at_end")
-                .wait(0.3f)
-                .callback([this]() {
+                .callback([this, val]() {
+                    // SILENT UPDATE: Update the real model now that the animation has started
+                    model.insert(val);
+                    
+                    // VISUAL UPDATE: Create the node in the graph
+                    // It will be at the end of the graph's nodes vector
+                    graph.addNodeRaw(std::to_string(val), {startX, startY + 200.f});
+                    
                     syncGraphEdges();
                     triggerLayout(0.5f);
                 })
+                .wait(0.3f)
                 .nextStep();
 
                 // Line: heapifyUp(last_index)
@@ -413,61 +466,103 @@ namespace Controllers {
                 UI::DSA::Node* child = currentPointers[j];
                 UI::DSA::Node* winnerNode = (v >= 0 && v < (int)currentPointers.size()) ? currentPointers[v] : nullptr;
 
-                if (parent && child) {
+                // Handle the newly inserted node if it's the child
+                if (!child && j == (int)currentPointers.size()) {
+                    // This is expected for the first comparison after insert
+                    // But since the callback hasn't run yet, we don't have the node pointer.
+                    // However, we can use graph.getNode(j) inside the callback!
+                }
+
+                if (parent) {
                     // Line: while index > 0
                     b.highlight("loop_cond").nextStep();
 
                     // Line: if val > parent
                     b.highlight("compare_parent")
-                    .nodesHighlight({parent, child}, 0.3f)
-                    .wait(0.2f).nextStep();
+                    .callback([this, i, j, winnerNode]() mutable {
+                        // Resolve child node at runtime
+                        auto* p = graph.getNode(i);
+                        auto* c = graph.getNode(j);
+                        if (p && c) {
+                            auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                            parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(p, 0.3f));
+                            parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(c, 0.3f));
+                            ctx.animManager.addAnimation(std::move(parallel));
+                        }
+                    })
+                    .wait(0.5f).nextStep();
 
-                    std::vector<UI::DSA::Node*> losers;
-                    if (parent != winnerNode) losers.push_back(parent);
-                    if (child != winnerNode) losers.push_back(child);
-
-                    if (!losers.empty()) {
-                        b.nodesUnhighlight(losers, 0.3f);
-                    }
+                    b.callback([this, i, j, winnerNode, v]() mutable {
+                        auto* p = graph.getNode(i);
+                        auto* c = graph.getNode(j);
+                        auto* winner = (v >= 0) ? graph.getNode(v) : nullptr;
+                        
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        bool added = false;
+                        if (p && p != winner) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(p, 0.3f)); added = true; }
+                        if (c && c != winner) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(c, 0.3f)); added = true; }
+                        
+                        if (added) {
+                            ctx.animManager.addAnimation(std::move(parallel));
+                        }
+                    });
                 }
             }
 
             if (action == Core::DSA::HeapAction::Swap) {
-                UI::DSA::Node* nodeA = currentPointers[i];
-                UI::DSA::Node* nodeB = currentPointers[j];
-
-                if (nodeA && nodeB) {
-                    std::swap(currentPointers[i], currentPointers[j]);
-
-                    // Line: swap(val, parent)
-                    b.highlight("swap_with_parent")
-                    .callback([this, i, j]() {
+                // IMPORTANT: We capture indices i and j to resolve pointers at runtime
+                b.highlight("swap_with_parent")
+                .callback([this, i, j]() {
+                    auto* nodeA = graph.getNode(i);
+                    auto* nodeB = graph.getNode(j);
+                    if (nodeA && nodeB) {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
-                    })
-                    .nodeSwap(nodeA, nodeB, 0.6f)
-                    .wait(0.6f)
-                    .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({nodeA, nodeB}, 0.2f)
-                    .wait(0.1f).nextStep();
+                        
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeSwapAnimation>(nodeA, nodeB, 0.6f));
+                    }
+                })
+                .wait(0.6f)
+                .callback([this]() { triggerLayout(0.0f); })
+                .callback([this, i, j]() {
+                    auto* nodeA = graph.getNode(i);
+                    auto* nodeB = graph.getNode(j);
+                    if (nodeA && nodeB) {
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeA, 0.2f));
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeB, 0.2f));
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.3f).nextStep();
+
+                // Update our local tracker for the observer's subsequent steps
+                if (j < (int)currentPointers.size()) {
+                    std::swap(currentPointers[i], currentPointers[j]);
+                } else {
+                    // The child was the new node, we just push a placeholder to keep index alignment
+                    // if it wasn't already there.
+                    while((int)currentPointers.size() <= j) currentPointers.push_back(nullptr);
+                    std::swap(currentPointers[i], currentPointers[j]);
                 }
             }
 
             if (action == Core::DSA::HeapAction::Unfocus) {
-                if (i >= 0 && i < (int)currentPointers.size()) {
-                    UI::DSA::Node* winnerNode = currentPointers[i];
+                // Line: else: break
+                b.highlight("break_loop")
+                .callback([this, i]() {
+                    auto* winnerNode = graph.getNode(i);
                     if (winnerNode) {
-                        // Line: else: break
-                        b.highlight("break_loop")
-                        .nodesUnhighlight({winnerNode}, 0.3f)
-                        .wait(0.2f).nextStep();
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(winnerNode, 0.3f));
                     }
-                }
+                })
+                .wait(0.2f).nextStep();
             }
         });
 
-        model.insert(val);
-        model.setObserver(nullptr);
+        tempModel.insert(val);
+        tempModel.setObserver(nullptr);
+        b.callback([this]() { triggerLayout(0.5f); }); // Final beautiful layout
         b.finish();
         submitAnimation(b);
     }
@@ -483,40 +578,58 @@ namespace Controllers {
             currentPointers.push_back(graph.getNode(k));
         }
 
-        model.setObserver([this, &b, currentPointers](Core::DSA::HeapAction action, int i, int j, int v) mutable {
+        Core::DSA::Heap tempModel = model;
+        tempModel.setObserver([this, &b, currentPointers](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             
             // 1. Swap Root with Last Node
             if (action == Core::DSA::HeapAction::Update && i == 0) {
                 int lastIdx = (int)currentPointers.size() - 1;
-                auto* rootNode = currentPointers[0];
-                auto* lastNode = currentPointers[lastIdx];
 
-                if (rootNode && lastNode) {
-                    std::swap(currentPointers[0], currentPointers[lastIdx]);
+                b.highlight("swap_root")
+                .callback([this, lastIdx]() {
+                    // SILENT UPDATE: Update the real model at the very beginning of the removal process
+                    // This ensures the model is in the "Post-Removal" state for subsequent snapshots.
+                    model.removeRoot();
 
-                    // Line: swap(root, last_element)
-                    b.highlight("swap_root")
-                    .nodesHighlight({rootNode, lastNode}, 0.3f)
-                    .wait(0.2f)
-                    .callback([this, lastIdx]() {
+                    auto* rootNode = graph.getNode(0);
+                    auto* lastNode = graph.getNode(lastIdx);
+                    if (rootNode && lastNode) {
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(rootNode, 0.3f));
+                        parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(lastNode, 0.3f));
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.3f)
+                .callback([this, lastIdx]() {
+                    auto* rootNode = graph.getNode(0);
+                    auto* lastNode = graph.getNode(lastIdx);
+                    if (rootNode && lastNode) {
                         graph.swapNodePointers(0, lastIdx);
                         syncGraphEdges();
-                    })
-                    .nodeSwap(rootNode, lastNode, 0.6f)
-                    .wait(0.6f)
-                    .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({rootNode, lastNode}, 0.2f)
-                    .wait(0.1f).nextStep(); 
-                }
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeSwapAnimation>(rootNode, lastNode, 0.6f));
+                    }
+                })
+                .wait(0.6f)
+                .callback([this, lastIdx]() { 
+                    triggerLayout(0.0f); 
+                    auto* nodeA = graph.getNode(0);
+                    auto* nodeB = graph.getNode(lastIdx);
+                    if (nodeA && nodeB) {
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeA, 0.2f));
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeB, 0.2f));
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.2f).nextStep(); 
+
+                std::swap(currentPointers[0], currentPointers[lastIdx]);
                 return;
             }
 
             // 2. Physical Removal
             if (action == Core::DSA::HeapAction::Remove) {
-                if (i >= 0 && i < (int)currentPointers.size()) {
-                    currentPointers.erase(currentPointers.begin() + i);
-                }
-
                 // Line: pool.pop_back()
                 b.highlight("remove_last")
                 .callback([this, i]() {
@@ -531,6 +644,10 @@ namespace Controllers {
                 })
                 .wait(0.5f).nextStep();
 
+                if (i < (int)currentPointers.size()) {
+                    currentPointers.erase(currentPointers.begin() + i);
+                }
+
                 // Line: heapifyDown(0)
                 b.highlight("heapify_down").nextStep();
                 return;
@@ -538,75 +655,95 @@ namespace Controllers {
 
             // 3. Comparison Logic (Trio Highlight)
             else if (action == Core::DSA::HeapAction::Compare) {
-                int leftChildIdx = j;
-                int rightChildIdx = j + 1;
-
-                std::vector<UI::DSA::Node*> trio;
-                if (i < (int)currentPointers.size()) trio.push_back(currentPointers[i]);
-                if (leftChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[leftChildIdx]);
-                if (rightChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[rightChildIdx]);
-
-                UI::DSA::Node* winnerNode = (v < (int)currentPointers.size()) ? currentPointers[v] : nullptr;
-                
-                std::vector<UI::DSA::Node*> losers;
-                for (auto* node : trio) {
-                    if (node != winnerNode) losers.push_back(node);
-                }
-
                 // Line: while leftChild exists
                 b.highlight("loop_cond").nextStep();
 
                 // Line: target = larger child
                 b.highlight("find_max_child")
-                .nodesHighlight(trio, 0.3f)
-                .wait(0.2f).nextStep();
+                .callback([this, i, j, v]() {
+                    int leftChildIdx = j;
+                    int rightChildIdx = j + 1;
+                    std::vector<UI::DSA::Node*> trio;
+                    if (auto* n = graph.getNode(i)) trio.push_back(n);
+                    if (auto* n = graph.getNode(leftChildIdx)) trio.push_back(n);
+                    if (auto* n = graph.getNode(rightChildIdx)) trio.push_back(n);
+                    
+                    if (!trio.empty()) {
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        for (auto* n : trio) parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(n, 0.3f));
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.3f).nextStep();
 
                 // Line: if target > val
                 b.highlight("compare_child")
-                .wait(0.2f).nextStep();
+                .callback([this, i, j, v]() {
+                    int leftChildIdx = j;
+                    int rightChildIdx = j + 1;
+                    auto* winnerNode = graph.getNode(v);
+                    
+                    auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                    bool added = false;
+                    if (auto* n = graph.getNode(i); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f)); added = true; }
+                    if (auto* n = graph.getNode(leftChildIdx); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f)); added = true; }
+                    if (auto* n = graph.getNode(rightChildIdx); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f)); added = true; }
 
-                if (!losers.empty()) {
-                    b.nodesUnhighlight(losers, 0.3f);
-                }
+                    if (added) {
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.2f).nextStep();
             }
 
-            // 4. Swap Logic
             else if (action == Core::DSA::HeapAction::Swap) {
-                UI::DSA::Node* nodeA = currentPointers[i]; // Parent
-                UI::DSA::Node* nodeB = currentPointers[j]; // Winner Child
-
-                if (nodeA && nodeB) {
-                    std::swap(currentPointers[i], currentPointers[j]);
-
-                    // Line: swap(val, target)
-                    b.highlight("swap_with_child")
-                    .callback([this, i, j]() {
+                // Line: swap(val, target)
+                b.highlight("swap_with_child")
+                .callback([this, i, j]() {
+                    auto* nodeA = graph.getNode(i);
+                    auto* nodeB = graph.getNode(j);
+                    if (nodeA && nodeB) {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
-                    })
-                    .nodeSwap(nodeA, nodeB, 0.6f)
-                    .wait(0.6f)
-                    .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({nodeA, nodeB}, 0.2f)
-                    .wait(0.1f).nextStep();
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeSwapAnimation>(nodeA, nodeB, 0.6f));
+                    }
+                })
+                .wait(0.6f)
+                .callback([this]() { triggerLayout(0.0f); })
+                .callback([this, i, j]() {
+                    auto* nodeA = graph.getNode(i);
+                    auto* nodeB = graph.getNode(j);
+                    if (nodeA && nodeB) {
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeA, 0.2f));
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeB, 0.2f));
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.2f).nextStep();
+                
+                if (i < (int)currentPointers.size() && j < (int)currentPointers.size()) {
+                    std::swap(currentPointers[i], currentPointers[j]);
                 }
             }
 
             // 5. Termination
             else if (action == Core::DSA::HeapAction::Unfocus) {
-                if (i >= 0 && i < (int)currentPointers.size()) {
-                    UI::DSA::Node* winnerNode = currentPointers[i];
+                // Line: else: break
+                b.highlight("break_loop")
+                .callback([this, i]() {
+                    auto* winnerNode = graph.getNode(i);
                     if (winnerNode) {
-                        // Line: else: break
-                        b.highlight("break_loop")
-                        .nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f).nextStep();
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(winnerNode, 0.3f));
                     }
-                }
+                })
+                .wait(0.2f).nextStep();
             }
         });
 
-        model.removeRoot();
-        model.setObserver(nullptr);
+        tempModel.removeRoot();
+        tempModel.setObserver(nullptr);
+        b.callback([this]() { triggerLayout(0.5f); }); // Final beautiful layout
         b.finish();
         submitAnimation(b);
     }
@@ -619,7 +756,8 @@ namespace Controllers {
 
         int currentSize = static_cast<int>(graph.getNodeCount());
 
-        // 1. Check if heap is empty
+        Core::DSA::Heap tempModel = model;
+        
         b.highlight("check_empty").nextStep();
         
         if (currentSize == 0) {
@@ -654,70 +792,86 @@ namespace Controllers {
             currentPointers.push_back(graph.getNode(k));
         }
 
-        model.setObserver([this, &b, currentPointers](Core::DSA::HeapAction action, int i, int j, int v) mutable {
+        Core::DSA::Heap tempModel = model;
+        tempModel.setObserver([this, &b, data](Core::DSA::HeapAction action, int i, int j, int v) mutable {
             if (action == Core::DSA::HeapAction::Insert) return;
 
-            // Line: for i = (size/2)-1 down to 0
             if (action == Core::DSA::HeapAction::Focus) {
-                b.highlight("loop_outer").nextStep();
+                b.highlight("loop_outer")
+                .callback([this, data]() {
+                    model.buildHeap(data);
+                })
+                .nextStep();
             }
             else if (action == Core::DSA::HeapAction::Compare) {
-                int leftChildIdx = j;
-                int rightChildIdx = j + 1;
-
-                std::vector<UI::DSA::Node*> trio;
-                if (i >= 0 && i < (int)currentPointers.size()) trio.push_back(currentPointers[i]);
-                if (leftChildIdx >= 0 && leftChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[leftChildIdx]);
-                if (rightChildIdx >= 0 && rightChildIdx < (int)currentPointers.size()) trio.push_back(currentPointers[rightChildIdx]);
-
-                UI::DSA::Node* winnerNode = (v >= 0 && v < (int)currentPointers.size()) ? currentPointers[v] : nullptr;
-                
-                std::vector<UI::DSA::Node*> losers;
-                for (auto* node : trio) {
-                    if (node != winnerNode) losers.push_back(node);
-                }
-
-                // Line: heapifyDown(i)
                 b.highlight("call_heapify")
-                .nodesHighlight(trio, 0.3f)
-                .wait(0.2f).nextStep();
+                .callback([this, i, j]() {
+                    auto* p = graph.getNode(i);
+                    auto* l = graph.getNode(j);
+                    auto* r = graph.getNode(j + 1);
+                    auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                    if (p) parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(p, 0.3f));
+                    if (l) parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(l, 0.3f));
+                    if (r) parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(r, 0.3f));
+                    ctx.animManager.addAnimation(std::move(parallel));
+                })
+                .wait(0.4f).nextStep();
 
-                if (!losers.empty()) {
-                    b.nodesUnhighlight(losers, 0.3f);
-                }
+                // Small unhighlight step before potential swap
+                b.highlight("call_heapify")
+                .callback([this, i, j, v]() {
+                    auto* winnerNode = (v >= 0) ? graph.getNode(v) : nullptr;
+                    auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                    bool added = false;
+                    for (int idx : {i, j, j+1}) {
+                        auto* n = graph.getNode(idx);
+                        if (n && n != winnerNode) {
+                            parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.2f));
+                            added = true;
+                        }
+                    }
+                    if (added) ctx.animManager.addAnimation(std::move(parallel));
+                }).wait(0.2f).nextStep();
             }
             else if (action == Core::DSA::HeapAction::Swap) {
-                UI::DSA::Node* nodeA = currentPointers[i];
-                UI::DSA::Node* nodeB = currentPointers[j];
-
-                if (nodeA && nodeB) {
-                    std::swap(currentPointers[i], currentPointers[j]);
-
-                    // Line: heapifyDown(i) - Swap part
-                    b.highlight("call_heapify") 
-                    .callback([this, i, j]() {
+                b.highlight("call_heapify") 
+                .callback([this, i, j]() {
+                    auto* nodeA = graph.getNode(i);
+                    auto* nodeB = graph.getNode(j);
+                    if (nodeA && nodeB) {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
-                    })
-                    .nodeSwap(nodeA, nodeB, 0.6f)
-                    .wait(0.6f)
-                    .callback([this]() { triggerLayout(0.0f); })
-                    .nodesUnhighlight({nodeA, nodeB}, 0.2f)
-                    .wait(0.1f).nextStep();
-                }
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeSwapAnimation>(nodeA, nodeB, 0.6f));
+                    }
+                })
+                .wait(0.6f)
+                .callback([this]() { triggerLayout(0.0f); })
+                .callback([this, i, j]() {
+                    auto* nodeA = graph.getNode(i);
+                    auto* nodeB = graph.getNode(j);
+                    if (nodeA && nodeB) {
+                        auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeA, 0.2f));
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeB, 0.2f));
+                        ctx.animManager.addAnimation(std::move(parallel));
+                    }
+                })
+                .wait(0.1f).nextStep();
             }
             else if (action == Core::DSA::HeapAction::Unfocus) {
-                if (i >= 0 && i < (int)currentPointers.size()) {
-                    UI::DSA::Node* winnerNode = currentPointers[i];
-                    if (winnerNode) {
-                        b.nodesUnhighlight({winnerNode}, 0.3f).wait(0.2f).nextStep();
+                b.highlight("loop_outer") // Return to loop after heapifying down
+                .callback([this, i]() {
+                    if (auto* n = graph.getNode(i)) {
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f));
                     }
-                }
+                })
+                .wait(0.2f).nextStep();
             }
-        }); // Closure of Lambda
+        }); 
 
-        model.buildHeap(data);
-        model.setObserver(nullptr);
+        tempModel.buildHeap(data);
+        tempModel.setObserver(nullptr);
+        b.callback([this]() { triggerLayout(0.5f); }); // Final beautiful layout
         b.finish();
         submitAnimation(b);
     }
@@ -815,4 +969,4 @@ namespace Controllers {
         }
     }
 
-} // namespace Controllers
+} // namespace Controllers

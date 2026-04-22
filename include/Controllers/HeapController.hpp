@@ -37,6 +37,7 @@ namespace Controllers {
                        UI::Widgets::PseudoCodeViewer* viewer = nullptr);
 
         void forceSnapLayout();
+        void forceVisualSync();
         
         // Creation and File I/O
         void handleCreateRandom(int size);

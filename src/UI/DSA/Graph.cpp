@@ -285,8 +285,9 @@ namespace UI::DSA {
     }
 
     void Graph::update(sf::Vector2f mouseWorldPos) {
-        // CHỈ CHẠY TƯƠNG TÁC VÀ VẬT LÝ KHI ĐỒ THỊ ĐƯỢC PHÉP KÉO (isDraggable == true)
-        if (isDraggable) {
+        // ONLY run physics/interactions when allowed AND not currently animating
+        // This prevents physics springs from fighting layout animations (which causes 'bunching')
+        if (isDraggable && !isAnimating()) {
             // CÁC HẰNG SỐ VẬT LÝ
             float safeDistance = 140.f;  
             float accelRate = 8.0f;      

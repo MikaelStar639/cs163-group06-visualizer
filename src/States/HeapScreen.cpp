@@ -153,8 +153,7 @@ void HeapScreen::update() {
     
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
-        myGraph.resetVisuals();
-        controller.forceSnapLayout(); 
+        controller.forceVisualSync(); 
         codeViewer.hide();
     }
     

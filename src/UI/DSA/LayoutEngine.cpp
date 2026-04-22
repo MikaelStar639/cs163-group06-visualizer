@@ -35,31 +35,29 @@ namespace UI::DSA::LayoutEngine {
         if (nodes.empty()) return animGroup;
 
         // 1. Determine the total depth of the tree to calculate the "span"
-        int maxLevel = static_cast<int>(std::floor(std::log2(nodes.size())));
+        int n = static_cast<int>(nodes.size());
+        int maxLevel = static_cast<int>(std::floor(std::log2(n)));
 
         for (size_t i = 0; i < nodes.size(); ++i) {
             int level = static_cast<int>(std::floor(std::log2(i + 1)));
             int firstIdxInLevel = static_cast<int>(std::pow(2, level)) - 1;
             int posInLevel = static_cast<int>(i) - firstIdxInLevel;
-            int numNodesInLevel = static_cast<int>(std::pow(2, level));
-
-            // 2. The Triangle Logic:
-            // The horizontal offset is based on the total width of the bottom level.
-            // We want the spacing to halve as we go up, or double as we go down.
-            // 'hSpacing' represents the distance between nodes at this specific level.
+            
+            // hSpacing represents the distance between nodes at this specific level.
+            // We want parents to be exactly between their children.
             float hSpacing = std::pow(2, maxLevel - level) * spacing;
             
-            // 3. Center the nodes
-            // Total width of this level is (nodes - 1) * spacing
-            float levelWidth = (numNodesInLevel - 1) * hSpacing;
+            // Center calculation:
+            // The entire level should be centered around startX.
+            // The number of potential nodes at this level is 2^level.
+            int maxNodesAtLevel = static_cast<int>(std::pow(2, level));
+            float levelWidth = (maxNodesAtLevel - 1) * hSpacing;
             float targetX = startX + (posInLevel * hSpacing) - (levelWidth / 2.0f);
             
-            // Vertical spacing can remain constant or be adjusted
-            float targetY = startY + (level * spacing * 1.2f); // 1.2f for a slightly taller triangle
+            float targetY = startY + (level * spacing * 1.0f); // Tighter vertical spacing
 
             sf::Vector2f currentPos = nodes[i]->getPosition();
-
-            if (std::abs(currentPos.x - targetX) > 1.f || std::abs(currentPos.y - targetY) > 1.f) {
+            if (std::abs(currentPos.x - targetX) > 0.5f || std::abs(currentPos.y - targetY) > 0.5f) {
                 animGroup->add(std::make_unique<Animations::NodeMoveAnimation>(
                     nodes[i].get(), sf::Vector2f(targetX, targetY), duration
                 ));
