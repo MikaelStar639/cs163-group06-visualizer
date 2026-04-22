@@ -3,6 +3,8 @@
 #include "UI/DSA/LayoutEngine.hpp"
 #include "UI/Animations/Core/AnimStepBuilder.hpp"
 #include <iostream>
+#include <any>
+#include "UI/Animations/StepByStep/HeapSnapshot.hpp"
 #include <algorithm>
 #include <fstream>
 #include <filesystem>
@@ -16,6 +18,12 @@ namespace Controllers {
                                    UI::Widgets::PseudoCodeViewer* viewer)
         : ctx(context), graph(g), model(m), codeViewer(viewer) {
             g.setIsDirected(false);
+
+            // Register snapshot handlers
+            ctx.stepNavigator.setSnapshotHandlers(
+                [this]() { return this->saveSnapshot(); },
+                [this](const std::any& s) { this->restoreSnapshot(s); }
+            );
         }
 
     void HeapController::syncGraphEdges() {
@@ -38,9 +46,10 @@ namespace Controllers {
 
     void HeapController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
         ctx.stepNavigator.clear();
+        masterNodePool.clear(); // Clear cemetery for new algorithm
         auto steps = b.buildSteps();
         for (auto& step : steps) {
-            ctx.stepNavigator.addStep(std::move(step));
+            ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
         }
         ctx.stepNavigator.playNext();
         if (ctx.isStepByStep) {
@@ -509,7 +518,10 @@ namespace Controllers {
                 b.highlight("remove_last")
                 .callback([this, i]() {
                     if (i >= 0 && i < (int)graph.getNodeCount()) {
-                        graph.removeNodeAt(i);
+                        auto extracted = graph.extractNode(i);
+                        if (extracted) {
+                            masterNodePool.push_back(std::move(extracted));
+                        }
                     }
                     syncGraphEdges();
                     triggerLayout(0.5f);
@@ -710,22 +722,94 @@ namespace Controllers {
     void HeapController::handleClearAll() {
         if (codeViewer) codeViewer->hide();
 
-        // If an animation is currently running, perform an instant reset
-        if (graph.isAnimating()) {
-            model.clear();
-            graph.clear();
-            return;
-        }
-
-        // Otherwise, perform an ordered cleanup
-        graph.clearEdges();
-        int currentSize = static_cast<int>(graph.getNodes().size());
-        
-        // Always remove at index 0 because the vector shifts down each time
-        for (int i = 0; i < currentSize; ++i) {
-            graph.removeNodeAt(0);
-        }
-
         model.clear();
+        graph.clear();
+        masterNodePool.clear();
     }
-}
+
+    // ==================== SNAPSHOTS ====================
+
+    std::any HeapController::saveSnapshot() {
+        UI::Animations::HeapSnapshot s;
+        s.pool = model.getPool();
+
+        auto& currentNodes = graph.getNodes();
+        for (const auto& nodePtr : currentNodes) {
+            UI::Animations::HeapSnapshot::NodeState ns;
+            ns.originalPointer = nodePtr.get();
+            ns.position = nodePtr->getPosition();
+            ns.fillColor = nodePtr->getFillColor();
+            ns.outlineColor = nodePtr->getOutlineColor();
+            ns.labelColor = nodePtr->getLabelColor();
+            ns.scale = nodePtr->getScale();
+            ns.label = nodePtr->getLabel();
+            s.nodes.push_back(ns);
+        }
+
+        if (codeViewer) s.activeLineIndex = codeViewer->getActiveLine();
+
+        return std::make_any<UI::Animations::HeapSnapshot>(std::move(s));
+    }
+
+    void HeapController::restoreSnapshot(const std::any& snapshotAny) {
+        const auto& s = std::any_cast<const UI::Animations::HeapSnapshot&>(snapshotAny);
+        
+        // 1. Model
+        model.loadRawData(s.pool);
+
+        // 2. Visuals - Rebuild graph from pool and snapshot
+        std::vector<std::unique_ptr<UI::DSA::Node>> newGraphNodes;
+        
+        for (const auto& nodeState : s.nodes) {
+            std::unique_ptr<UI::DSA::Node> node = nullptr;
+
+            // Try extracting from current graph
+            for (int i = 0; i < (int)graph.getNodeCount(); ++i) {
+                if (graph.getNode(i) == nodeState.originalPointer) {
+                    node = graph.extractNode(i);
+                    break;
+                }
+            }
+
+            // Try extracting from pool
+            if (!node) {
+                for (auto it = masterNodePool.begin(); it != masterNodePool.end(); ++it) {
+                    if (it->get() == nodeState.originalPointer) {
+                        node = std::move(*it);
+                        masterNodePool.erase(it);
+                        break;
+                    }
+                }
+            }
+
+            // If found, restore state
+            if (node) {
+                node->setLabel(nodeState.label);
+                node->setPosition(nodeState.position);
+                node->setFillColor(nodeState.fillColor);
+                node->setOutlineColor(nodeState.outlineColor);
+                node->setLabelColor(nodeState.labelColor);
+                node->setScale(nodeState.scale);
+                
+                newGraphNodes.push_back(std::move(node));
+            }
+        }
+
+        // Move remaining current graph nodes to pool
+        while (graph.getNodeCount() > 0) {
+            masterNodePool.push_back(graph.extractNode(0));
+        }
+
+        // Set the new nodes
+        for (auto& node : newGraphNodes) {
+            graph.insertNodePtr(-1, std::move(node));
+        }
+
+        syncGraphEdges();
+
+        if (codeViewer && s.activeLineIndex >= 0) {
+            codeViewer->highlightLine(s.activeLineIndex);
+        }
+    }
+
+} // namespace Controllers

@@ -4,15 +4,15 @@ namespace UI::Animations {
 
     void SequenceAnimation::add(std::unique_ptr<AnimationBase> anim) {
         if (anim) {
-            sequence.push(std::move(anim));
+            sequence.push_back(std::move(anim));
         }
     }
 
     void SequenceAnimation::update(float dt) {
-        while (!sequence.empty() && dt > 0.f) {
-            sequence.front()->update(dt);
-            if (sequence.front()->isFinished()) {
-                sequence.pop();
+        while (currentIndex < static_cast<int>(sequence.size()) && dt > 0.f) {
+            sequence[currentIndex]->update(dt);
+            if (sequence[currentIndex]->isFinished()) {
+                currentIndex++;
             } 
             else {
                 break;
@@ -21,7 +21,14 @@ namespace UI::Animations {
     }
 
     bool SequenceAnimation::isFinished() const {
-        return sequence.empty();
+        return currentIndex >= static_cast<int>(sequence.size());
+    }
+
+    void SequenceAnimation::reset() {
+        currentIndex = 0;
+        for (auto& anim : sequence) {
+            anim->reset();
+        }
     }
 
 } // namespace UI::Animations

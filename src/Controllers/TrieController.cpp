@@ -21,6 +21,9 @@ namespace Controllers {
                                    UI::Widgets::PseudoCodeViewer* viewer)
         : ctx(context), graph(g), model(m), codeViewer(viewer) 
     {
+        // Safety: Clear any snapshot handlers from previous screens
+        ctx.stepNavigator.setSnapshotHandlers(nullptr, nullptr);
+
         if (graph.getNodes().empty()) {
             graph.addNode("Root", {startX, startY});
             poolToGraphMap[model.getRootIndex()] = 0;

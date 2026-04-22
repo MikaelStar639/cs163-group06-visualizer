@@ -16,6 +16,7 @@ namespace UI::Animations {
         NodeMoveAnimation(UI::DSA::Node* node, sf::Vector2f end, float duration);
         void update(float dt) override;
         bool isFinished() const override;
+        void reset() override;
     };
 
 } // namespace UI::Animations

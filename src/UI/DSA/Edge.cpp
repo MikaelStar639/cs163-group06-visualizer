@@ -138,6 +138,11 @@ void Edge::flipDirection(){
     std::swap(source, dest);
 }
 
+void Edge::setNodes(Node* src, Node* dest) {
+    this->source = src;
+    this->dest = dest;
+}
+
 std::string Edge::getWeight() const{
     return weight;
 }

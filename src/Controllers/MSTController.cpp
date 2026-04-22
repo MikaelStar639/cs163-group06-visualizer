@@ -140,7 +140,11 @@ namespace Controllers {
                                  UI::DSA::Graph& g,
                                  Core::DSA::MST& m,
                                  UI::Widgets::PseudoCodeViewer* viewer)
-        : ctx(context), graph(g), model(m), codeViewer(viewer) {}
+        : ctx(context), graph(g), model(m), codeViewer(viewer) 
+    {
+        // Safety: Clear any snapshot handlers from previous screens
+        ctx.stepNavigator.setSnapshotHandlers(nullptr, nullptr);
+    }
 
     void MSTController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
         ctx.stepNavigator.clear();

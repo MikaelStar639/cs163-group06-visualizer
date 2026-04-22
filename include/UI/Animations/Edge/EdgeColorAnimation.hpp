@@ -12,8 +12,9 @@ namespace UI::Animations {
                                                     sf::Color end, 
                                                     float duration);
 
-        void update(float dt);
-        bool isFinished() const;
+        void update(float dt) override;
+        bool isFinished() const override;
+        void reset() override;
 
     private:
         sf::Color lerpColor(sf::Color start, sf::Color end, float t);

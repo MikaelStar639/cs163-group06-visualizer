@@ -17,6 +17,7 @@ namespace UI::Animations {
         NodeScaleAnimation(UI::DSA::Node* node, float start, float end, float duration);
         void update(float dt) override;
         bool isFinished() const override;
+        void reset() override;
     };
 
     class NodeInsertAnimation : public NodeScaleAnimation {

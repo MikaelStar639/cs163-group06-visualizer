@@ -10,8 +10,11 @@ namespace UI::Animations {
         //dt: time between 2 frames
         virtual void update(float dt) = 0;
 
-        //Return true if finished running
+        // Return true if finished running
         virtual bool isFinished() const = 0;
+
+        // Reset the animation to its start state
+        virtual void reset() {}
     };
 
 }

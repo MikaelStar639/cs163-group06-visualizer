@@ -27,6 +27,7 @@ namespace UI::Animations {
                        
         void update(float dt) override;
         bool isFinished() const override;
+        void reset() override;
     };
 
     class NodeHighlightAnimation : public NodeColorAnimation {

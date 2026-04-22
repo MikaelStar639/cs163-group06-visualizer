@@ -124,7 +124,8 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // 6. Timeline and Speed Controls
     speedSlider.handleEvent(event);
 
-    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext()) {
+    // Allow controls if we are animating OR if we have steps to play/back
+    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext() || ctx.stepNavigator.getTotalSteps() > 0) {
         if (btnPlay.isClicked(event)) {
             ctx.animManager.togglePause();   
         }
@@ -140,11 +141,17 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
 
         if (btnPrev.isClicked(event)) {
-            ctx.animManager.clearAll();
-            ctx.stepNavigator.clear();
-            ctx.animManager.setPaused(false);
-            std::cout << "[INFO] Animation Cancelled.\n";
-            cancelClicked = true;
+            if (ctx.isStepByStep && ctx.stepNavigator.getCurrentIndex() >= 0) {
+                // If in step mode and we have something to lùi, go back one step
+                ctx.stepNavigator.stepBack();
+            } else {
+                // Otherwise, cancel the animation as before
+                ctx.animManager.clearAll();
+                ctx.stepNavigator.clear();
+                ctx.animManager.setPaused(false);
+                std::cout << "[INFO] Animation Cancelled.\n";
+                cancelClicked = true;
+            }
         }
     } 
     else {
@@ -179,7 +186,7 @@ void DSAMenuBase::update(sf::Vector2i mousePos) {
     for (auto& btn : activeSubButtons) btn.update(mousePos);
     if (dropdownAction) dropdownAction->update(mousePos);
     
-    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext()) {
+    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext() || ctx.stepNavigator.getTotalSteps() > 0) {
         btnPrev.update(mousePos);
         btnPlay.update(mousePos);
         btnNext.update(mousePos);
@@ -213,7 +220,7 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     }
 
     
-    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext()) {
+    if (!ctx.animManager.empty() || ctx.stepNavigator.hasNext() || ctx.stepNavigator.getTotalSteps() > 0) {
         btnPrev.draw();
         btnPlay.draw();
         btnNext.draw();

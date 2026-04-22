@@ -3,14 +3,28 @@
 
 namespace UI::Animations {
 
+    // Internal proxy to allow sharing AnimationBase ownership with AnimationManager
+    class SharedAnimationProxy : public AnimationBase {
+    private:
+        std::shared_ptr<AnimationBase> inner;
+    public:
+        SharedAnimationProxy(std::shared_ptr<AnimationBase> anim) : inner(anim) {
+            if (inner) inner->reset();
+        }
+        void update(float dt) override { if (inner) inner->update(dt); }
+        bool isFinished() const override { return !inner || inner->isFinished(); }
+        void reset() override { if (inner) inner->reset(); }
+    };
+
     void StepNavigator::clear() {
         steps.clear();
+        history.clear();
         currentStepIndex = -1;
     }
 
-    void StepNavigator::addStep(std::unique_ptr<AnimationBase> step) {
+    void StepNavigator::addStep(std::shared_ptr<AnimationBase> step) {
         if (step) {
-            steps.push_back(std::move(step));
+            steps.push_back(step); // Keep shared ownership
         }
     }
 
@@ -21,18 +35,59 @@ namespace UI::Animations {
     }
 
     bool StepNavigator::playNext() {
-        if (!animManager) return false;
+        if (!animManager || !hasNext()) return false;
         
-        // If there's an animation already running/paused, finish it instantly
-        // before starting the next logical step to ensure we don't 'jam'.
         if (!animManager->empty()) {
             animManager->skipToEnd();
             animManager->setPaused(false);
         }
 
-        if (currentStepIndex + 1 < static_cast<int>(steps.size())) {
-            currentStepIndex++;
-            animManager->addAnimation(std::move(steps[currentStepIndex]));
+        // 1. Advance to the next step index
+        currentStepIndex++;
+
+        // 2. Try replaying from history: 
+        // To replay step X with animation, we must first restore state BEFORE step X (history[X])
+        if (static_cast<int>(history.size()) > currentStepIndex) {
+            if (snapshotRestorer) {
+                snapshotRestorer(history[currentStepIndex]);
+            }
+            // Continue to part 4 to play the animation normally
+        } else {
+            // 3. First-time play: Save the state BEFORE playing
+            if (snapshotProvider && static_cast<int>(history.size()) <= currentStepIndex) {
+                history.push_back(snapshotProvider());
+            }
+        }
+
+        // 4. Play the actual animation (Either first time or replay)
+        if (currentStepIndex >= 0 && currentStepIndex < static_cast<int>(steps.size()) && steps[currentStepIndex]) {
+            // Wrap in a proxy to share with AnimationManager
+            animManager->addAnimation(std::make_unique<SharedAnimationProxy>(steps[currentStepIndex]));
+        }
+        
+        return true;
+    }
+
+    bool StepNavigator::stepBack() {
+        if (!animManager || currentStepIndex < 0) return false;
+
+        // CRITICAL: If an animation is currently running, finish it instantly 
+        // to ensure the snapshot we take for the 'After' state is correct.
+        if (!animManager->empty()) {
+            animManager->skipToEnd();
+        }
+
+        // If we are moving back from a step that hasn't had its 'After' state saved yet
+        if (snapshotProvider && static_cast<int>(history.size()) == currentStepIndex + 1) {
+            history.push_back(snapshotProvider());
+        }
+
+        animManager->clearAll();
+
+        // Restore the state BEFORE Step X (history[X])
+        if (snapshotRestorer && currentStepIndex < static_cast<int>(history.size())) {
+            snapshotRestorer(history[currentStepIndex]);
+            currentStepIndex--;
             return true;
         }
 
@@ -44,12 +99,19 @@ namespace UI::Animations {
     }
 
     void StepNavigator::playAllRemaining() {
-        if (!animManager || !hasNext()) return;
+        if (!animManager || steps.empty()) return;
+
+        // 1. If we are currently in the middle of history, restore the current state first
+        if (currentStepIndex >= 0 && currentStepIndex < static_cast<int>(history.size())) {
+            if (snapshotRestorer) {
+                snapshotRestorer(history[currentStepIndex]);
+            }
+        }
 
         auto sequence = std::make_unique<SequenceAnimation>();
         while (hasNext()) {
             currentStepIndex++;
-            sequence->add(std::move(steps[currentStepIndex]));
+            sequence->add(std::make_unique<SharedAnimationProxy>(steps[currentStepIndex]));
         }
         animManager->addAnimation(std::move(sequence));
     }
@@ -60,7 +122,7 @@ namespace UI::Animations {
         // Play remaining steps through the manager
         while (currentStepIndex + 1 < static_cast<int>(steps.size())) {
             currentStepIndex++;
-            animManager->addAnimation(std::move(steps[currentStepIndex]));
+            animManager->addAnimation(std::make_unique<SharedAnimationProxy>(steps[currentStepIndex]));
         }
         
         // Tell manager to finish everything instantly

@@ -22,6 +22,7 @@ namespace UI::Animations {
         NodeSwapAnimation(UI::DSA::Node* a, UI::DSA::Node* b, float duration);
         void update(float dt) override;
         bool isFinished() const override;
+        void reset() override;
     };
 
 } // namespace UI::Animations

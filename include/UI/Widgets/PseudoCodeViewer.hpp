@@ -49,6 +49,7 @@ namespace UI::Widgets {
         void clearHighlight();
         void hide();
         bool isVisible() const { return visible; }
+        int getActiveLine() const { return activeLine; }
 
         void setPosition(float x, float y);
         void setPositionBottomRight(float windowWidth, float windowHeight, float margin = 20.f);

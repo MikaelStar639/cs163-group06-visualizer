@@ -43,10 +43,13 @@ namespace UI::DSA {
         void insertNodeAt(int index, const std::string& val, sf::Vector2f pos); 
         void removeLastNode(); 
         void removeNodeAt(int index); 
+        std::unique_ptr<Node> extractNode(int index);
+        void insertNodePtr(int index, std::unique_ptr<Node> node);
         void updateNodeValue(int index, const std::string &newVal);
         
         void addEdge(int srcIndex, int destIndex, const std::string& weight = "");
         void removeEdge(int srcIndex, int destIndex);
+        void removeEdgeAt(int index, bool animate = true);
 
         void clear();      
         void clearEdges(); 
@@ -59,6 +62,7 @@ namespace UI::DSA {
 
         const std::vector<std::unique_ptr<Node>>& getNodes() const;
         const std::vector<std::unique_ptr<Edge>>& getEdges() const;
+        std::vector<std::unique_ptr<Edge>>& getEdges();
 
         Node* getNode(int index) const; 
         Edge* getEdge(int srcIndex, int destIndex) const; 

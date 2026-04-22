@@ -45,4 +45,8 @@ namespace UI::Animations{
     bool NodeSwapAnimation::isFinished() const {
             return elapsedTime >= totalDuration;
         }
+
+    void NodeSwapAnimation::reset() {
+        elapsedTime = 0.f;
+    }
 }

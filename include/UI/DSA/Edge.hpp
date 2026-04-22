@@ -33,6 +33,7 @@ public:
     void setThickness(float newThickness);
     void toggleDirection(bool directed);
     void flipDirection();
+    void setNodes(Node* src, Node* dest);
     
     // Getters
     std::string getWeight() const;

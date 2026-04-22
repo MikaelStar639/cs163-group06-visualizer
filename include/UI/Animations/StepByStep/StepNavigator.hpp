@@ -1,6 +1,7 @@
 #pragma once
 #include "UI/Animations/Core/AnimationBase.hpp"
 #include "UI/Animations/Core/AnimationManager.hpp"
+#include <any>
 #include <vector>
 #include <memory>
 #include <functional>
@@ -15,16 +16,30 @@ namespace UI::Animations {
      */
     class StepNavigator {
     private:
-        std::vector<std::unique_ptr<AnimationBase>> steps;
+        std::vector<std::shared_ptr<AnimationBase>> steps;
         int currentStepIndex = -1;
         bool stepModeActive = false;
         
         AnimationManager* animManager = nullptr;
 
+        // History of states for the Back feature (Generic via std::any)
+        std::vector<std::any> history;
+        std::function<std::any()> snapshotProvider;
+        std::function<void(const std::any&)> snapshotRestorer;
+
     public:
         StepNavigator() = default;
 
         void setAnimationManager(AnimationManager* manager) { animManager = manager; }
+
+        /**
+         * @brief Register callbacks to save/restore state.
+         */
+        void setSnapshotHandlers(std::function<std::any()> saver, 
+                                 std::function<void(const std::any&)> restorer) {
+            snapshotProvider = saver;
+            snapshotRestorer = restorer;
+        }
 
         /**
          * @brief Clear all steps and reset index.
@@ -34,13 +49,19 @@ namespace UI::Animations {
         /**
          * @brief Add a logical animation step to the queue.
          */
-        void addStep(std::unique_ptr<AnimationBase> step);
+        void addStep(std::shared_ptr<AnimationBase> step);
 
         /**
          * @brief Trigger the next logical step.
          * @return true if a step was started, false if no more steps remain.
          */
         bool playNext();
+
+        /**
+         * @brief Restore the previous state.
+         * @return true if stepped back successfully.
+         */
+        bool stepBack();
 
         /**
          * @brief Check if there are more steps to play.

@@ -48,6 +48,33 @@ namespace UI::DSA {
         );
     }
 
+    std::unique_ptr<Node> Graph::extractNode(int index) {
+        if (index < 0 || index >= nodes.size()) return nullptr;
+        
+        std::unique_ptr<Node> node = std::move(nodes[index]);
+        Node* ptr = node.get();
+        
+        nodes.erase(nodes.begin() + index);
+        
+        auto it = std::find(drawOrder.begin(), drawOrder.end(), ptr);
+        if (it != drawOrder.end()) drawOrder.erase(it);
+        
+        velocities.erase(ptr);
+        lockedNodes.erase(ptr);
+        
+        return node;
+    }
+
+    void Graph::insertNodePtr(int index, std::unique_ptr<Node> node) {
+        if (!node) return;
+        Node* ptr = node.get();
+        
+        if (index < 0 || index > nodes.size()) index = nodes.size();
+        nodes.insert(nodes.begin() + index, std::move(node));
+        
+        drawOrder.push_back(ptr);
+    }
+
     void Graph::removeNodeAt(int index) {
         if (index < 0 || index >= nodes.size()) return;
 
@@ -130,6 +157,28 @@ namespace UI::DSA {
                 }
             )
         );
+    }
+
+    void Graph::removeEdgeAt(int index, bool animate) {
+        if (index < 0 || index >= edges.size()) return;
+
+        if (animate) {
+            Edge* edgeToDelete = edges[index].get();
+            ctx.animManager.addAnimation(
+                std::make_unique<UI::Animations::EdgeDeleteAnimation>(
+                    edgeToDelete, 0.2f,
+                    [this, edgeToDelete]() {
+                        edges.erase(
+                            std::remove_if(edges.begin(), edges.end(),
+                                [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; }),
+                            edges.end()
+                        );
+                    }
+                )
+            );
+        } else {
+            edges.erase(edges.begin() + index);
+        }
     }
 
     void Graph::clear() {
@@ -319,6 +368,7 @@ namespace UI::DSA {
 
     const std::vector<std::unique_ptr<Node>>& Graph::getNodes() const { return nodes; }
     const std::vector<std::unique_ptr<Edge>>& Graph::getEdges() const { return edges; }
+    std::vector<std::unique_ptr<Edge>>& Graph::getEdges() { return edges; }
 
     bool Graph::isAnimating() const {return !ctx.animManager.empty();}
 

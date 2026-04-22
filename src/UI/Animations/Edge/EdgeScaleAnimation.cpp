@@ -32,4 +32,8 @@ namespace UI::Animations {
         return elapsedTime >= totalDuration;
     }
 
+    void EdgeScaleAnimation::reset() {
+        elapsedTime = 0.f;
+    }
+
 }

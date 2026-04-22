@@ -13,6 +13,7 @@ namespace UI::Animations {
         explicit CallbackAnimation(std::function<void()> cb);
         void update(float dt) override;
         bool isFinished() const override;
+        void reset() override;
     };
 
 } // namespace UI::Animations

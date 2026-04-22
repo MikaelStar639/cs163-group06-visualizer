@@ -14,13 +14,41 @@ namespace Controllers {
 
     LinkedListController::LinkedListController(AppContext& context, UI::DSA::Graph& g, Core::DSA::LinkedList& m,
                                                UI::Widgets::PseudoCodeViewer* viewer)
-        : ctx(context), graph(g), model(m), codeViewer(viewer) {}
+        : ctx(context), graph(g), model(m), codeViewer(viewer) 
+    {
+        // Register snapshot handlers for the StepNavigator
+        ctx.stepNavigator.setSnapshotHandlers(
+            [this]() { return this->saveSnapshot(); },
+            [this](const std::any& s) { this->restoreSnapshot(s); }
+        );
+    }
 
-    void LinkedListController::syncGraphEdges() {
-        graph.clearEdges();
-        int numNodes = graph.getNodes().size();
-        for (int i = 0; i < numNodes - 1; ++i) {
-            graph.addEdge(i, i + 1);
+    void LinkedListController::syncGraphEdges(bool animate) {
+        int numNodes = (int)graph.getNodes().size();
+        int targetEdgeCount = std::max(0, numNodes - 1);
+        auto& currentEdges = graph.getEdges();
+
+        // 1. Remove extra edges
+        while ((int)currentEdges.size() > targetEdgeCount) {
+            graph.removeEdgeAt((int)currentEdges.size() - 1, animate);
+        }
+
+        // 2. Update existing edges and add missing ones
+        for (int i = 0; i < targetEdgeCount; ++i) {
+            if (i < (int)currentEdges.size()) {
+                // Edge exists, ensure it points to correct nodes
+                currentEdges[i]->setNodes(graph.getNode(i), graph.getNode(i+1));
+            } else {
+                // Add new edge (silent if we are replaying)
+                if (animate) {
+                    graph.addEdge(i, i + 1);
+                } else {
+                    // Manually add without animation
+                    graph.getEdges().push_back(std::make_unique<UI::DSA::Edge>(
+                        ctx, graph.getNode(i), graph.getNode(i+1), graph.getIsDirected()
+                    ));
+                }
+            }
         }
     }
 
@@ -31,9 +59,10 @@ namespace Controllers {
 
     void LinkedListController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
         ctx.stepNavigator.clear();
+        masterNodePool.clear(); // New algorithm starts, we can clear the pool
         auto steps = b.buildSteps();
         for (auto& step : steps) {
-            ctx.stepNavigator.addStep(std::move(step));
+            ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
         }
         ctx.stepNavigator.playNext(); // Start the sequence
         
@@ -643,4 +672,83 @@ namespace Controllers {
         model.clear();
     }
 
-} // namespace Controllers
+    std::any LinkedListController::saveSnapshot() {
+        UI::Animations::LinkedListSnapshot s;
+        s.listModel = model; // Copy the data model
+
+        // Capture visual state of all nodes currently in the graph
+        auto& currentNodes = graph.getNodes();
+        for (const auto& nodePtr : currentNodes) {
+            UI::Animations::LinkedListSnapshot::NodeState ns;
+            ns.originalPointer = nodePtr.get(); // IMPORTANT: This is our key
+            ns.position = nodePtr->getPosition();
+            ns.fillColor = nodePtr->getFillColor();
+            ns.outlineColor = nodePtr->getOutlineColor();
+            ns.labelColor = nodePtr->getLabelColor();
+            ns.scale = nodePtr->getScale();
+            ns.label = nodePtr->getLabel();
+            s.nodes.push_back(ns);
+        }
+
+        if (codeViewer) {
+            s.activeLineIndex = codeViewer->getActiveLine();
+        }
+
+        return std::make_any<UI::Animations::LinkedListSnapshot>(std::move(s));
+    }
+
+    void LinkedListController::restoreSnapshot(const std::any& snapshotAny) {
+        // Safe cast back to our specific snapshot type
+        const auto& s = std::any_cast<const UI::Animations::LinkedListSnapshot&>(snapshotAny);
+
+        // 1. Restore Data Model
+        model = s.listModel;
+
+        // 2. Move ALL current graph nodes to our masterPool so they don't get deleted
+        while (graph.getNodes().size() > 0) {
+            masterNodePool.push_back(graph.extractNode(0));
+        }
+
+        // 3. Re-insert nodes from masterPool back to graph based on originalPointer
+        for (const auto& nodeState : s.nodes) {
+            auto it = std::find_if(masterNodePool.begin(), masterNodePool.end(), 
+                [&](const std::unique_ptr<UI::DSA::Node>& n) {
+                    return n.get() == nodeState.originalPointer;
+                });
+            
+            if (it != masterNodePool.end()) {
+                // Node found in pool, put it back in graph
+                std::unique_ptr<UI::DSA::Node> node = std::move(*it);
+                masterNodePool.erase(it);
+                
+                // Update properties
+                node->setLabel(nodeState.label);
+                node->setPosition(nodeState.position);
+                node->setFillColor(nodeState.fillColor);
+                node->setOutlineColor(nodeState.outlineColor);
+                node->setLabelColor(nodeState.labelColor);
+                node->setScale(nodeState.scale);
+                
+                graph.insertNodePtr(-1, std::move(node));
+            } else {
+                // This shouldn't happen often if we track correctly, but create new if missing
+                auto* newNode = graph.addNodeRaw(nodeState.label, nodeState.position);
+                newNode->setFillColor(nodeState.fillColor);
+                newNode->setOutlineColor(nodeState.outlineColor);
+            }
+        }
+        
+        // Ensure edges are synced (SILENTLY to avoid breaking dangling pointers if any)
+        syncGraphEdges(false);
+
+        // 3. Restore PseudoCode
+        if (codeViewer) {
+            if (s.activeLineIndex >= 0) {
+                codeViewer->highlightLine(s.activeLineIndex);
+            } else {
+                codeViewer->clearHighlight();
+            }
+        }
+    }
+
+} // namespace Controllers

@@ -24,4 +24,8 @@ namespace UI::Animations {
     bool NodeScaleAnimation::isFinished() const{
         return elapsedTime >= totalDuration;
     }
+
+    void NodeScaleAnimation::reset() {
+        elapsedTime = 0.f;
+    }
 }

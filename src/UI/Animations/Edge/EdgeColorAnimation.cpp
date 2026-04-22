@@ -40,4 +40,8 @@ namespace UI::Animations {
         return elapsedTime >= totalDuration;
     }
 
+    void EdgeColorAnimation::reset() {
+        elapsedTime = 0.f;
+    }
+
 }
