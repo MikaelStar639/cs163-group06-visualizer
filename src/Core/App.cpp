@@ -41,7 +41,7 @@ void App::run(){
         }
 
         context.animManager.update(dt);
-        currentScreen->update();
+        currentScreen->update(dt);
 
         window.clear(Config::Colors::Background); 
         currentScreen->draw();

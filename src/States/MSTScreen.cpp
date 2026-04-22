@@ -139,15 +139,13 @@ void MSTScreen::handleMenuAction() {
     }
 }
 
-void MSTScreen::update() {
+void MSTScreen::update(float dt) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
-    uiMenu.update(mousePos);
-
+    uiMenu.update(mousePos, dt);
+    
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
-        myGraph.resetVisuals();
-        controller.interruptRunning("Animation cancelled");
-        codeViewer.hide();
+        controller.forceSnapLayout(); 
     }
 
     // Preview realtime cho Create -> Manual
@@ -155,7 +153,7 @@ void MSTScreen::update() {
 
     refreshStatusText();
 
-    DSAScreenBase::update();
+    DSAScreenBase::update(dt);
 }
 void MSTScreen::draw() {
     DSAScreenBase::draw();

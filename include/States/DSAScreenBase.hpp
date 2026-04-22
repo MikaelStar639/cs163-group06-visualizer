@@ -17,6 +17,6 @@ public:
     explicit DSAScreenBase(AppContext& context, bool directed = true);
     virtual ~DSAScreenBase() = default;
     virtual void handleEvent(const sf::Event& event) override;
-    virtual void update() override;
+    virtual void update(float dt) override;
     virtual void draw() override;
 };

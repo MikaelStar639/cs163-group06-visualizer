@@ -74,7 +74,7 @@ namespace UI::Widgets {
         virtual ~DSAMenuBase() = default;
 
         virtual void handleEvent(const sf::Event& event);
-        virtual void update(sf::Vector2i mousePos);
+        virtual void update(sf::Vector2i mousePos, float dt);
         virtual void draw(sf::RenderWindow& window);
 
         // API for Controller (Screen)
@@ -96,6 +96,7 @@ namespace UI::Widgets {
 
         std::vector<InputBar>& getInputsMutable() { return activeInputs; }
 
+        
         
         
     };

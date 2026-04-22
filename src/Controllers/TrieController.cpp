@@ -49,6 +49,7 @@ namespace Controllers {
             }
             int gIdx = poolToGraphMap[pIdx];
             if (auto* n = graph.getNode(gIdx)) {
+                n->setLabelColor(Config::UI::Colors::NodeText); // CẦN THIẾT: Reset màu chữ về trắng
                 if (pool[pIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100)); 
                 else n->setFillColor(Config::UI::Colors::NodeFill); 
             }
@@ -103,8 +104,9 @@ namespace Controllers {
     }
 
     void TrieController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        masterNodePool.clear();
+        ctx.animManager.clearAll();
         ctx.stepNavigator.clear();
+        masterNodePool.clear();
         auto steps = b.buildSteps();
         for (auto& step : steps) ctx.stepNavigator.addStep(std::move(step));
         ctx.stepNavigator.playNext();
@@ -193,12 +195,25 @@ namespace Controllers {
         handleClearAll(); 
         try {
             int n = std::stoi(rawTokens[0]);
-            for (int i = 1; i <= n && i < (int)rawTokens.size(); ++i) model.insert(rawTokens[i]);
+            for (int i = 1; i <= n && i < (int)rawTokens.size(); ++i) {
+                model.insert(sanitize(rawTokens[i]));
+            }
         } catch (...) {}
         syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT);  
     }
 
-    void TrieController::handleInsert(const std::string& word) {
+    std::string TrieController::sanitize(const std::string& word) {
+        std::string res = "";
+        for (char c : word) {
+            if (std::isalpha(c)) res += (char)std::tolower(c);
+        }
+        return res;
+    }
+
+    void TrieController::handleInsert(std::string word) {
+        word = sanitize(word);
+        if (word.empty()) return;
+
         using Builder = UI::Animations::AnimStepBuilder;
         auto codeDef = Core::DSA::PseudoCode::Trie::insert();
         Builder b(codeDef, codeViewer);
@@ -271,10 +286,15 @@ namespace Controllers {
             triggerLayoutWithModel(futureModel, Config::Animation::DURATION_LAYOUT);
         }).wait(Config::Animation::STEP_WAIT_LAYOUT).nextStep();
 
-        b.finish(); submitAnimation(b);
+        // FINAL CLEANUP: Ensure everything is unhighlighted
+        b.callback([this]() { this->syncGraph(); }).finish(); 
+        submitAnimation(b);
     }
 
-    void TrieController::handleSearch(const std::string& word, bool isPrefix) {
+    void TrieController::handleSearch(std::string word, bool isPrefix) {
+        word = sanitize(word);
+        if (word.empty()) return;
+
         using Builder = UI::Animations::AnimStepBuilder;
         auto codeDef = Core::DSA::PseudoCode::Trie::search();
         Builder b(codeDef, codeViewer);
@@ -318,29 +338,63 @@ namespace Controllers {
                 }).wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
             } else b.highlight("not_found_end").nextStep();
         }
-        b.finish(); submitAnimation(b);
+        
+        // FINAL CLEANUP: Ensure everything is unhighlighted
+        b.callback([this]() { this->syncGraph(); }).finish(); 
+        submitAnimation(b);
     }
 
-    void TrieController::handleRemove(const std::string& word) {
+    void TrieController::handleRemove(std::string word) {
+        word = sanitize(word);
+        if (word.empty()) return;
+
         using Builder = UI::Animations::AnimStepBuilder;
         auto codeDef = Core::DSA::PseudoCode::Trie::deleteWord();
         Builder b(codeDef, codeViewer);
         b.highlight("init_curr").nextStep(); 
         int currPoolIdx = model.getRootIndex();
+        bool found = true;
+
         for (char c : word) {
             b.highlight("loop_char").nextStep(); 
             int nextPoolIdx = model.getPool()[currPoolIdx].children[c - 'a'];
             b.callback([this, currPoolIdx]() {
-                if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) { n->setFillColor(Config::UI::Colors::NodeHighlight); n->setLabelColor(Config::UI::Colors::LabelHighlight); }
+                if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) { 
+                    n->setFillColor(Config::UI::Colors::NodeHighlight); n->setLabelColor(Config::UI::Colors::LabelHighlight); 
+                }
             }).wait(Config::Animation::STEP_WAIT_TRAVERSAL);
+            
             b.highlight("check_null").nextStep(); 
-            if (nextPoolIdx == -1) { b.highlight("not_found").nextStep(); return; }
+            if (nextPoolIdx == -1) { 
+                b.highlight("not_found").nextStep(); 
+                found = false;
+                break; 
+            }
+
             b.highlight("advance").callback([this, currPoolIdx]() {
-                if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) { n->setLabelColor(Config::UI::Colors::NodeText); if (model.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100)); else n->setFillColor(Config::UI::Colors::NodeFill); }
+                if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) { 
+                    n->setLabelColor(Config::UI::Colors::NodeText); 
+                    if (model.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100)); 
+                    else n->setFillColor(Config::UI::Colors::NodeFill); 
+                }
             }).nextStep();
             currPoolIdx = nextPoolIdx;
         }
-        b.highlight("delete").nextStep().callback([this, word]() { model.deleteWord(word); syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT); }).nextStep().finish();
+
+        if (found) {
+            if (model.getPool()[currPoolIdx].isEndOfWord) {
+                b.highlight("delete").nextStep().callback([this, word]() { 
+                    model.deleteWord(word); 
+                    syncGraph(); 
+                    triggerLayout(Config::Animation::DURATION_LAYOUT); 
+                }).nextStep();
+            } else {
+                b.highlight("not_found").nextStep();
+            }
+        }
+
+        // FINAL CLEANUP: Ensure everything is unhighlighted
+        b.callback([this]() { this->syncGraph(); }).finish();
         submitAnimation(b);
     }
     
@@ -353,6 +407,10 @@ namespace Controllers {
     }
 
     std::any TrieController::saveSnapshot() {
+        // CRITICAL: Force all nodes to their intended layout positions (0 duration)
+        // This ensures the snapshot captures perfect coordinates, not interpolated ones during movement.
+        triggerLayout(0.f);
+
         UI::Animations::TrieSnapshot s; s.trieModel = model; s.poolToGraphMap = poolToGraphMap;
         for (const auto& nodePtr : graph.getNodes()) {
             UI::Animations::TrieSnapshot::NodeState ns;

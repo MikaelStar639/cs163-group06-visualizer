@@ -25,6 +25,6 @@ public:
     explicit LinkedListScreen(AppContext& context);
 
     void handleEvent(const sf::Event& event) override;
-    void update() override;
+    void update(float dt) override;
     void draw() override;
 };

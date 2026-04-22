@@ -94,7 +94,7 @@ void TrieMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {
     else if (type == Action::Search) {
         int sel = createDropdown({"Word", "Prefix"}, currentX, 160.f);
         currentX += 160.f + gap;
-        createInput("Text", currentX, 160.f, InputType::AnyText);
+        createInput("Word", currentX, 160.f, InputType::Word);
         currentX += 160.f + gap;
         createExecuteBtn(currentX);
         currentX += 90.f;

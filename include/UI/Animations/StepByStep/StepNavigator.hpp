@@ -18,9 +18,12 @@ namespace UI::Animations {
     private:
         std::vector<std::shared_ptr<AnimationBase>> steps;
         int currentStepIndex = -1;
-        bool stepModeActive = false;
+        bool stepModeActive = true;
         
         AnimationManager* animManager = nullptr;
+        bool autoPlayEnabled = false;
+        float autoPlayDelay = 0.8f;
+        float autoPlayTimer = 0.0f;
 
         // History of states for the Back feature (Generic via std::any)
         std::vector<std::any> history;
@@ -77,6 +80,10 @@ namespace UI::Animations {
         int getCurrentIndex() const { return currentStepIndex; }
         int getTotalSteps() const { return static_cast<int>(steps.size()); }
         
+        void setAutoPlay(bool enabled) { autoPlayEnabled = enabled; if (enabled) autoPlayTimer = 0.0f; }
+        bool isAutoPlay() const { return autoPlayEnabled; }
+        void setAutoPlayDelay(float delay) { autoPlayDelay = delay; }
+
         /**
          * @brief Autonomous update to handle auto-advancement when step-by-step is OFF.
          */

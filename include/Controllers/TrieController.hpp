@@ -34,6 +34,7 @@ namespace Controllers {
         void triggerLayoutWithModel(const Core::DSA::Trie& layoutModel, float duration);
         void submitAnimation(UI::Animations::AnimStepBuilder& b);
 
+        std::string sanitize(const std::string& word);
         std::any saveSnapshot();
         void restoreSnapshot(const std::any& snapshotAny);
 
@@ -45,9 +46,9 @@ namespace Controllers {
         void handleCreateRandom(int count);
         void handleCreateFromFile();
         void handleEditDataFile();
-        void handleInsert(const std::string& word);
-        void handleSearch(const std::string& word, bool isPrefix = false);
-        void handleRemove(const std::string& word);
+        void handleInsert(std::string word);
+        void handleSearch(std::string word, bool isPrefix = false);
+        void handleRemove(std::string word);
         void handleClearAll();
     };
 

@@ -108,16 +108,17 @@ void LinkedListScreen::handleMenuAction() {
     }
 }
 
-void LinkedListScreen::update() {
+void LinkedListScreen::update(float dt) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
-    uiMenu.update(mousePos);
+    uiMenu.update(mousePos, dt);
+    
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
-        myGraph.resetVisuals();
         controller.forceSnapLayout(); 
         codeViewer.hide();
     }
-    DSAScreenBase::update();
+    
+    DSAScreenBase::update(dt);
 }
 
 void LinkedListScreen::draw() {

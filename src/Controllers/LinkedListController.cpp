@@ -58,6 +58,7 @@ namespace Controllers {
     }
 
     void LinkedListController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.animManager.clearAll();
         ctx.stepNavigator.clear();
         masterNodePool.clear(); // New algorithm starts, we can clear the pool
         auto steps = b.buildSteps();
@@ -744,6 +745,9 @@ namespace Controllers {
     }
 
     std::any LinkedListController::saveSnapshot() {
+        // Force nodes to intended positions before snapshot
+        triggerLayout(0.f);
+
         UI::Animations::LinkedListSnapshot s;
         s.listModel = model; // Copy the data model
 

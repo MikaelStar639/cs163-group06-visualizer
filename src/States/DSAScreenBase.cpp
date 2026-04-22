@@ -68,7 +68,7 @@ void DSAScreenBase::handleEvent(const sf::Event& event) {
     }
 }
 
-void DSAScreenBase::update() {
+void DSAScreenBase::update(float dt) {
     // 1. get the pixel coords of the screen
     sf::Vector2i pixelPos = sf::Mouse::getPosition(ctx.window);
     

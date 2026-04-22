@@ -49,6 +49,7 @@ namespace Controllers {
     }
 
     void HeapController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.animManager.clearAll();
         ctx.stepNavigator.clear();
         masterNodePool.clear(); // Clear cemetery for new algorithm
         auto steps = b.buildSteps();
@@ -882,6 +883,9 @@ namespace Controllers {
     // ==================== SNAPSHOTS ====================
 
     std::any HeapController::saveSnapshot() {
+        // Force nodes to intended positions before snapshot
+        triggerLayout(0.f);
+
         UI::Animations::HeapSnapshot s;
         s.pool = model.getPool();
 

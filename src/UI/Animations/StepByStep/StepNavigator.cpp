@@ -20,6 +20,8 @@ namespace UI::Animations {
         steps.clear();
         history.clear();
         currentStepIndex = -1;
+        autoPlayEnabled = false;
+        autoPlayTimer = 0.0f;
     }
 
     void StepNavigator::addStep(std::shared_ptr<AnimationBase> step) {
@@ -29,8 +31,27 @@ namespace UI::Animations {
     }
 
     void StepNavigator::update(float dt) {
-        if (!stepModeActive && hasNext() && animManager && animManager->empty()) {
+        if (!animManager) return;
+
+        // Mode 1: Step-by-Step OFF (Traditional continuous playback)
+        if (!stepModeActive && hasNext() && animManager->empty() && !animManager->isPaused()) {
             playNext();
+        }
+        
+        // Mode 2: Auto-Play in Step Mode (The "Movie" mode)
+        else if (stepModeActive && autoPlayEnabled && hasNext() && animManager->empty()) {
+            autoPlayTimer += dt;
+            if (autoPlayTimer >= autoPlayDelay) {
+                autoPlayTimer = 0.0f;
+                
+                // Preserve the enabled state since playNext() would normally disable it
+                bool wasAuto = autoPlayEnabled;
+                playNext();
+                autoPlayEnabled = wasAuto;
+            }
+        }
+        else {
+            autoPlayTimer = 0.0f; // Reset if interrupted or animating
         }
     }
 
@@ -41,6 +62,9 @@ namespace UI::Animations {
             animManager->skipToEnd();
             animManager->setPaused(false);
         }
+        
+        // Manual navigation stops Auto-Play
+        autoPlayEnabled = false;
 
         // 1. Advance to the next step index
         currentStepIndex++;
@@ -82,10 +106,11 @@ namespace UI::Animations {
             history.push_back(snapshotProvider());
         }
 
+        autoPlayEnabled = false;
         animManager->clearAll();
 
         // Restore the state BEFORE Step X (history[X])
-        if (snapshotRestorer && currentStepIndex < static_cast<int>(history.size())) {
+        if (snapshotRestorer && currentStepIndex >= 0 && currentStepIndex < (int)history.size()) {
             snapshotRestorer(history[currentStepIndex]);
             currentStepIndex--;
             return true;

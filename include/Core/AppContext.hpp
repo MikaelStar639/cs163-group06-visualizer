@@ -13,5 +13,5 @@ struct AppContext {
     ScreenState nextState;
     UI::Animations::AnimationManager animManager;
     UI::Animations::StepNavigator stepNavigator;
-    bool isStepByStep = false;
+    bool isStepByStep = true;
 };
