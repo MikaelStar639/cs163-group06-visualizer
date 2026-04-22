@@ -8,6 +8,10 @@
 #include <vector>
 #include <string>
 
+#include "UI/Animations/StepByStep/MSTSnapshot.hpp"
+
+namespace UI::Animations { class AnimStepBuilder; }
+
 namespace Controllers {
 
     class MSTController {
@@ -23,10 +27,17 @@ namespace Controllers {
 
         void rebuildGraphFromModel();
         UI::DSA::Edge* getEdgeById(int edgeId) const;
+        void submitAnimation(UI::Animations::AnimStepBuilder& b);
 
         int lastTotalWeight = 0;
         int lastSelectedEdgeCount = 0;
         std::string lastAlgorithm = "None";
+
+        using MSTSnapshot = UI::Animations::MSTSnapshot;
+
+        void syncGraph();
+        std::any saveSnapshot();
+        void restoreSnapshot(const std::any& snapshot);
 
         std::string liveMessage = "Idle";
         int liveTotalWeight = 0;

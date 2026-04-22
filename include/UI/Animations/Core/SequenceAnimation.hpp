@@ -7,7 +7,8 @@ namespace UI::Animations {
 
     class SequenceAnimation : public AnimationBase {
     private:
-        std::queue<std::unique_ptr<AnimationBase>> sequence;
+        std::vector<std::unique_ptr<AnimationBase>> sequence;
+        int currentIndex = 0;
 
     public:
         SequenceAnimation() = default;
@@ -15,6 +16,8 @@ namespace UI::Animations {
         void add(std::unique_ptr<AnimationBase> anim);
         void update(float dt) override;
         bool isFinished() const override;
+        void reset() override;
+        bool isEmpty() const { return sequence.empty(); }
     };
 
 } // namespace UI::Animations

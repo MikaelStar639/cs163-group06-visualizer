@@ -4,8 +4,11 @@
 #include "Core/DSA/Heap.hpp"
 #include "UI/DSA/Graph.hpp"
 #include "UI/Widgets/PseudoCodeViewer.hpp"
+#include <any>
 #include <string>
 #include <vector>
+
+namespace UI::Animations { class AnimStepBuilder; struct HeapSnapshot; }
 
 namespace Controllers {
 
@@ -20,14 +23,21 @@ namespace Controllers {
         float startY = 250.f;
         float spacing = 150.f;
 
+        // Cemetery for nodes to prevent dangling pointers
+        std::vector<std::unique_ptr<UI::DSA::Node>> masterNodePool;
+
         void syncGraphEdges();
         void triggerLayout(float duration = 0.5f);
+        void submitAnimation(UI::Animations::AnimStepBuilder& b);
 
+        std::any saveSnapshot();
+        void restoreSnapshot(const std::any& s);
     public:
         HeapController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Heap& m, 
                        UI::Widgets::PseudoCodeViewer* viewer = nullptr);
 
         void forceSnapLayout();
+        void forceVisualSync();
         
         // Creation and File I/O
         void handleCreateRandom(int size);

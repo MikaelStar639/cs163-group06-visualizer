@@ -14,6 +14,7 @@ namespace UI::Animations {
         explicit WaitAnimation(float duration) : duration(duration) {}
         void update(float dt) override { elapsed += dt; }
         bool isFinished() const override { return elapsed >= duration; }
+        void reset() override { elapsed = 0.f; }
     };
 
 } // namespace UI::Animations

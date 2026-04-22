@@ -15,4 +15,8 @@ namespace UI::Animations {
         return hasRun; 
     }
 
+    void CallbackAnimation::reset() {
+        hasRun = false;
+    }
+
 } // namespace UI::Animations

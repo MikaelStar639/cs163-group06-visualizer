@@ -86,9 +86,9 @@ void TrieScreen::handleMenuAction() {
     }
 }
 
-void TrieScreen::update() {
+void TrieScreen::update(float dt) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
-    uiMenu.update(mousePos);
+    uiMenu.update(mousePos, dt);
 
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
@@ -104,7 +104,7 @@ void TrieScreen::update() {
         codeViewer.hide();
     }
 
-    DSAScreenBase::update();
+    DSAScreenBase::update(dt);
 }
 
 void TrieScreen::draw() {

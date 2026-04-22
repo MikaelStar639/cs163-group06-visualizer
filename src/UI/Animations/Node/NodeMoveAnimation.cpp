@@ -23,4 +23,8 @@ namespace UI::Animations{
     bool NodeMoveAnimation::isFinished() const {
         return elapsedTime >= totalDuration;
     }
+
+    void NodeMoveAnimation::reset() {
+        elapsedTime = 0.f;
+    }
 }

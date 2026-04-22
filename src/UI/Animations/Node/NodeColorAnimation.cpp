@@ -36,4 +36,8 @@ namespace UI::Animations {
         return elapsedTime >= totalDuration;
     }
 
+    void NodeColorAnimation::reset() {
+        elapsedTime = 0.f;
+    }
+
 }

@@ -55,7 +55,7 @@ void MSTScreen::handleEvent(const sf::Event& event) {
             uiMenu.clearInputs();
         }
 
-        if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::MSTMenu::Action::Clean)) {
+        if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::MSTMenu::Action::Clear)) {
             uiMenu.resetMenu();
         }
     }
@@ -132,22 +132,20 @@ void MSTScreen::handleMenuAction() {
         int startNode = std::stoi(inputs[0].getText());
         controller.handleRunPrim(startNode);
     }
-    else if (action == MSTMenu::Action::Clean) {
+    else if (action == MSTMenu::Action::Clear) {
         controller.handleClearAll();
         syncGraphToManualCache();
         clearManualPreviewCache();
     }
 }
 
-void MSTScreen::update() {
+void MSTScreen::update(float dt) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
-    uiMenu.update(mousePos);
-
+    uiMenu.update(mousePos, dt);
+    
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
-        myGraph.resetVisuals();
-        controller.interruptRunning("Animation cancelled");
-        codeViewer.hide();
+        controller.forceSnapLayout(); 
     }
 
     // Preview realtime cho Create -> Manual
@@ -155,7 +153,7 @@ void MSTScreen::update() {
 
     refreshStatusText();
 
-    DSAScreenBase::update();
+    DSAScreenBase::update(dt);
 }
 void MSTScreen::draw() {
     DSAScreenBase::draw();

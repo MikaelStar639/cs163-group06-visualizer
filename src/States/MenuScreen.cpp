@@ -57,7 +57,7 @@ void MenuScreen::handleEvent(const sf::Event& event) {
 }
 
 //update the buttons
-void MenuScreen::update() {
+void MenuScreen::update(float dt) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
 
     btnLinkedList.update(mousePos);

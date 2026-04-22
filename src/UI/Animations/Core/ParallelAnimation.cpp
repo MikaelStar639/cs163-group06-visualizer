@@ -8,17 +8,24 @@ namespace UI::Animations {
     }
 
     void ParallelAnimation::update(float dt){
-        for (int i = static_cast<int>(animations.size()) - 1; i >= 0; --i) {
-            animations[i]->update(dt);
-            
-            if (animations[i]->isFinished()) {
-                animations.erase(animations.begin() + i);
+        for (auto& anim : animations) {
+            if (!anim->isFinished()) {
+                anim->update(dt);
             }
         }
     }
 
     bool ParallelAnimation::isFinished() const{
-        return animations.empty();
+        for (const auto& anim : animations) {
+            if (!anim->isFinished()) return false;
+        }
+        return true;
+    }
+
+    void ParallelAnimation::reset() {
+        for (auto& anim : animations) {
+            anim->reset();
+        }
     }
 
 } // namespace UI::Animations

@@ -13,12 +13,12 @@ std::vector<std::string> MSTMenu::getMainButtonLabels() const {
         "Create",
         "Kruskal",
         "Prim",
-        "Clean"
+        "Clear"
     };
 }
 
 bool MSTMenu::isInstantAction(int index) const {
-    return index == static_cast<int>(Action::Clean);
+    return index == static_cast<int>(Action::Clear);
 }
 
 void MSTMenu::renderSubMenu(float boxX, float boxY, int menuIndex) {

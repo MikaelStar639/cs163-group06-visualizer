@@ -10,6 +10,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
       btnPrev(context, "", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnPlay(context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnNext(context, "", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnToggleStepMode(context, "Step: ON", {480.f, context.window.getSize().y - 95.f}, {160.f, 40.f}),
       title(context.font, titleText, 24),
       speedSlider(context, 
                   sf::Vector2f{100.f, context.window.getSize().y - 80.f}, 
@@ -28,6 +29,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 
     applyBtnColors(btnBack); 
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
+    applyBtnColors(btnToggleStepMode);
 
     
     sf::Color panelColor(122, 160, 142);
@@ -87,6 +89,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // 4. Input and Enter Key Handling
     if (!dropdownAction || !dropdownAction->getIsDropped()) {
         bool allInputsValid = true;
+        bool isStepByStep = true;
         bool submitted = false;
 
         for (auto& input : activeInputs) {
@@ -122,43 +125,153 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
     // 6. Timeline and Speed Controls
     speedSlider.handleEvent(event);
 
-    if (!ctx.animManager.empty()) {
+    // Allow controls if we are animating OR if we have steps to play/back
+    bool isAtEnd = !ctx.stepNavigator.hasNext() && ctx.animManager.empty();
+    bool shouldShowControls = !isAtEnd && ctx.stepNavigator.getTotalSteps() > 0;
+    
+    // In Step Mode, allow seeing the bar to step back, but hide if we've reached the very end
+    if (ctx.isStepByStep && ctx.stepNavigator.getTotalSteps() > 0) {
+        if (isAtEnd && ctx.stepNavigator.getCurrentIndex() >= ctx.stepNavigator.getTotalSteps() - 1) {
+            shouldShowControls = false;
+        } else {
+            shouldShowControls = true;
+        }
+    }
+
+    // --- Hotkeys removed as requested ---
+
+    if (shouldShowControls) {
         if (btnPlay.isClicked(event)) {
-            ctx.animManager.togglePause();   
+            if (ctx.isStepByStep) {
+                bool newState = !ctx.stepNavigator.isAutoPlay();
+                ctx.stepNavigator.setAutoPlay(newState);
+                // Unified: Play button starts everything, Pause button stops everything
+                ctx.animManager.setPaused(!newState);
+            } else {
+                ctx.animManager.togglePause();   
+            }
         }
 
         if (btnNext.isClicked(event)) {
-            ctx.animManager.skipToEnd();
-            ctx.animManager.setPaused(false);
+            // Nếu là Step ON: Cho phép nhấn bất cứ lúc nào (interrupt)
+            // Nếu là Step OFF: Chỉ cho phép nếu không có hiệu ứng nào đang chạy (safe)
+            if (ctx.isStepByStep || ctx.animManager.empty()) {
+                if (ctx.stepNavigator.hasNext()) {
+                    ctx.stepNavigator.playNext();
+                    // Đảm bảo chạy ngay hiệu ứng của bước đó
+                    ctx.animManager.setPaused(false);
+                }
+                else if (!ctx.isStepByStep) {
+                    ctx.animManager.skipToEnd();
+                    ctx.animManager.setPaused(false);
+                }
+            }
         }
 
         if (btnPrev.isClicked(event)) {
-            ctx.animManager.clearAll();
-            ctx.animManager.setPaused(false);
-            std::cout << "[INFO] Animation Cancelled.\n";
-            cancelClicked = true;
+            if (ctx.isStepByStep || ctx.animManager.empty()) {
+                if (ctx.isStepByStep) {
+                    if (ctx.stepNavigator.getCurrentIndex() >= 0) {
+                        ctx.stepNavigator.stepBack();
+                    } else {
+                        ctx.animManager.clearAll();
+                        ctx.stepNavigator.clear();
+                        ctx.animManager.setPaused(false);
+                        cancelClicked = true;
+                    }
+                } else {
+                    ctx.animManager.clearAll();
+                    ctx.stepNavigator.clear();
+                    ctx.animManager.setPaused(false);
+                    cancelClicked = true;
+                }
+            }
         }
     } 
     else {
-        if (ctx.animManager.isPaused()) {
+        // Reset pause state when done, but ONLY if not in Step Mode
+        if (ctx.animManager.isPaused() && !ctx.isStepByStep) {
+            ctx.animManager.setPaused(false);
+        }
+    }
+
+    if (btnBack.isClicked(event)) {
+        ctx.nextState = ScreenState::MainMenu;
+    }
+
+    if (btnToggleStepMode.isClicked(event)) {
+        ctx.isStepByStep = !ctx.isStepByStep;
+        btnToggleStepMode.setLabel(ctx.isStepByStep ? "Step: ON" : "Step: OFF");
+        ctx.stepNavigator.setStepMode(ctx.isStepByStep);
+
+        if (ctx.isStepByStep) {
+            // Hoàn tất hiệu ứng đang chạy (nếu có) để trạng thái đứng im được sạch sẽ
+            if (!ctx.animManager.empty()) {
+                ctx.animManager.skipToEnd();
+            }
+            // Mặc định dừng lại để người dùng tự điều khiển
+            ctx.animManager.setPaused(true);
+            ctx.stepNavigator.setAutoPlay(false);
+        } else {
+            // Mặc định chạy tiếp luôn cho đỡ ngợp
             ctx.animManager.setPaused(false);
         }
     }
 }
 
-void DSAMenuBase::update(sf::Vector2i mousePos) {
+void DSAMenuBase::update(sf::Vector2i mousePos, float dt) {
+    ctx.stepNavigator.update(dt); // Now with real DeltaTime!
     btnBack.update(mousePos);
     for (auto& btn : mainButtons) btn.update(mousePos);
     for (auto& input : activeInputs) input.update();
     for (auto& btn : activeSubButtons) btn.update(mousePos);
     if (dropdownAction) dropdownAction->update(mousePos);
     
-    if (!ctx.animManager.empty()) {
-        btnPrev.update(mousePos);
-        btnPlay.update(mousePos);
-        btnNext.update(mousePos);
+    bool isAtEnd = !ctx.stepNavigator.hasNext() && ctx.animManager.empty();
+    bool shouldShowControls = !isAtEnd && ctx.stepNavigator.getTotalSteps() > 0;
+    if (ctx.isStepByStep && ctx.stepNavigator.getTotalSteps() > 0) {
+        if (isAtEnd && ctx.stepNavigator.getCurrentIndex() >= ctx.stepNavigator.getTotalSteps() - 1) {
+            shouldShowControls = false;
+        } else {
+            shouldShowControls = true;
+        }
     }
 
+    if (shouldShowControls) {
+        auto applyBtnColors = [](Button& b) {
+            b.setColors(Config::UI::Colors::ButtonIdle, Config::UI::Colors::ButtonHover, 
+                    Config::UI::Colors::ButtonPressed, Config::UI::Colors::ButtonText);
+        };
+
+        if (ctx.isStepByStep) {
+            // Chế độ Thủ công: Đặt cạnh nút Step cho dễ điều khiển
+            sf::Vector2f stepPos = btnToggleStepMode.getPosition();
+            sf::Vector2f stepSize = btnToggleStepMode.getSize();
+            
+            float btnWidth = 50.f;
+            float btnHeight = 40.f;
+            float margin = 15.f;
+
+            btnPrev.setSize({btnWidth, btnHeight});
+            btnNext.setSize({btnWidth, btnHeight});
+
+            // Đặt ngay sau nút Step
+            btnPrev.setPosition({stepPos.x + stepSize.x + margin, stepPos.y});
+            btnNext.setPosition({stepPos.x + stepSize.x + margin + btnWidth + 10.f, stepPos.y});
+            
+            // Căn chỉnh Icon vào tâm nút
+            iconPrev.setPosition({btnPrev.getPosition().x + btnWidth/2.f, btnPrev.getPosition().y + btnHeight/2.f});
+            iconNext.setPosition({btnNext.getPosition().x + btnWidth/2.f, btnNext.getPosition().y + btnHeight/2.f});
+
+            applyBtnColors(btnPrev); applyBtnColors(btnNext);
+            btnPrev.update(mousePos);
+            btnNext.update(mousePos);
+        } else {
+            // Chế độ Tự động: Không hiện nút nào cả
+        }
+    }
+
+    btnToggleStepMode.update(mousePos);
     speedSlider.update(mousePos); 
 
     float sliderVal = speedSlider.getValue(); 
@@ -171,6 +284,11 @@ void DSAMenuBase::update(sf::Vector2i mousePos) {
     }
         
     ctx.animManager.setSpeedScale(speed);
+
+    // Sync Auto-Play delay with speed (faster speed = shorter delay)
+    // Range: 1.5s (slow) to 0.1s (fast)
+    float delay = 1.5f - (sliderVal / 100.f) * 1.4f;
+    ctx.stepNavigator.setAutoPlayDelay(delay);
 }
 
 void DSAMenuBase::draw(sf::RenderWindow& window) {
@@ -186,34 +304,32 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
     }
 
     
-    if (!ctx.animManager.empty()) {
-        btnPrev.draw();
-        btnPlay.draw();
-        btnNext.draw();
-
-        if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, 2.f});
-        window.draw(iconPrev);
-        if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, -2.f});
-
-        bool playPressed = btnPlay.isCurrentlyPressed();
-        if (playPressed) {
-            iconPlay.move({0.f, 2.f});
-            iconPause.move({0.f, 2.f});
+    bool isAtEnd = !ctx.stepNavigator.hasNext() && ctx.animManager.empty();
+    bool shouldShowControls = !isAtEnd && ctx.stepNavigator.getTotalSteps() > 0;
+    if (ctx.isStepByStep && ctx.stepNavigator.getTotalSteps() > 0) {
+        if (isAtEnd && ctx.stepNavigator.getCurrentIndex() >= ctx.stepNavigator.getTotalSteps() - 1) {
+            shouldShowControls = false;
+        } else {
+            shouldShowControls = true;
         }
-
-        if (ctx.animManager.isPaused()) window.draw(iconPlay);
-        else window.draw(iconPause);
-
-        if (playPressed) {
-            iconPlay.move({0.f, -2.f});
-            iconPause.move({0.f, -2.f});
-        }
-
-        if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, 2.f});
-        window.draw(iconNext);
-        if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, -2.f});
     }
 
+    if (shouldShowControls) {
+        if (ctx.isStepByStep) {
+            btnPrev.draw();
+            btnNext.draw();
+
+            if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, 2.f});
+            window.draw(iconPrev);
+            if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, -2.f});
+
+            if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, 2.f});
+            window.draw(iconNext);
+            if (btnNext.isCurrentlyPressed()) iconNext.move({0.f, -2.f});
+        }
+    }
+
+    btnToggleStepMode.draw();
     speedSlider.draw();
 }
 

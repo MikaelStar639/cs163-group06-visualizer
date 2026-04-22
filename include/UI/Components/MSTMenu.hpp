@@ -9,7 +9,7 @@ namespace UI::Widgets {
             Create = 0,
             Kruskal,
             Prim,
-            Clean
+            Clear
         };
 
     protected:

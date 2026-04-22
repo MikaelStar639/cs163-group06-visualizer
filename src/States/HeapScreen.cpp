@@ -147,18 +147,17 @@ void HeapScreen::handleMenuAction() {
     }
 }
 
-void HeapScreen::update() {
+void HeapScreen::update(float dt) {
     sf::Vector2i mousePos = sf::Mouse::getPosition(ctx.window);
-    uiMenu.update(mousePos);
+    uiMenu.update(mousePos, dt);
     
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
-        myGraph.resetVisuals();
         controller.forceSnapLayout(); 
         codeViewer.hide();
     }
     
-    DSAScreenBase::update();
+    DSAScreenBase::update(dt);
 }
 
 void HeapScreen::draw() {

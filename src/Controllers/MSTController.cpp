@@ -10,6 +10,7 @@
 #include "UI/Animations/Node/NodeScaleAnimation.hpp"
 #include "UI/Animations/Edge/EdgeColorAnimation.hpp"
 #include "UI/Animations/Edge/EdgeScaleAnimation.hpp"
+#include "UI/Animations/Core/AnimStepBuilder.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -20,6 +21,7 @@
 #include <cstdlib>
 #include <cmath>
 #include <unordered_map>
+#include "Core/Platform.hpp"
 #include <map>
 
 #include <unordered_map>
@@ -27,7 +29,7 @@
 namespace Controllers {
 
     namespace {
-        constexpr float DEFAULT_WAIT = 0.28f;
+        constexpr float DEFAULT_WAIT = Config::Animation::STEP_WAIT_ACTION;
 
         const sf::Color MST_EDGE_ACCEPT = sf::Color(50, 220, 120);
         const sf::Color MST_EDGE_REJECT = sf::Color(220, 80, 80);
@@ -139,7 +141,96 @@ namespace Controllers {
                                  UI::DSA::Graph& g,
                                  Core::DSA::MST& m,
                                  UI::Widgets::PseudoCodeViewer* viewer)
-        : ctx(context), graph(g), model(m), codeViewer(viewer) {}
+        : ctx(context), graph(g), model(m), codeViewer(viewer) 
+    {
+        // Register snapshot handlers for the StepNavigator
+        ctx.stepNavigator.setSnapshotHandlers(
+            [this]() { return this->saveSnapshot(); },
+            [this](const std::any& s) { this->restoreSnapshot(s); }
+        );
+    }
+
+    void MSTController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.animManager.clearAll(); // Stop any current animation
+        ctx.stepNavigator.clear();
+        auto steps = b.buildSteps();
+        for (auto& step : steps) {
+            ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
+        }
+        ctx.stepNavigator.playNext();
+        if (ctx.isStepByStep) {
+            ctx.animManager.setPaused(true);
+        }
+    }
+
+    void MSTController::syncGraph() {
+        // For MST, syncGraph mainly ensures we are not in an inconsistent visual state
+        // Most algorithm steps handle colors directly, but we can use this to force 
+        // labels and fill colors to be standard if needed.
+    }
+
+    std::any MSTController::saveSnapshot() {
+        MSTSnapshot s;
+        s.liveMessage = liveMessage;
+        s.liveTotalWeight = liveTotalWeight;
+        s.liveSelectedEdgeCount = liveSelectedEdgeCount;
+        s.running = running;
+
+        for (const auto& nodePtr : graph.getNodes()) {
+            MSTSnapshot::NodeState ns;
+            ns.position = nodePtr->getPosition();
+            ns.fillColor = nodePtr->getFillColor();
+            ns.labelColor = nodePtr->getLabelColor();
+            ns.scale = nodePtr->getScale();
+            s.nodes.push_back(ns);
+        }
+
+        for (const auto& edgePtr : graph.getEdges()) {
+            MSTSnapshot::EdgeState es;
+            es.color = edgePtr->getColor();
+            es.thickness = edgePtr->getThickness();
+            s.edges.push_back(es);
+        }
+
+        if (codeViewer) {
+            s.activeLineIndex = codeViewer->getActiveLine();
+        }
+
+        return std::make_any<MSTSnapshot>(std::move(s));
+    }
+
+    void MSTController::restoreSnapshot(const std::any& snapshot) {
+        const auto& s = std::any_cast<const MSTSnapshot&>(snapshot);
+        
+        ctx.animManager.clearAll();
+
+        liveMessage = s.liveMessage;
+        liveTotalWeight = s.liveTotalWeight;
+        liveSelectedEdgeCount = s.liveSelectedEdgeCount;
+        running = s.running;
+
+        auto& currentNodes = graph.getNodes();
+        for (size_t i = 0; i < s.nodes.size() && i < currentNodes.size(); ++i) {
+            currentNodes[i]->setPosition(s.nodes[i].position);
+            currentNodes[i]->setFillColor(s.nodes[i].fillColor);
+            currentNodes[i]->setLabelColor(s.nodes[i].labelColor);
+            currentNodes[i]->setScale(s.nodes[i].scale);
+        }
+
+        auto& currentEdges = graph.getEdges();
+        for (size_t i = 0; i < s.edges.size() && i < currentEdges.size(); ++i) {
+            currentEdges[i]->setColor(s.edges[i].color);
+            currentEdges[i]->setThickness(s.edges[i].thickness);
+        }
+
+        if (codeViewer) {
+            if (s.activeLineIndex >= 0) {
+                codeViewer->highlightLine(s.activeLineIndex);
+            } else {
+                codeViewer->clearHighlight();
+            }
+        }
+    }
 
     UI::DSA::Edge* MSTController::getEdgeById(int edgeId) const {
         const auto& es = graph.getEdges();
@@ -264,7 +355,7 @@ namespace Controllers {
             }
         }
         for (const auto& e : model.getEdges()) {
-            graph.addEdge(e.u, e.v, std::to_string(e.w));
+            graph.addEdge(e.u, e.v, std::to_string(e.w), false);
         }
 
         // Ép đồ thị tự thu nhỏ lại 66% để nhìn thoáng hơn
@@ -282,6 +373,9 @@ namespace Controllers {
         model.clear();
         if (codeViewer) codeViewer->hide();
         if (nodeCount <= 0) return;
+        
+        // Safety limit for visualizer (Max 50 nodes for MST due to graph complexity)
+        if (nodeCount > 50) nodeCount = 50;
 
         int maxEdges = nodeCount * (nodeCount - 1) / 2;
         edgeCount = std::clamp(edgeCount, std::max(0, nodeCount - 1), maxEdges);
@@ -375,7 +469,7 @@ namespace Controllers {
             outFile.close();
         }
 
-        std::system(("start notepad " + filePath).c_str());
+        Core::Platform::openTextEditor(filePath);
     }
 
     void MSTController::handleCreateFromFile() {
@@ -399,7 +493,7 @@ namespace Controllers {
                         << "# -----------------------------------\n";
                 outFile.close();
             }
-            std::system(("start notepad " + filePath).c_str());
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -475,22 +569,10 @@ namespace Controllers {
         graph.resetVisuals();
 
         auto codeDef = Core::DSA::PseudoCode::MST::kruskal();
-        if (codeViewer) codeViewer->setCode(codeDef);
+        using Builder = UI::Animations::AnimStepBuilder;
+        Builder b(codeDef, codeViewer);
 
-        auto seq = std::make_unique<UI::Animations::SequenceAnimation>();
-
-        auto addCode = [&](const std::string& label) {
-            if (!codeViewer) return;
-            int idx = codeDef.lineIndex(label);
-            if (idx < 0) return;
-            auto* viewer = codeViewer;
-            seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                [viewer, idx]() { viewer->highlightLine(idx); }
-            ));
-        };
-
-        addCode("sort_edges");
-        seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
+        b.highlight("sort_edges").wait(DEFAULT_WAIT).nextStep();
 
         auto steps = model.runKruskal();
         lastAlgorithm = "Kruskal";
@@ -511,124 +593,97 @@ namespace Controllers {
 
         for (const auto& st : steps) {
             if (st.type == Core::DSA::MSTStep::Type::ConsiderEdge) {
-                addCode("consider");
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveMessage = "Considering edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("consider")
+                .callback([this, st]() {
+                    liveMessage = "Considering edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::EdgeColorAnimation>(
-                        edge, edge->getColor(), Config::UI::Colors::EdgeHighlight, 0.18f
-                    ));
-                    seq->add(std::make_unique<UI::Animations::EdgeScaleAnimation>(
-                        edge, edge->getThickness(), MST_EDGE_CONSIDER_THICK, 0.14f
-                    ));
+                    b.edgeColor(edge, edge->getColor(), Config::UI::Colors::EdgeHighlight, 0.18f)
+                     .edgeScale(edge, edge->getThickness(), MST_EDGE_CONSIDER_THICK, 0.14f);
                 }
 
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    auto par = std::make_unique<UI::Animations::ParallelAnimation>();
-                    if (nu) par->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(nu, 0.16f));
-                    if (nv) par->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(nv, 0.16f));
-                    seq->add(std::move(par));
+                    if (nu) b.nodeHighlight(nu, 0.16f);
+                    if (nv) b.nodeHighlight(nv, 0.16f);
                 }
 
-                addCode("check_cycle");
-                seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
+                b.highlight("check_cycle")
+                 .wait(DEFAULT_WAIT).nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::AcceptEdge) {
-                addCode("accept");
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveSelectedEdgeCount++;
-                        liveTotalWeight += st.w;
-                        liveMessage = "Accepted edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("accept")
+                .callback([this, st]() {
+                    liveSelectedEdgeCount++;
+                    liveTotalWeight += st.w;
+                    liveMessage = "Accepted edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [edge]() {
-                            edge->setColor(MST_EDGE_ACCEPT);
-                            edge->setThickness(MST_EDGE_THICK);
-                        }
-                    ));
+                    b.callback([edge]() {
+                        edge->setColor(MST_EDGE_ACCEPT);
+                        edge->setThickness(MST_EDGE_THICK);
+                    });
                 }
 
-                addCode("union");
-                seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
+                b.highlight("union")
+                 .wait(DEFAULT_WAIT);
 
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    auto par = std::make_unique<UI::Animations::ParallelAnimation>();
-                    if (nu) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nu, 0.10f));
-                    if (nv) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nv, 0.10f));
-                    seq->add(std::move(par));
+                    if (nu) b.nodeUnhighlight(nu, 0.10f);
+                    if (nv) b.nodeUnhighlight(nv, 0.10f);
                 }
+                b.nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::RejectEdge) {
-                addCode("reject");
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveMessage = "Rejected edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("reject")
+                .callback([this, st]() {
+                    liveMessage = "Rejected edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::EdgeColorAnimation>(
-                        edge, edge->getColor(), MST_EDGE_REJECT, 0.16f
-                    ));
-                    seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.10f));
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [edge]() {
-                            edge->setColor(Config::UI::Colors::EdgeFill);
-                            edge->setThickness(Config::UI::EDGE_THICKNESS);
-                        }
-                    ));
+                    b.edgeColor(edge, edge->getColor(), MST_EDGE_REJECT, 0.16f)
+                     .wait(0.10f)
+                     .callback([edge]() {
+                        edge->setColor(Config::UI::Colors::EdgeFill);
+                        edge->setThickness(Config::UI::EDGE_THICKNESS);
+                     });
                 }
 
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    auto par = std::make_unique<UI::Animations::ParallelAnimation>();
-                    if (nu) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nu, 0.10f));
-                    if (nv) par->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nv, 0.10f));
-                    seq->add(std::move(par));
+                    if (nu) b.nodeUnhighlight(nu, 0.10f);
+                    if (nv) b.nodeUnhighlight(nv, 0.10f);
                 }
+                b.nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::Finish) {
-                addCode("finish");
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this]() {
-                        running = false;
-                        liveMessage = "Kruskal finished";
-                    }
-                ));
-                seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.45f));
+                b.highlight("finish")
+                .callback([this]() {
+                    running = false;
+                    liveMessage = "Kruskal finished";
+                })
+                .wait(0.45f).nextStep();
             }
         }
 
-        if (codeViewer) {
-            auto* viewer = codeViewer;
-            seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                [viewer]() { viewer->hide(); }
-            ));
-        }
-
-        ctx.animManager.addAnimation(std::move(seq));
+        b.callback([this]() { if(codeViewer) codeViewer->hide(); });
+        b.finish();
+        submitAnimation(b);
     }
 
     void MSTController::handleRunPrim(int startLabel) {
@@ -652,28 +707,11 @@ namespace Controllers {
         graph.resetVisuals();
 
         auto codeDef = Core::DSA::PseudoCode::MST::prim();
-        if (codeViewer) codeViewer->setCode(codeDef);
-
-        auto seq = std::make_unique<UI::Animations::SequenceAnimation>();
-
-        auto addCode = [&](const std::string& label) {
-            if (!codeViewer) return;
-            int idx = codeDef.lineIndex(label);
-            if (idx < 0) return;
-            auto* viewer = codeViewer;
-            seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                [viewer, idx]() { viewer->highlightLine(idx); }
-            ));
-        };
+        using Builder = UI::Animations::AnimStepBuilder;
+        Builder b(codeDef, codeViewer);
 
         auto steps = model.runPrim(startNode);
-        std::set<int> visitedNodes;
-        for (const auto& st : steps) {
-            if (st.type == Core::DSA::MSTStep::Type::VisitNode && st.node >= 0) {
-                visitedNodes.insert(st.node);
-            }
-        }
-
+        
         lastAlgorithm = "Prim";
         lastTotalWeight = 0;
         lastSelectedEdgeCount = 0;
@@ -690,184 +728,138 @@ namespace Controllers {
         liveSelectedEdgeCount = 0;
         running = true;
 
-        // [BƯỚC 1]: KHAI BÁO MẢNG THEO DÕI NGAY TRƯỚC VÒNG LẶP
         std::vector<bool> isVisited(graph.getNodes().size(), false);
 
         for (const auto& st : steps) {
             if (st.type == Core::DSA::MSTStep::Type::VisitNode) {
-                // [BƯỚC 2]: CẬP NHẬT MẢNG THEO DÕI
                 isVisited[st.node] = true; 
-                
-                addCode(st.codeLabel);
-
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveMessage = "Visited node " + std::to_string(st.node);
-                    }
-                ));
+                b.highlight(st.codeLabel)
+                .callback([this, st]() {
+                    liveMessage = "Visited node " + std::to_string(st.node);
+                });
 
                 auto* node = graph.getNode(st.node);
                 if (node) {
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [node]() {
-                            node->setFillColor(MST_NODE_VISITED);
-                            node->setLabelColor(MST_NODE_VISITED_TEXT);
-                        }
-                    ));
-                    seq->add(std::make_unique<UI::Animations::NodeScaleAnimation>(node, 1.0f, 1.15f, 0.12f));
-                    seq->add(std::make_unique<UI::Animations::NodeScaleAnimation>(node, 1.15f, 1.0f, 0.12f));
+                    b.callback([node]() {
+                        node->setFillColor(MST_NODE_VISITED);
+                        node->setLabelColor(MST_NODE_VISITED_TEXT);
+                    })
+                    .nodeScale(node, 1.0f, 1.15f, 0.12f)
+                    .nodeScale(node, 1.15f, 1.0f, 0.12f);
                 }
 
-                seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
+                b.wait(DEFAULT_WAIT).nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::RelaxEdge) {
-                addCode("push_edge");
-
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveMessage = "Push edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("push_edge")
+                .callback([this, st]() {
+                    liveMessage = "Push edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::EdgeColorAnimation>(
-                        edge, edge->getColor(), sf::Color(120, 170, 255), 0.12f
-                    ));
-                    seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.06f));
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [edge]() {
-                            if (edge->getColor() != MST_EDGE_ACCEPT) {
-                                edge->setColor(Config::UI::Colors::EdgeFill);
-                            }
+                    b.edgeColor(edge, edge->getColor(), sf::Color(120, 170, 255), 0.12f)
+                     .wait(0.06f)
+                     .callback([edge]() {
+                        if (edge->getColor() != MST_EDGE_ACCEPT) {
+                            edge->setColor(Config::UI::Colors::EdgeFill);
                         }
-                    ));
+                     });
                 }
+                b.nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::ConsiderEdge) {
-                addCode("consider");
-
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveMessage = "Considering edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("consider")
+                .callback([this, st]() {
+                    liveMessage = "Considering edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::EdgeColorAnimation>(
-                        edge, edge->getColor(), Config::UI::Colors::EdgeHighlight, 0.18f
-                    ));
-                    seq->add(std::make_unique<UI::Animations::EdgeScaleAnimation>(
-                        edge, edge->getThickness(), MST_EDGE_CONSIDER_THICK, 0.14f
-                    ));
+                    b.edgeColor(edge, edge->getColor(), Config::UI::Colors::EdgeHighlight, 0.18f)
+                     .edgeScale(edge, edge->getThickness(), MST_EDGE_CONSIDER_THICK, 0.14f);
                 }
 
                 auto* to = graph.getNode(st.v);
                 if (to) {
-                    seq->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(to, 0.14f));
+                    b.nodeHighlight(to, 0.14f);
                 }
-
-                seq->add(std::make_unique<UI::Animations::WaitAnimation>(DEFAULT_WAIT));
+                b.nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::AcceptEdge) {
-                // [BƯỚC 3]: ĐÁNH DẤU CHẮC CHẮN NODE NÀY ĐÃ THUỘC MST
                 isVisited[st.v] = true;
-                
-                addCode("accept");
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveSelectedEdgeCount++;
-                        liveTotalWeight += st.w;
-                        liveMessage = "Accepted edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("accept")
+                .callback([this, st]() {
+                    liveSelectedEdgeCount++;
+                    liveTotalWeight += st.w;
+                    liveMessage = "Accepted edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [edge]() {
-                            edge->setColor(MST_EDGE_ACCEPT);
-                            edge->setThickness(MST_EDGE_THICK);
-                        }
-                    ));
+                    b.callback([edge]() {
+                        edge->setColor(MST_EDGE_ACCEPT);
+                        edge->setThickness(MST_EDGE_THICK);
+                    });
                 }
 
                 auto* to = graph.getNode(st.v);
                 if (to) {
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [to]() {
-                            to->setFillColor(MST_NODE_VISITED);
-                            to->setLabelColor(MST_NODE_VISITED_TEXT);
-                        }
-                    ));
+                    b.callback([to]() {
+                        to->setFillColor(MST_NODE_VISITED);
+                        to->setLabelColor(MST_NODE_VISITED_TEXT);
+                    });
                 }
+                b.nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::RejectEdge) {
-                addCode("reject");
-
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this, st]() {
-                        liveMessage = "Rejected edge (" +
-                                    std::to_string(st.u) + ", " +
-                                    std::to_string(st.v) + ", " +
-                                    std::to_string(st.w) + ")";
-                    }
-                ));
+                b.highlight("reject")
+                .callback([this, st]() {
+                    liveMessage = "Rejected edge (" +
+                                  std::to_string(st.u) + ", " +
+                                  std::to_string(st.v) + ", " +
+                                  std::to_string(st.w) + ")";
+                });
 
                 if (auto* edge = getEdgeById(st.edgeId)) {
-                    seq->add(std::make_unique<UI::Animations::EdgeColorAnimation>(
-                        edge, edge->getColor(), MST_EDGE_REJECT, 0.16f
-                    ));
-                    seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.10f));
-                    seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                        [edge]() {
-                            if (edge->getColor() != MST_EDGE_ACCEPT) {
-                                edge->setColor(Config::UI::Colors::EdgeFill);
-                                edge->setThickness(Config::UI::EDGE_THICKNESS);
-                            }
+                    b.edgeColor(edge, edge->getColor(), MST_EDGE_REJECT, 0.16f)
+                     .wait(0.10f)
+                     .callback([edge]() {
+                        if (edge->getColor() != MST_EDGE_ACCEPT) {
+                            edge->setColor(Config::UI::Colors::EdgeFill);
+                            edge->setThickness(Config::UI::EDGE_THICKNESS);
                         }
-                    ));
+                     });
                 }
-
                 auto* to = graph.getNode(st.v);
                 if (to) {
                     if (isVisited[st.v]) {
-                        seq->add(std::make_unique<UI::Animations::NodeColorAnimation>(
-                            to, MST_NODE_VISITED, MST_NODE_VISITED_TEXT, 0.10f
-                        ));
+                        b.nodeColor(to, MST_NODE_VISITED, MST_NODE_VISITED_TEXT, 0.10f);
                     } else {
-                        // Chưa thuộc MST mới xài NodeUnhighlightAnimation về màu mặc định
-                        seq->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(to, 0.10f));
+                        b.nodeUnhighlight(to, 0.10f);
                     }
                 }
+                b.nextStep();
             }
             else if (st.type == Core::DSA::MSTStep::Type::Finish) {
-                addCode("finish");
-                seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                    [this]() {
-                        running = false;
-                        liveMessage = "Prim finished";
-                    }
-                ));
-                seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.45f));
+                b.highlight("finish")
+                .callback([this]() {
+                    running = false;
+                    liveMessage = "Prim finished";
+                })
+                .wait(0.45f).nextStep();
             }
         }
 
-        if (codeViewer) {
-            auto* viewer = codeViewer;
-            seq->add(std::make_unique<UI::Animations::CallbackAnimation>(
-                [viewer]() { viewer->hide(); }
-            ));
-        }
-
-        ctx.animManager.addAnimation(std::move(seq));
+        b.callback([this]() { if(codeViewer) codeViewer->hide(); });
+        b.finish();
+        submitAnimation(b);
     }
 
     void MSTController::handleClearAll() {
