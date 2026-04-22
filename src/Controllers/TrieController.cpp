@@ -153,7 +153,7 @@ namespace Controllers {
                 randomWords.push_back(word); model.insert(word); 
             }
         }
-        syncGraph(); triggerLayout(0.6f);
+        syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT);
     }
 
     void TrieController::handleEditDataFile() {
@@ -195,7 +195,7 @@ namespace Controllers {
             int n = std::stoi(rawTokens[0]);
             for (int i = 1; i <= n && i < (int)rawTokens.size(); ++i) model.insert(rawTokens[i]);
         } catch (...) {}
-        syncGraph(); triggerLayout(0.6f);  
+        syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT);  
     }
 
     void TrieController::handleInsert(const std::string& word) {
@@ -229,7 +229,7 @@ namespace Controllers {
                 if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
                     n->setFillColor(Config::UI::Colors::NodeHighlight); n->setLabelColor(Config::UI::Colors::LabelHighlight);
                 }
-            }).wait(0.1f);
+            }).wait(Config::Animation::STEP_WAIT_TRAVERSAL);
             
             b.highlight("check_null").nextStep();
             
@@ -244,8 +244,8 @@ namespace Controllers {
                     poolToGraphMap[nextPoolIdx] = newUiIdx;
                     graph.addEdge(parentUiIdx, newUiIdx, "");
 
-                    triggerLayoutWithModel(futureModel, 0.2f);
-                }).wait(0.4f).nextStep();
+                    triggerLayoutWithModel(futureModel, Config::Animation::DURATION_LAYOUT);
+                }).wait(Config::Animation::STEP_WAIT_LAYOUT).nextStep();
             }
             
             b.highlight("advance").callback([this, futureModel, currPoolIdx]() {
@@ -255,7 +255,7 @@ namespace Controllers {
                     if (futureModel.getPool()[currPoolIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100)); 
                     else n->setFillColor(Config::UI::Colors::NodeFill); 
                 }
-            }).wait(0.1f).nextStep();
+            }).wait(Config::Animation::STEP_WAIT_TRAVERSAL).nextStep();
             currPoolIdx = nextPoolIdx;
         }
 
@@ -264,12 +264,12 @@ namespace Controllers {
             if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
                 n->setFillColor(Config::UI::Colors::NodeHighlight); n->setLabelColor(Config::UI::Colors::LabelHighlight);
             }
-        }).wait(0.3f).callback([this, futureModel, currPoolIdx]() {
+        }).wait(Config::Animation::DURATION_COLOR).callback([this, futureModel, currPoolIdx]() {
             if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
                 n->setFillColor(sf::Color(70, 160, 100)); n->setLabelColor(Config::UI::Colors::NodeText);
             }
-            triggerLayoutWithModel(futureModel, 0.5f);
-        }).nextStep();
+            triggerLayoutWithModel(futureModel, Config::Animation::DURATION_LAYOUT);
+        }).wait(Config::Animation::STEP_WAIT_LAYOUT).nextStep();
 
         b.finish(); submitAnimation(b);
     }
@@ -288,7 +288,7 @@ namespace Controllers {
                 if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) {
                     n->setFillColor(Config::UI::Colors::NodeHighlight); n->setLabelColor(Config::UI::Colors::LabelHighlight);
                 }
-            }).wait(0.2f);
+            }).wait(Config::Animation::STEP_WAIT_TRAVERSAL);
             b.highlight("check_null").nextStep();
             if (nextPoolIdx == -1) {
                 b.highlight("not_found").nextStep();
@@ -315,7 +315,7 @@ namespace Controllers {
             if (model.getPool()[currPoolIdx].isEndOfWord || isPrefix) {
                 b.highlight("found").callback([this, currPoolIdx]() {
                     if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) n->setFillColor(Config::UI::Colors::NodeHighlight);
-                }).wait(0.3f).nextStep();
+                }).wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
             } else b.highlight("not_found_end").nextStep();
         }
         b.finish(); submitAnimation(b);
@@ -332,7 +332,7 @@ namespace Controllers {
             int nextPoolIdx = model.getPool()[currPoolIdx].children[c - 'a'];
             b.callback([this, currPoolIdx]() {
                 if (poolToGraphMap.count(currPoolIdx)) if (auto* n = graph.getNode(poolToGraphMap[currPoolIdx])) { n->setFillColor(Config::UI::Colors::NodeHighlight); n->setLabelColor(Config::UI::Colors::LabelHighlight); }
-            }).wait(0.2f);
+            }).wait(Config::Animation::STEP_WAIT_TRAVERSAL);
             b.highlight("check_null").nextStep(); 
             if (nextPoolIdx == -1) { b.highlight("not_found").nextStep(); return; }
             b.highlight("advance").callback([this, currPoolIdx]() {
@@ -340,7 +340,7 @@ namespace Controllers {
             }).nextStep();
             currPoolIdx = nextPoolIdx;
         }
-        b.highlight("delete").nextStep().callback([this, word]() { model.deleteWord(word); syncGraph(); triggerLayout(0.6f); }).nextStep().finish();
+        b.highlight("delete").nextStep().callback([this, word]() { model.deleteWord(word); syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT); }).nextStep().finish();
         submitAnimation(b);
     }
     

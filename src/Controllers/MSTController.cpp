@@ -28,7 +28,7 @@
 namespace Controllers {
 
     namespace {
-        constexpr float DEFAULT_WAIT = 0.28f;
+        constexpr float DEFAULT_WAIT = Config::Animation::STEP_WAIT_ACTION;
 
         const sf::Color MST_EDGE_ACCEPT = sf::Color(50, 220, 120);
         const sf::Color MST_EDGE_REJECT = sf::Color(220, 80, 80);

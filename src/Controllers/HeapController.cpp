@@ -446,9 +446,9 @@ namespace Controllers {
                     graph.addNodeRaw(std::to_string(val), {startX, startY + 200.f});
                     
                     syncGraphEdges();
-                    triggerLayout(0.5f);
+                    triggerLayout(Config::Animation::DURATION_LAYOUT);
                 })
-                .wait(0.3f)
+                .wait(Config::Animation::STEP_WAIT_LAYOUT)
                 .nextStep();
 
                 // Line: heapifyUp(last_index)
@@ -480,12 +480,12 @@ namespace Controllers {
                         auto* c = graph.getNode(j);
                         if (p && c) {
                             auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
-                            parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(p, 0.3f));
-                            parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(c, 0.3f));
+                            parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(p, Config::Animation::DURATION_COLOR));
+                            parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(c, Config::Animation::DURATION_COLOR));
                             ctx.animManager.addAnimation(std::move(parallel));
                         }
                     })
-                    .wait(0.5f).nextStep();
+                    .wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
 
                     b.callback([this, i, j, winnerNode, v]() mutable {
                         auto* p = graph.getNode(i);
@@ -494,13 +494,13 @@ namespace Controllers {
                         
                         auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
                         bool added = false;
-                        if (p && p != winner) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(p, 0.3f)); added = true; }
-                        if (c && c != winner) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(c, 0.3f)); added = true; }
+                        if (p && p != winner) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(p, Config::Animation::DURATION_COLOR)); added = true; }
+                        if (c && c != winner) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(c, Config::Animation::DURATION_COLOR)); added = true; }
                         
                         if (added) {
                             ctx.animManager.addAnimation(std::move(parallel));
                         }
-                    });
+                    }).wait(Config::Animation::DURATION_COLOR);
                 }
             }
 
@@ -514,22 +514,22 @@ namespace Controllers {
                         graph.swapNodePointers(i, j);
                         syncGraphEdges();
                         
-                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeSwapAnimation>(nodeA, nodeB, 0.6f));
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeSwapAnimation>(nodeA, nodeB, Config::Animation::DURATION_MOVE));
                     }
                 })
-                .wait(0.6f)
+                .wait(Config::Animation::DURATION_MOVE)
                 .callback([this]() { triggerLayout(0.0f); })
                 .callback([this, i, j]() {
                     auto* nodeA = graph.getNode(i);
                     auto* nodeB = graph.getNode(j);
                     if (nodeA && nodeB) {
                         auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
-                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeA, 0.2f));
-                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeB, 0.2f));
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeA, Config::Animation::DURATION_QUICK));
+                        parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(nodeB, Config::Animation::DURATION_QUICK));
                         ctx.animManager.addAnimation(std::move(parallel));
                     }
                 })
-                .wait(0.3f).nextStep();
+                .wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
 
                 // Update our local tracker for the observer's subsequent steps
                 if (j < (int)currentPointers.size()) {
@@ -557,7 +557,7 @@ namespace Controllers {
 
         tempModel.insert(val);
         tempModel.setObserver(nullptr);
-        b.callback([this]() { triggerLayout(0.5f); }); // Final beautiful layout
+        b.callback([this]() { triggerLayout(Config::Animation::DURATION_LAYOUT); }); // Final beautiful layout
         b.finish();
         submitAnimation(b);
     }
@@ -595,7 +595,7 @@ namespace Controllers {
                         ctx.animManager.addAnimation(std::move(parallel));
                     }
                 })
-                .wait(0.3f)
+                .wait(Config::Animation::STEP_WAIT_ACTION)
                 .callback([this, lastIdx]() {
                     auto* rootNode = graph.getNode(0);
                     auto* lastNode = graph.getNode(lastIdx);
@@ -635,9 +635,9 @@ namespace Controllers {
                         }
                     }
                     syncGraphEdges();
-                    triggerLayout(0.5f);
+                    triggerLayout(Config::Animation::DURATION_LAYOUT);
                 })
-                .wait(0.5f).nextStep();
+                .wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
 
                 if (i < (int)currentPointers.size()) {
                     currentPointers.erase(currentPointers.begin() + i);
@@ -665,11 +665,11 @@ namespace Controllers {
                     
                     if (!trio.empty()) {
                         auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
-                        for (auto* n : trio) parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(n, 0.3f));
+                        for (auto* n : trio) parallel->add(std::make_unique<UI::Animations::NodeHighlightAnimation>(n, Config::Animation::DURATION_COLOR));
                         ctx.animManager.addAnimation(std::move(parallel));
                     }
                 })
-                .wait(0.3f).nextStep();
+                .wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
 
                 // Line: if target > val
                 b.highlight("compare_child")
@@ -680,9 +680,9 @@ namespace Controllers {
                     
                     auto parallel = std::make_unique<UI::Animations::ParallelAnimation>();
                     bool added = false;
-                    if (auto* n = graph.getNode(i); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f)); added = true; }
-                    if (auto* n = graph.getNode(leftChildIdx); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f)); added = true; }
-                    if (auto* n = graph.getNode(rightChildIdx); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f)); added = true; }
+                    if (auto* n = graph.getNode(i); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, Config::Animation::DURATION_COLOR)); added = true; }
+                    if (auto* n = graph.getNode(leftChildIdx); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, Config::Animation::DURATION_COLOR)); added = true; }
+                    if (auto* n = graph.getNode(rightChildIdx); n && n != winnerNode) { parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, Config::Animation::DURATION_COLOR)); added = true; }
 
                     if (added) {
                         ctx.animManager.addAnimation(std::move(parallel));
@@ -738,7 +738,7 @@ namespace Controllers {
 
         tempModel.removeRoot();
         tempModel.setObserver(nullptr);
-        b.callback([this]() { triggerLayout(0.5f); }); // Final beautiful layout
+        b.callback([this]() { triggerLayout(Config::Animation::DURATION_LAYOUT); }); // Final beautiful layout
         b.finish();
         submitAnimation(b);
     }
@@ -764,11 +764,11 @@ namespace Controllers {
             // Highlight the root node using the vector-based call
             b.highlight("access_root")
             .nodesHighlight({rootNode}, 0.5f) 
-            .wait(0.5f).nextStep();
+            .wait(Config::Animation::STEP_WAIT_ACTION).nextStep();
 
             // 3. Return value phase
             b.highlight("return_val")
-            .wait(0.5f)
+            .wait(Config::Animation::STEP_WAIT_ACTION)
             .nodesUnhighlight({rootNode}, 0.2f)
             .nextStep().finish();
         }
@@ -821,7 +821,7 @@ namespace Controllers {
                     for (int idx : {i, j, j+1}) {
                         auto* n = graph.getNode(idx);
                         if (n && n != winnerNode) {
-                            parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.2f));
+                            parallel->add(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, Config::Animation::DURATION_QUICK));
                             added = true;
                         }
                     }
@@ -857,7 +857,7 @@ namespace Controllers {
                 b.highlight("loop_outer") // Return to loop after heapifying down
                 .callback([this, i]() {
                     if (auto* n = graph.getNode(i)) {
-                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, 0.3f));
+                        ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(n, Config::Animation::DURATION_COLOR));
                     }
                 })
                 .wait(0.2f).nextStep();
@@ -866,7 +866,7 @@ namespace Controllers {
 
         tempModel.buildHeap(data);
         tempModel.setObserver(nullptr);
-        b.callback([this]() { triggerLayout(0.5f); }); // Final beautiful layout
+        b.callback([this]() { triggerLayout(Config::Animation::DURATION_LAYOUT); }); // Final beautiful layout
         b.finish();
         submitAnimation(b);
     }

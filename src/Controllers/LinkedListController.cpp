@@ -96,7 +96,7 @@ namespace Controllers {
             graph.addNode(std::to_string(randomVal), {startX, startY});
         }
         syncGraphEdges();
-        triggerLayout(0.6f);
+        triggerLayout(Config::Animation::DURATION_LAYOUT);
     }
 
     void LinkedListController::handleCreateFromFile() {
@@ -223,7 +223,7 @@ namespace Controllers {
         }
 
         syncGraphEdges();
-        triggerLayout(0.6f);
+        triggerLayout(Config::Animation::DURATION_LAYOUT);
     }
 
     void LinkedListController::handleEditDataFile() {
@@ -280,23 +280,23 @@ namespace Controllers {
             auto codeDef = Core::DSA::PseudoCode::LinkedList::insertHead();
             Builder b(codeDef, codeViewer);
 
-            b.highlight("create_node").wait(0.3f).nextStep()
-             .highlight("link_next").wait(0.3f).nextStep()
+            b.highlight("create_node").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
+             .highlight("link_next").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
              .highlight("update_head")
              .callback([this, val]() {
                  model.insertHead(val);
                  graph.insertNodeAt(0, std::to_string(val), {startX - spacing, startY});
                  auto* newNode = graph.getNode(0);
                  if (newNode) {
-                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, 0.5f));
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, Config::Animation::DURATION_COLOR));
                  }
                  syncGraphEdges();
                  triggerLayout();
              })
-             .wait(0.6f)
+             .wait(Config::Animation::STEP_WAIT_LAYOUT)
              .callback([this]() {
                  auto* newNode = graph.getNode(0);
-                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, 0.3f));
+                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, Config::Animation::DURATION_COLOR));
              })
              .finish();
 
@@ -338,11 +338,11 @@ namespace Controllers {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
                     b.highlight("loop_cond").nextStep();
-                    b.nodeHighlight(uiNode, 0.3f);
+                    b.nodeHighlight(uiNode, Config::Animation::DURATION_COLOR);
                     
                     if (i < steps - 1) { // If not the last node
                         b.highlight("advance").nextStep();
-                        b.nodeUnhighlight(uiNode, 0.2f);
+                        b.nodeUnhighlight(uiNode, Config::Animation::DURATION_COLOR);
                     }
                 }
             }
@@ -357,19 +357,19 @@ namespace Controllers {
                  graph.insertNodeAt(actualPos, std::to_string(val), {startX + actualPos * spacing, startY - 100.f});
                  auto* newNode = graph.getNode(actualPos);
                  if (newNode) {
-                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, 0.5f));
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, Config::Animation::DURATION_COLOR));
                  }
                  if (lastNode) {
-                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(lastNode, 0.3f));
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(lastNode, Config::Animation::DURATION_COLOR));
                  }
                  syncGraphEdges();
                  triggerLayout();
              })
-             .wait(0.6f)
+             .wait(Config::Animation::STEP_WAIT_LAYOUT)
              .callback([this]() {
                  int actualPos = model.getLogicalList().size() - 1;
                  auto* newNode = graph.getNode(actualPos);
-                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, 0.3f));
+                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, Config::Animation::DURATION_COLOR));
              })
              .finish();
 
@@ -391,11 +391,11 @@ namespace Controllers {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
                     b.highlight("loop_cond").nextStep();
-                    b.nodeHighlight(uiNode, 0.3f);
+                    b.nodeHighlight(uiNode, Config::Animation::DURATION_COLOR);
 
                     if (i < steps - 1) { // If not the 'pre' node yet
                         b.highlight("advance").nextStep();
-                        b.nodeUnhighlight(uiNode, 0.2f);
+                        b.nodeUnhighlight(uiNode, Config::Animation::DURATION_COLOR);
                     }
                 }
             }
@@ -410,23 +410,23 @@ namespace Controllers {
                      graph.insertNodeAt(targetPos, std::to_string(val), {startX + targetPos * spacing, startY - 100.f});
                      auto* newNode = graph.getNode(targetPos);
                      if (newNode) {
-                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, 0.5f));
+                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, Config::Animation::DURATION_COLOR));
                      }
                      if (preNode) {
-                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, 0.3f));
+                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, Config::Animation::DURATION_COLOR));
                      }
                      syncGraphEdges();
                      triggerLayout();
                  }
              })
-             .highlight("link_next").wait(0.3f).nextStep()
+             .highlight("link_next").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
              .highlight("link_pre")
-             .wait(0.6f)
+             .wait(Config::Animation::STEP_WAIT_LAYOUT)
              .callback([this, targetPos]() {
                  auto* newNode = graph.getNode(targetPos);
                  auto* preNodeInCb = graph.getNode(targetPos - 1);
-                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, 0.3f));
-                 if (preNodeInCb) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNodeInCb, 0.3f));
+                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, Config::Animation::DURATION_COLOR));
+                 if (preNodeInCb) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNodeInCb, Config::Animation::DURATION_COLOR));
              })
              .finish();
 
@@ -444,8 +444,8 @@ namespace Controllers {
             Builder b(codeDef, codeViewer);
 
             b.highlight("check_null").nextStep()
-             .highlight("save_temp").wait(0.3f).nextStep()
-             .highlight("advance").wait(0.3f).nextStep()
+             .highlight("save_temp").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
+             .highlight("advance").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
              .highlight("delete")
              .callback([this]() {
                  model.deleteHead();
@@ -499,11 +499,11 @@ namespace Controllers {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
                     b.highlight("loop_cond").nextStep();
-                    b.nodeHighlight(uiNode, 0.3f);
+                    b.nodeHighlight(uiNode, Config::Animation::DURATION_COLOR);
 
                     if (i < steps - 1) { // If not the 'pre' node yet
                         b.highlight("advance").nextStep();
-                        b.nodeUnhighlight(uiNode, 0.2f);
+                        b.nodeUnhighlight(uiNode, Config::Animation::DURATION_COLOR);
                     }
                 }
             }
@@ -516,12 +516,12 @@ namespace Controllers {
                  model.deleteTail();
                  graph.removeNodeAt((int)graph.getNodes().size() - 1);
                  if (preNode) {
-                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, 0.3f));
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, Config::Animation::DURATION_COLOR));
                  }
                  syncGraphEdges();
                  triggerLayout();
              })
-             .highlight("unlink").wait(0.3f).nextStep()
+             .highlight("unlink").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
              .highlight("delete")
              .finish();
 
@@ -545,11 +545,11 @@ namespace Controllers {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
                     b.highlight("loop_cond").nextStep();
-                    b.nodeHighlight(uiNode, 0.3f);
+                    b.nodeHighlight(uiNode, Config::Animation::DURATION_COLOR);
 
                     if (i < steps - 1) { // If not the 'pre' node yet
                         b.highlight("advance").nextStep();
-                        b.nodeUnhighlight(uiNode, 0.2f);
+                        b.nodeUnhighlight(uiNode, Config::Animation::DURATION_COLOR);
                     }
                 }
             }
@@ -561,12 +561,12 @@ namespace Controllers {
                  model.deleteAt(targetPos);
                  graph.removeNodeAt(targetPos);
                  if (preNode) {
-                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, 0.3f));
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, Config::Animation::DURATION_COLOR));
                  }
                  syncGraphEdges();
                  triggerLayout();
              })
-             .highlight("unlink").wait(0.3f).nextStep()
+             .highlight("unlink").wait(Config::Animation::STEP_WAIT_ACTION).nextStep()
              .highlight("delete")
              .finish();
 
@@ -593,19 +593,19 @@ namespace Controllers {
             if (!uiNode) break;
 
             b.highlight("loop_cond").nextStep();
-            b.nodeHighlight(uiNode, 0.3f);
+            b.nodeHighlight(uiNode, Config::Animation::DURATION_COLOR);
             b.highlight("check_val").nextStep();
 
             if (model.getPool()[curr].value == targetValue) {
                 b.highlight("found").nextStep()
-                 .nodeScale(uiNode, 1.0f, 1.3f, 0.2f)
-                 .nodeScale(uiNode, 1.3f, 1.0f, 0.2f)
-                 .nodeUnhighlight(uiNode, 0.3f);
+                 .nodeScale(uiNode, 1.0f, 1.3f, Config::Animation::DURATION_QUICK)
+                 .nodeScale(uiNode, 1.3f, 1.0f, Config::Animation::DURATION_QUICK)
+                 .nodeUnhighlight(uiNode, Config::Animation::DURATION_COLOR);
                 found = true;
                 break; 
             } else {
                 b.highlight("advance").nextStep()
-                 .nodeUnhighlight(uiNode, 0.2f);
+                 .nodeUnhighlight(uiNode, Config::Animation::DURATION_QUICK);
             }
             curr = model.getPool()[curr].nextIndex;
             idx++;
@@ -649,7 +649,7 @@ namespace Controllers {
                 auto* uiNode = graph.getNode(i);
                 if (!uiNode) continue;
                 b.highlight("loop_cond").nextStep();
-                b.nodeHighlight(uiNode, 0.2f);
+                b.nodeHighlight(uiNode, Config::Animation::DURATION_QUICK);
                 
                 if (i < pos) {
                     b.highlight("advance").nextStep();
@@ -667,7 +667,7 @@ namespace Controllers {
                          graph.updateNodeValue(pos, std::to_string(newVal));
                      }
                      if (targetNode) {
-                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(targetNode, 0.2f));
+                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(targetNode, Config::Animation::DURATION_QUICK));
                      }
                  })
                  .nodeScale(targetNode, 1.2f, 1.0f, 0.15f);
@@ -691,7 +691,7 @@ namespace Controllers {
                 if (!uiNode) break;
 
                 b.highlight("loop_cond").nextStep()
-                 .nodeHighlight(uiNode, 0.2f)
+                 .nodeHighlight(uiNode, Config::Animation::DURATION_QUICK)
                  .highlight("check_val").nextStep();
 
                 if (model.getPool()[curr].value == oldVal) {
@@ -704,7 +704,7 @@ namespace Controllers {
                      })
                      .highlight("found").nextStep()
                      .nodeScale(uiNode, 1.2f, 1.0f, 0.15f)
-                     .nodeUnhighlight(uiNode, 0.2f);
+                     .nodeUnhighlight(uiNode, Config::Animation::DURATION_QUICK);
                     found = true;
                     break;
                 } else {
