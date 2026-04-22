@@ -87,6 +87,9 @@ namespace Controllers {
         model.clear();
         graph.clear();
 
+        // Safety limit for visualizer (increased to 100 as requested)
+        if (size > 100) size = 100;
+
         for (int i = 0; i < size; ++i) {
             int randomVal = std::rand() % 100;
             model.insertTail(randomVal);

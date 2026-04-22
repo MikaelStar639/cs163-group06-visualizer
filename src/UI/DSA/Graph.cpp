@@ -128,7 +128,7 @@ namespace UI::DSA {
         removeNodeAt(nodes.size() - 1); 
     }
 
-    void Graph::addEdge(int srcIndex, int destIndex, const std::string& weight) {
+    void Graph::addEdge(int srcIndex, int destIndex, const std::string& weight, bool animate) {
         if (srcIndex < 0 || srcIndex >= nodes.size() || 
             destIndex < 0 || destIndex >= nodes.size()) return;
 
@@ -136,43 +136,54 @@ namespace UI::DSA {
             ctx, nodes[srcIndex].get(), nodes[destIndex].get(), isDirected, weight
         ));
 
-        ctx.animManager.addAnimation(
-            std::make_unique<UI::Animations::EdgeInsertAnimation>(edges.back().get(), 0.3f)
-        );
+        if (animate) {
+            ctx.animManager.addAnimation(
+                std::make_unique<UI::Animations::EdgeInsertAnimation>(edges.back().get(), 0.3f)
+            );
+        }
     }
 
     void Graph::removeEdge(int srcIndex, int destIndex) {
         Edge* edgeToDelete = getEdge(srcIndex, destIndex);
         if (!edgeToDelete) return;
 
-        ctx.animManager.addAnimation(
-            std::make_unique<UI::Animations::EdgeDeleteAnimation>(
-                edgeToDelete, 0.2f,
-                [this, edgeToDelete]() {
-                    edges.erase(
-                        std::remove_if(edges.begin(), edges.end(),
-                            [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; }),
-                        edges.end()
-                    );
-                }
-            )
-        );
+        auto it = std::find_if(edges.begin(), edges.end(),
+            [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; });
+        
+        if (it != edges.end()) {
+            std::unique_ptr<Edge> dyingEdgePtr = std::move(*it);
+            edges.erase(it);
+            dyingEdges.push_back(std::move(dyingEdgePtr));
+
+            ctx.animManager.addAnimation(
+                std::make_unique<UI::Animations::EdgeDeleteAnimation>(
+                    edgeToDelete, 0.2f,
+                    [this, edgeToDelete]() {
+                        auto dyingIt = std::find_if(dyingEdges.begin(), dyingEdges.end(),
+                            [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; });
+                        if (dyingIt != dyingEdges.end()) dyingEdges.erase(dyingIt);
+                    }
+                )
+            );
+        }
     }
 
     void Graph::removeEdgeAt(int index, bool animate) {
         if (index < 0 || index >= edges.size()) return;
 
         if (animate) {
-            Edge* edgeToDelete = edges[index].get();
+            std::unique_ptr<Edge> dyingEdgePtr = std::move(edges[index]);
+            Edge* edgeToDelete = dyingEdgePtr.get();
+            edges.erase(edges.begin() + index);
+            dyingEdges.push_back(std::move(dyingEdgePtr));
+
             ctx.animManager.addAnimation(
                 std::make_unique<UI::Animations::EdgeDeleteAnimation>(
                     edgeToDelete, 0.2f,
                     [this, edgeToDelete]() {
-                        edges.erase(
-                            std::remove_if(edges.begin(), edges.end(),
-                                [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; }),
-                            edges.end()
-                        );
+                        auto dyingIt = std::find_if(dyingEdges.begin(), dyingEdges.end(),
+                            [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; });
+                        if (dyingIt != dyingEdges.end()) dyingEdges.erase(dyingIt);
                     }
                 )
             );
@@ -184,7 +195,9 @@ namespace UI::DSA {
     void Graph::clear() {
         ctx.animManager.clearAll();
         edges.clear();
+        dyingEdges.clear();
         nodes.clear();
+        dyingNodes.clear();
         drawOrder.clear();
         velocities.clear(); 
         lockedNodes.clear(); 
@@ -192,7 +205,23 @@ namespace UI::DSA {
     }
 
     void Graph::clearEdges() {
-        edges.clear();
+        while (!edges.empty()) {
+            std::unique_ptr<Edge> dyingEdgePtr = std::move(edges.back());
+            Edge* edgeToDelete = dyingEdgePtr.get();
+            edges.pop_back();
+            dyingEdges.push_back(std::move(dyingEdgePtr));
+
+            ctx.animManager.addAnimation(
+                std::make_unique<UI::Animations::EdgeDeleteAnimation>(
+                    edgeToDelete, 0.05f,
+                    [this, edgeToDelete]() {
+                        auto dyingIt = std::find_if(dyingEdges.begin(), dyingEdges.end(),
+                            [edgeToDelete](const std::unique_ptr<Edge>& e) { return e.get() == edgeToDelete; });
+                        if (dyingIt != dyingEdges.end()) dyingEdges.erase(dyingIt);
+                    }
+                )
+            );
+        }
     }
 
     void Graph::resetVisuals(){
@@ -359,6 +388,9 @@ namespace UI::DSA {
     }
     void Graph::draw() {
         for (auto& edge : edges) {
+            edge->draw();
+        }
+        for (auto& edge : dyingEdges) {
             edge->draw();
         }
         for (const auto &node: drawOrder) {

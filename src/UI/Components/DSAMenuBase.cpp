@@ -141,11 +141,20 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         }
 
         if (btnPrev.isClicked(event)) {
-            if (ctx.isStepByStep && ctx.stepNavigator.getCurrentIndex() >= 0) {
-                // If in step mode and we have something to lùi, go back one step
-                ctx.stepNavigator.stepBack();
+            if (ctx.isStepByStep) {
+                if (ctx.stepNavigator.getCurrentIndex() >= 0) {
+                    // Nhấn lần đầu: Về Step -1
+                    ctx.stepNavigator.stepBack();
+                } else {
+                    // Đã ở Step -1, nhấn lần nữa sẽ Cancel (đây chính là Step -2)
+                    ctx.animManager.clearAll();
+                    ctx.stepNavigator.clear();
+                    ctx.animManager.setPaused(false);
+                    std::cout << "[INFO] Animation Cancelled.\n";
+                    cancelClicked = true;
+                }
             } else {
-                // Otherwise, cancel the animation as before
+                // Chế độ Step OFF: Cancel luôn
                 ctx.animManager.clearAll();
                 ctx.stepNavigator.clear();
                 ctx.animManager.setPaused(false);

@@ -281,7 +281,7 @@ namespace Controllers {
             }
         }
         for (const auto& e : model.getEdges()) {
-            graph.addEdge(e.u, e.v, std::to_string(e.w));
+            graph.addEdge(e.u, e.v, std::to_string(e.w), false);
         }
 
         // Ép đồ thị tự thu nhỏ lại 66% để nhìn thoáng hơn
@@ -299,6 +299,9 @@ namespace Controllers {
         model.clear();
         if (codeViewer) codeViewer->hide();
         if (nodeCount <= 0) return;
+        
+        // Safety limit for visualizer (Max 50 nodes for MST due to graph complexity)
+        if (nodeCount > 50) nodeCount = 50;
 
         int maxEdges = nodeCount * (nodeCount - 1) / 2;
         edgeCount = std::clamp(edgeCount, std::max(0, nodeCount - 1), maxEdges);

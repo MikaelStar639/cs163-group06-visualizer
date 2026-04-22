@@ -6,6 +6,8 @@
 #include "UI/Widgets/PseudoCodeViewer.hpp"
 #include <string>
 #include <unordered_map>
+#include <any>
+#include "UI/Animations/StepByStep/TrieSnapshot.hpp"
 
 namespace UI::Animations { class AnimStepBuilder; }
 
@@ -24,10 +26,16 @@ namespace Controllers {
         float horizontalSpacing = 100.f;
 
         std::unordered_map<int, int> poolToGraphMap;
+        std::vector<std::unique_ptr<UI::DSA::Node>> masterNodePool;
 
         void syncGraph();
+        void syncEdges(bool animate = true);
         void triggerLayout(float duration = 0.5f);
+        void triggerLayoutWithModel(const Core::DSA::Trie& layoutModel, float duration);
         void submitAnimation(UI::Animations::AnimStepBuilder& b);
+
+        std::any saveSnapshot();
+        void restoreSnapshot(const std::any& snapshotAny);
 
     public:
         TrieController(AppContext& context, UI::DSA::Graph& g, Core::DSA::Trie& m,

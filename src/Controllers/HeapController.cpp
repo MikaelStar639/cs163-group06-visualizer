@@ -34,8 +34,8 @@ namespace Controllers {
             int left = 2 * i + 1;
             int right = 2 * i + 2;
 
-            if (left < numNodes) graph.addEdge(i, left);
-            if (right < numNodes) graph.addEdge(i, right);
+            if (left < numNodes) graph.addEdge(i, left, "", false);
+            if (right < numNodes) graph.addEdge(i, right, "", false);
         }
     }
 
@@ -80,6 +80,9 @@ namespace Controllers {
         
         model.clear();
         graph.clear();
+
+        // Safety limit for visualizer (increased to 100 as requested)
+        if (size > 100) size = 100;
 
         std::vector<int> initialData;
         for (int i = 0; i < size; ++i) {
@@ -153,7 +156,7 @@ namespace Controllers {
                         << "# DETAILED INSTRUCTIONS:\n"
                         << "# 1. Type the number of elements 'n' first.\n"
                         << "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
-                        << "#    (Max n is 15. Values must be between -999 and 999).\n"
+                        << "#    (Max n is 100. Values must be between -999 and 999).\n"
                         << "# -----------------------------------\n";
                 outFile.close();
             }
@@ -193,8 +196,8 @@ namespace Controllers {
             int n = allNumbers[0];
             if (n < 0) {
                 errorMsg = "# [WARNING] Invalid size 'n' = " + std::to_string(n) + ".\n";
-            } else if (n > 15) {
-                errorMsg = "# [WARNING] Size 'n' = " + std::to_string(n) + " is too large (Max 15).\n";
+            } else if (n > 100) {
+                errorMsg = "# [WARNING] Size 'n' = " + std::to_string(n) + " is too large (Max 100).\n";
             } else if (allNumbers.size() - 1 < static_cast<size_t>(n)) {
                 errorMsg = "# [WARNING] Expected " + std::to_string(n) + " elements, found " + std::to_string(allNumbers.size() - 1) + ".\n";
             } else {
@@ -284,8 +287,8 @@ namespace Controllers {
             errorMsg = "# [WARNING] Could not read 'n'.\n";
         } else {
             int n = allNumbers[0];
-            if (n < 0 || n > 15) {
-                errorMsg = "# [WARNING] Invalid size (Max 15).\n";
+            if (n < 0 || n > 100) {
+                errorMsg = "# [WARNING] Invalid size (Max 100).\n";
             } else if ((int)allNumbers.size() - 1 < n) {
                 errorMsg = "# [WARNING] Not enough elements found.\n";
             } else {
@@ -340,7 +343,7 @@ namespace Controllers {
                             "# DETAILED INSTRUCTIONS:\n"
                             "# 1. Type the number of elements 'n' first.\n"
                             "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
-                            "#    (Max n is 15. Values must be between -999 and 999).\n"
+                            "#    (Max n is 100. Values must be between -999 and 999).\n"
                             "# 3. Do NOT use commas (,) or other punctuation marks.\n"
                             "# 4. When you are done:\n"
                             "#    - Save this file by pressing Ctrl + S\n"

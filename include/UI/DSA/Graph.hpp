@@ -18,6 +18,7 @@ namespace UI::DSA {
         std::vector<std::unique_ptr<Node>> nodes;
         std::vector<std::unique_ptr<Node>> dyingNodes;
         std::vector<std::unique_ptr<Edge>> edges;
+        std::vector<std::unique_ptr<Edge>> dyingEdges;
         std::vector<Node*> drawOrder;
 
         std::unordered_map<Node*, sf::Vector2f> velocities;
@@ -47,7 +48,7 @@ namespace UI::DSA {
         void insertNodePtr(int index, std::unique_ptr<Node> node);
         void updateNodeValue(int index, const std::string &newVal);
         
-        void addEdge(int srcIndex, int destIndex, const std::string& weight = "");
+        void addEdge(int srcIndex, int destIndex, const std::string& weight = "", bool animate = true);
         void removeEdge(int srcIndex, int destIndex);
         void removeEdgeAt(int index, bool animate = true);
 
