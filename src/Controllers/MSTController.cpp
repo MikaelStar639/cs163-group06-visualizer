@@ -142,19 +142,92 @@ namespace Controllers {
                                  UI::Widgets::PseudoCodeViewer* viewer)
         : ctx(context), graph(g), model(m), codeViewer(viewer) 
     {
-        // Safety: Clear any snapshot handlers from previous screens
-        ctx.stepNavigator.setSnapshotHandlers(nullptr, nullptr);
+        // Register snapshot handlers for the StepNavigator
+        ctx.stepNavigator.setSnapshotHandlers(
+            [this]() { return this->saveSnapshot(); },
+            [this](const std::any& s) { this->restoreSnapshot(s); }
+        );
     }
 
     void MSTController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
+        ctx.animManager.clearAll(); // Stop any current animation
         ctx.stepNavigator.clear();
         auto steps = b.buildSteps();
         for (auto& step : steps) {
-            ctx.stepNavigator.addStep(std::move(step));
+            ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
         }
         ctx.stepNavigator.playNext();
         if (ctx.isStepByStep) {
             ctx.animManager.setPaused(true);
+        }
+    }
+
+    void MSTController::syncGraph() {
+        // For MST, syncGraph mainly ensures we are not in an inconsistent visual state
+        // Most algorithm steps handle colors directly, but we can use this to force 
+        // labels and fill colors to be standard if needed.
+    }
+
+    std::any MSTController::saveSnapshot() {
+        MSTSnapshot s;
+        s.liveMessage = liveMessage;
+        s.liveTotalWeight = liveTotalWeight;
+        s.liveSelectedEdgeCount = liveSelectedEdgeCount;
+        s.running = running;
+
+        for (const auto& nodePtr : graph.getNodes()) {
+            MSTSnapshot::NodeState ns;
+            ns.position = nodePtr->getPosition();
+            ns.fillColor = nodePtr->getFillColor();
+            ns.labelColor = nodePtr->getLabelColor();
+            ns.scale = nodePtr->getScale();
+            s.nodes.push_back(ns);
+        }
+
+        for (const auto& edgePtr : graph.getEdges()) {
+            MSTSnapshot::EdgeState es;
+            es.color = edgePtr->getColor();
+            es.thickness = edgePtr->getThickness();
+            s.edges.push_back(es);
+        }
+
+        if (codeViewer) {
+            s.activeLineIndex = codeViewer->getActiveLine();
+        }
+
+        return std::make_any<MSTSnapshot>(std::move(s));
+    }
+
+    void MSTController::restoreSnapshot(const std::any& snapshot) {
+        const auto& s = std::any_cast<const MSTSnapshot&>(snapshot);
+        
+        ctx.animManager.clearAll();
+
+        liveMessage = s.liveMessage;
+        liveTotalWeight = s.liveTotalWeight;
+        liveSelectedEdgeCount = s.liveSelectedEdgeCount;
+        running = s.running;
+
+        auto& currentNodes = graph.getNodes();
+        for (size_t i = 0; i < s.nodes.size() && i < currentNodes.size(); ++i) {
+            currentNodes[i]->setPosition(s.nodes[i].position);
+            currentNodes[i]->setFillColor(s.nodes[i].fillColor);
+            currentNodes[i]->setLabelColor(s.nodes[i].labelColor);
+            currentNodes[i]->setScale(s.nodes[i].scale);
+        }
+
+        auto& currentEdges = graph.getEdges();
+        for (size_t i = 0; i < s.edges.size() && i < currentEdges.size(); ++i) {
+            currentEdges[i]->setColor(s.edges[i].color);
+            currentEdges[i]->setThickness(s.edges[i].thickness);
+        }
+
+        if (codeViewer) {
+            if (s.activeLineIndex >= 0) {
+                codeViewer->highlightLine(s.activeLineIndex);
+            } else {
+                codeViewer->clearHighlight();
+            }
         }
     }
 

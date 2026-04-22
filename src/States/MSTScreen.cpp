@@ -55,7 +55,7 @@ void MSTScreen::handleEvent(const sf::Event& event) {
             uiMenu.clearInputs();
         }
 
-        if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::MSTMenu::Action::Clean)) {
+        if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::MSTMenu::Action::Clear)) {
             uiMenu.resetMenu();
         }
     }
@@ -132,7 +132,7 @@ void MSTScreen::handleMenuAction() {
         int startNode = std::stoi(inputs[0].getText());
         controller.handleRunPrim(startNode);
     }
-    else if (action == MSTMenu::Action::Clean) {
+    else if (action == MSTMenu::Action::Clear) {
         controller.handleClearAll();
         syncGraphToManualCache();
         clearManualPreviewCache();
