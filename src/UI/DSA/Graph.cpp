@@ -384,6 +384,24 @@ namespace UI::DSA {
                     n->onHover(); 
                 }
             }
+        } else{
+            Node* hoveredNode = nullptr;
+            if (draggedNode == nullptr) {
+                for (int i = drawOrder.size() - 1; i >= 0; --i) {
+                    if (drawOrder[i]->contains(mouseWorldPos)) {
+                        hoveredNode = drawOrder[i]; 
+                        break; 
+                    }
+                }
+            }
+
+            for (auto n: drawOrder){
+                if (n == hoveredNode){
+                    n->onHover();
+                } else{
+                    n->onIdle();
+                }
+            }
         }
 
         // 5. LUÔN CẬP NHẬT CẠNH (EDGES)
