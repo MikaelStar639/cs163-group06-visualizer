@@ -286,8 +286,17 @@ namespace Controllers {
              .callback([this, val]() {
                  model.insertHead(val);
                  graph.insertNodeAt(0, std::to_string(val), {startX - spacing, startY});
+                 auto* newNode = graph.getNode(0);
+                 if (newNode) {
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, 0.5f));
+                 }
                  syncGraphEdges();
                  triggerLayout();
+             })
+             .wait(0.6f)
+             .callback([this]() {
+                 auto* newNode = graph.getNode(0);
+                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, 0.3f));
              })
              .finish();
 
@@ -324,24 +333,43 @@ namespace Controllers {
             }
 
             // TRAVERSAL
-            int steps = (int)graph.getNodes().size() - 1;
+            int steps = (int)graph.getNodes().size();
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond").nextStep()
-                     .nodeHighlight(uiNode, 0.3f)
-                     .highlight("advance").nextStep()
-                     .nodeUnhighlight(uiNode, 0.2f);
+                    b.highlight("loop_cond").nextStep();
+                    b.nodeHighlight(uiNode, 0.3f);
+                    
+                    if (i < steps - 1) { // If not the last node
+                        b.highlight("advance").nextStep();
+                        b.nodeUnhighlight(uiNode, 0.2f);
+                    }
                 }
             }
 
+            // Keep the last node highlighted while inserting
+            auto* lastNode = graph.getNode(steps - 1);
+
             b.highlight("insert_tail")
-             .callback([this, val]() {
+             .callback([this, val, lastNode]() {
                  model.insertTail(val);
                  int actualPos = model.getLogicalList().size() - 1;
                  graph.insertNodeAt(actualPos, std::to_string(val), {startX + actualPos * spacing, startY - 100.f});
+                 auto* newNode = graph.getNode(actualPos);
+                 if (newNode) {
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, 0.5f));
+                 }
+                 if (lastNode) {
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(lastNode, 0.3f));
+                 }
                  syncGraphEdges();
                  triggerLayout();
+             })
+             .wait(0.6f)
+             .callback([this]() {
+                 int actualPos = model.getLogicalList().size() - 1;
+                 auto* newNode = graph.getNode(actualPos);
+                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, 0.3f));
              })
              .finish();
 
@@ -358,28 +386,48 @@ namespace Controllers {
              .highlight("init_pre").nextStep();
 
             // TRAVERSAL
-            int steps = targetPos - 1;
+            int steps = targetPos; // Traverse to reach the 'pre' node
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond").nextStep()
-                     .nodeHighlight(uiNode, 0.3f)
-                     .highlight("advance").nextStep()
-                     .nodeUnhighlight(uiNode, 0.2f);
+                    b.highlight("loop_cond").nextStep();
+                    b.nodeHighlight(uiNode, 0.3f);
+
+                    if (i < steps - 1) { // If not the 'pre' node yet
+                        b.highlight("advance").nextStep();
+                        b.nodeUnhighlight(uiNode, 0.2f);
+                    }
                 }
             }
 
+            // Keep the 'pre' node highlighted while inserting
+            auto* preNode = graph.getNode(targetPos - 1);
+
             b.highlight("create_node").nextStep()
-             .callback([this, targetPos, val]() {
+             .callback([this, targetPos, val, preNode]() {
                  bool success = model.insertAt(targetPos, val);
                  if (success) {
                      graph.insertNodeAt(targetPos, std::to_string(val), {startX + targetPos * spacing, startY - 100.f});
+                     auto* newNode = graph.getNode(targetPos);
+                     if (newNode) {
+                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeHighlightAnimation>(newNode, 0.5f));
+                     }
+                     if (preNode) {
+                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, 0.3f));
+                     }
                      syncGraphEdges();
                      triggerLayout();
                  }
              })
              .highlight("link_next").wait(0.3f).nextStep()
              .highlight("link_pre")
+             .wait(0.6f)
+             .callback([this, targetPos]() {
+                 auto* newNode = graph.getNode(targetPos);
+                 auto* preNodeInCb = graph.getNode(targetPos - 1);
+                 if (newNode) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(newNode, 0.3f));
+                 if (preNodeInCb) ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNodeInCb, 0.3f));
+             })
              .finish();
 
             submitAnimation(b);
@@ -446,21 +494,30 @@ namespace Controllers {
             }
 
             // TRAVERSAL
-            int steps = currentSize - 2;
+            int steps = currentSize - 1; // Traverse to reach the 'pre' node
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond").nextStep()
-                     .nodeHighlight(uiNode, 0.3f)
-                     .highlight("advance").nextStep()
-                     .nodeUnhighlight(uiNode, 0.2f);
+                    b.highlight("loop_cond").nextStep();
+                    b.nodeHighlight(uiNode, 0.3f);
+
+                    if (i < steps - 1) { // If not the 'pre' node yet
+                        b.highlight("advance").nextStep();
+                        b.nodeUnhighlight(uiNode, 0.2f);
+                    }
                 }
             }
 
+            auto* preNode = graph.getNode(currentSize - 2);
+            auto* delNode = graph.getNode(currentSize - 1);
+
             b.highlight("save_del").nextStep()
-             .callback([this]() {
+             .callback([this, preNode]() {
                  model.deleteTail();
                  graph.removeNodeAt((int)graph.getNodes().size() - 1);
+                 if (preNode) {
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, 0.3f));
+                 }
                  syncGraphEdges();
                  triggerLayout();
              })
@@ -483,21 +540,29 @@ namespace Controllers {
             }
 
             // TRAVERSAL
-            int steps = targetPos - 1;
+            int steps = targetPos; // Traverse to reach the 'pre' node
             for (int i = 0; i < steps; ++i) {
                 auto* uiNode = graph.getNode(i);
                 if (uiNode) {
-                    b.highlight("loop_cond").nextStep()
-                     .nodeHighlight(uiNode, 0.3f)
-                     .highlight("advance").nextStep()
-                     .nodeUnhighlight(uiNode, 0.2f);
+                    b.highlight("loop_cond").nextStep();
+                    b.nodeHighlight(uiNode, 0.3f);
+
+                    if (i < steps - 1) { // If not the 'pre' node yet
+                        b.highlight("advance").nextStep();
+                        b.nodeUnhighlight(uiNode, 0.2f);
+                    }
                 }
             }
 
+            auto* preNode = (targetPos > 0) ? graph.getNode(targetPos - 1) : nullptr;
+
             b.highlight("save_del").nextStep()
-             .callback([this, targetPos]() {
+             .callback([this, targetPos, preNode]() {
                  model.deleteAt(targetPos);
                  graph.removeNodeAt(targetPos);
+                 if (preNode) {
+                     ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(preNode, 0.3f));
+                 }
                  syncGraphEdges();
                  triggerLayout();
              })
@@ -527,9 +592,9 @@ namespace Controllers {
             UI::DSA::Node* uiNode = graph.getNode(idx);
             if (!uiNode) break;
 
-            b.highlight("loop_cond").nextStep()
-             .nodeHighlight(uiNode, 0.3f)
-             .highlight("check_val").nextStep();
+            b.highlight("loop_cond").nextStep();
+            b.nodeHighlight(uiNode, 0.3f);
+            b.highlight("check_val").nextStep();
 
             if (model.getPool()[curr].value == targetValue) {
                 b.highlight("found").nextStep()
@@ -580,29 +645,32 @@ namespace Controllers {
              .highlight("init_curr").nextStep();
 
             // TRAVERSAL
-            for (int i = 0; i < pos; ++i) {
+            for (int i = 0; i < pos + 1; ++i) { // Highlight up to the target node
                 auto* uiNode = graph.getNode(i);
                 if (!uiNode) continue;
-                b.highlight("loop_cond").nextStep()
-                 .nodeHighlight(uiNode, 0.2f)
-                 .highlight("advance").nextStep()
-                 .nodeUnhighlight(uiNode, 0.1f);
+                b.highlight("loop_cond").nextStep();
+                b.nodeHighlight(uiNode, 0.2f);
+                
+                if (i < pos) {
+                    b.highlight("advance").nextStep();
+                    b.nodeUnhighlight(uiNode, 0.1f);
+                }
             }
 
             // Target node
-            auto* uiNode = graph.getNode(pos);
-            if (uiNode) {
-                b.highlight("loop_cond").nextStep()
-                 .nodeHighlight(uiNode, 0.2f)
-                 .highlight("update_val").nextStep()
-                 .nodeScale(uiNode, 1.0f, 1.2f, 0.15f)
-                 .callback([this, pos, newVal]() {
+            auto* targetNode = graph.getNode(pos);
+            if (targetNode) {
+                b.highlight("update_val").nextStep()
+                 .nodeScale(targetNode, 1.0f, 1.2f, 0.15f)
+                 .callback([this, pos, newVal, targetNode]() {
                      if (model.updateAt(pos, newVal)) {
                          graph.updateNodeValue(pos, std::to_string(newVal));
                      }
+                     if (targetNode) {
+                         ctx.animManager.addAnimation(std::make_unique<UI::Animations::NodeUnhighlightAnimation>(targetNode, 0.2f));
+                     }
                  })
-                 .nodeScale(uiNode, 1.2f, 1.0f, 0.15f)
-                 .nodeUnhighlight(uiNode, 0.2f);
+                 .nodeScale(targetNode, 1.2f, 1.0f, 0.15f);
             }
 
             b.finish();
