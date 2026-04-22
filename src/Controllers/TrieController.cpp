@@ -72,7 +72,9 @@ namespace Controllers {
     }
 
     void TrieController::syncEdges(bool animate) {
-        graph.clearEdges();
+        if (animate) graph.clearEdges();
+        else graph.clearEdgesSilently();
+
         const auto& pool = model.getPool();
         for(auto const& [pIdx, gIdx] : poolToGraphMap) {
             // Safety check: ensure pIdx is valid in the current pool to prevent OOB crashes during snapshot restore
@@ -365,6 +367,10 @@ namespace Controllers {
 
     void TrieController::restoreSnapshot(const std::any& snapshotAny) {
         const auto& s = std::any_cast<const UI::Animations::TrieSnapshot&>(snapshotAny);
+        
+        // CRITICAL: Stop any pending layout or visual animations that might fight the snapshot state
+        ctx.animManager.clearAll();
+
         model = s.trieModel; poolToGraphMap = s.poolToGraphMap;
         while (graph.getNodes().size() > 0) masterNodePool.push_back(graph.extractNode(0));
         for (const auto& ns : s.nodes) {

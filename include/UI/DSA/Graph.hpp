@@ -54,6 +54,7 @@ namespace UI::DSA {
 
         void clear();      
         void clearEdges(); 
+        void clearEdgesSilently(); 
 
         void resetVisuals();
 

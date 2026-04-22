@@ -224,6 +224,11 @@ namespace UI::DSA {
         }
     }
 
+    void Graph::clearEdgesSilently() {
+        edges.clear();
+        dyingEdges.clear();
+    }
+
     void Graph::resetVisuals(){
         for (auto& node : nodes) {
             node->setFillColor(Config::UI::Colors::NodeFill);

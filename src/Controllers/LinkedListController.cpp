@@ -772,6 +772,9 @@ namespace Controllers {
         // Safe cast back to our specific snapshot type
         const auto& s = std::any_cast<const UI::Animations::LinkedListSnapshot&>(snapshotAny);
 
+        // CRITICAL: Stop any pending layout or color animations that might fight the snapshot state
+        ctx.animManager.clearAll();
+
         // 1. Restore Data Model
         model = s.listModel;
 

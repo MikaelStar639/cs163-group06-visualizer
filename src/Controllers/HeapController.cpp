@@ -28,7 +28,7 @@ namespace Controllers {
         }
 
     void HeapController::syncGraphEdges() {
-        graph.clearEdges();
+        graph.clearEdgesSilently();
         int numNodes = static_cast<int>(graph.getNodes().size());
         
         for (int i = 0; i < numNodes; ++i) {
@@ -906,6 +906,9 @@ namespace Controllers {
     void HeapController::restoreSnapshot(const std::any& snapshotAny) {
         const auto& s = std::any_cast<const UI::Animations::HeapSnapshot&>(snapshotAny);
         
+        // CRITICAL: Stop any pending layout or swap animations that might fight the snapshot state
+        ctx.animManager.clearAll();
+
         // 1. Model
         model.loadRawData(s.pool);
 
