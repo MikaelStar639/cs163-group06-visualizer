@@ -11,6 +11,7 @@
 #include <UI/Shapes/PlayIcon.hpp>
 #include <UI/Shapes/NextIcon.hpp>
 #include <UI/Shapes/PrevIcon.hpp>
+#include <UI/Shapes/FastForwardIcon.hpp>
 #include <vector>
 #include <string>
 #include <optional>
@@ -32,11 +33,13 @@ namespace UI::Widgets {
         Button btnPrev;
         Button btnPlay;
         Button btnNext;
+        Button btnSkipToEnd;
         Button btnToggleStepMode;
         UI::Shapes::PlayIcon iconPlay;
         UI::Shapes::PauseIcon iconPause;
         UI::Shapes::NextIcon iconNext;
         UI::Shapes::PrevIcon iconPrev;
+        UI::Shapes::FastForwardIcon iconFastForward;
 
         // Menu State
         int activeMenuIndex = -1;

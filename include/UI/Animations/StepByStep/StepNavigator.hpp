@@ -22,7 +22,7 @@ namespace UI::Animations {
         
         AnimationManager* animManager = nullptr;
         bool autoPlayEnabled = false;
-        float autoPlayDelay = 0.8f;
+        float autoPlayDelay = 1.2f;
         float autoPlayTimer = 0.0f;
 
         // History of states for the Back feature (Generic via std::any)
@@ -58,7 +58,7 @@ namespace UI::Animations {
          * @brief Trigger the next logical step.
          * @return true if a step was started, false if no more steps remain.
          */
-        bool playNext();
+        bool playNext(bool skipCurrent = true);
 
         /**
          * @brief Restore the previous state.

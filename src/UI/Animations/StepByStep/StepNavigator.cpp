@@ -35,7 +35,11 @@ namespace UI::Animations {
 
         // Mode 1: Step-by-Step OFF (Traditional continuous playback)
         if (!stepModeActive && hasNext() && animManager->empty() && !animManager->isPaused()) {
-            playNext();
+            autoPlayTimer += dt;
+            if (autoPlayTimer >= 0.25f) { // Subtle but important delay
+                autoPlayTimer = 0.0f;
+                playNext();
+            }
         }
         
         // Mode 2: Auto-Play in Step Mode (The "Movie" mode)
@@ -55,10 +59,10 @@ namespace UI::Animations {
         }
     }
 
-    bool StepNavigator::playNext() {
+    bool StepNavigator::playNext(bool skipCurrent) {
         if (!animManager || !hasNext()) return false;
         
-        if (!animManager->empty()) {
+        if (skipCurrent && !animManager->empty()) {
             animManager->skipToEnd();
             animManager->setPaused(false);
         }
@@ -142,16 +146,36 @@ namespace UI::Animations {
     }
 
     void StepNavigator::skipAll() {
-        if (!animManager) return;
+        if (!animManager || steps.empty()) return;
 
-        // Play remaining steps through the manager
-        while (currentStepIndex + 1 < static_cast<int>(steps.size())) {
-            currentStepIndex++;
-            animManager->addAnimation(std::make_unique<SharedAnimationProxy>(steps[currentStepIndex]));
+        // 1. Interrupt any current auto-play and finish current animations instantly
+        autoPlayEnabled = false;
+        if (!animManager->empty()) {
+            animManager->skipToEnd();
+        }
+
+        // 2. Process each step with "Smooth Landing" logic
+        while (hasNext()) {
+            // Check if we are approaching the end (last 2 steps)
+            bool isNearEnd = (currentStepIndex + 3 >= static_cast<int>(steps.size()));
+
+            if (isNearEnd) {
+                // THE SMOOTH LANDING: Play the final steps normally
+                // We pass 'false' to NOT skip the previous step, 
+                // so they play one after another.
+                playNext(false);
+            } else {
+                // Intermediate steps: Play and force to finish instantly
+                playNext(true);
+                animManager->skipToEnd();
+            }
         }
         
-        // Tell manager to finish everything instantly
-        animManager->skipToEnd();
+        // 3. Ensure the final snapshot of the end state is captured 
+        // (Note: playNext takes state BEFORE step, so we need one more for the AFTER state)
+        if (snapshotProvider && !hasNext() && static_cast<int>(history.size()) == currentStepIndex + 1) {
+            history.push_back(snapshotProvider());
+        }
     }
 
 } // namespace UI::Animations
