@@ -50,9 +50,11 @@ namespace Controllers {
     }
 
     void HeapController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        ctx.animManager.clearAll();
+        ctx.stepNavigator.forceFinishAll(); // Instantly finish previous operation before starting new one
+        ctx.animManager.clearAll(); // Ensure queue is clean
         ctx.stepNavigator.clear();
         masterNodePool.clear(); // Clear cemetery for new algorithm
+        graph.resetVisuals();   // Ensure no leftover highlights from interrupted operations
         auto steps = b.buildSteps();
         for (auto& step : steps) {
             ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
@@ -145,6 +147,7 @@ namespace Controllers {
         
         // Smoothly transition all nodes from the center to their heap positions
         triggerLayout(0.6f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handlePreHeapifiedRandom(int size) {
@@ -179,6 +182,7 @@ namespace Controllers {
         
         // Use a slightly longer layout time to make the "pop-in" feel intentional
         triggerLayout(0.8f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handleCreateFromFile() {
@@ -282,6 +286,7 @@ namespace Controllers {
 
         // Glide everything from {startX, startY} into the correct Binary Tree layout
         triggerLayout(0.6f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handlePreHeapifiedFromFile() {
@@ -371,6 +376,7 @@ namespace Controllers {
         // 7. Finalize layout
         syncGraphEdges();
         triggerLayout(0.8f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handleEditDataFile() {

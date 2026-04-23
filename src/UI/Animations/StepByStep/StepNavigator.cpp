@@ -59,7 +59,7 @@ namespace UI::Animations {
         }
     }
 
-    bool StepNavigator::playNext(bool skipCurrent) {
+    bool StepNavigator::playNext(bool skipCurrent, bool disableSnapshot) {
         if (!animManager || !hasNext()) return false;
         
         if (skipCurrent && !animManager->empty()) {
@@ -76,14 +76,18 @@ namespace UI::Animations {
         // 2. Try replaying from history: 
         // To replay step X with animation, we must first restore state BEFORE step X (history[X])
         if (static_cast<int>(history.size()) > currentStepIndex) {
-            if (snapshotRestorer) {
+            if (snapshotRestorer && history[currentStepIndex].has_value()) {
                 snapshotRestorer(history[currentStepIndex]);
             }
             // Continue to part 4 to play the animation normally
         } else {
             // 3. First-time play: Save the state BEFORE playing
             if (snapshotProvider && static_cast<int>(history.size()) <= currentStepIndex) {
-                history.push_back(snapshotProvider());
+                if (disableSnapshot) {
+                    history.push_back(std::any()); // Empty snapshot to save RAM
+                } else {
+                    history.push_back(snapshotProvider());
+                }
             }
         }
 
@@ -114,10 +118,16 @@ namespace UI::Animations {
         animManager->clearAll();
 
         // Restore the state BEFORE Step X (history[X])
+        // If we disabled snapshots, skip over empty ones
         if (snapshotRestorer && currentStepIndex >= 0 && currentStepIndex < (int)history.size()) {
-            snapshotRestorer(history[currentStepIndex]);
-            currentStepIndex--;
-            return true;
+            while (currentStepIndex >= 0 && !history[currentStepIndex].has_value()) {
+                currentStepIndex--;
+            }
+            if (currentStepIndex >= 0) {
+                snapshotRestorer(history[currentStepIndex]);
+                currentStepIndex--;
+                return true;
+            }
         }
 
         return false;
@@ -132,7 +142,7 @@ namespace UI::Animations {
 
         // 1. If we are currently in the middle of history, restore the current state first
         if (currentStepIndex >= 0 && currentStepIndex < static_cast<int>(history.size())) {
-            if (snapshotRestorer) {
+            if (snapshotRestorer && history[currentStepIndex].has_value()) {
                 snapshotRestorer(history[currentStepIndex]);
             }
         }
@@ -163,10 +173,10 @@ namespace UI::Animations {
                 // THE SMOOTH LANDING: Play the final steps normally
                 // We pass 'false' to NOT skip the previous step, 
                 // so they play one after another.
-                playNext(false);
+                playNext(false, false);
             } else {
                 // Intermediate steps: Play and force to finish instantly
-                playNext(true);
+                playNext(true, true); // True to skipCurrent, True to disableSnapshot (saves RAM)
                 animManager->skipToEnd();
             }
         }
@@ -176,6 +186,36 @@ namespace UI::Animations {
         if (snapshotProvider && !hasNext() && static_cast<int>(history.size()) == currentStepIndex + 1) {
             history.push_back(snapshotProvider());
         }
+    }
+
+    void StepNavigator::forceFinishAll() {
+        if (!animManager || steps.empty()) return;
+
+        autoPlayEnabled = false;
+        if (!animManager->empty()) {
+            animManager->skipToEnd();
+        }
+
+        while (hasNext()) {
+            playNext(true, true); // True to skipCurrent, True to disableSnapshot
+            animManager->skipToEnd();
+        }
+    }
+
+    void StepNavigator::restoreToStart() {
+        if (!animManager) return;
+        
+        // 1. Stop any running animations immediately
+        autoPlayEnabled = false;
+        animManager->clearAll();
+
+        // 2. Restore to history[0] if it exists
+        if (snapshotRestorer && !history.empty() && history[0].has_value()) {
+            snapshotRestorer(history[0]);
+        }
+
+        // 3. Clear the steps
+        clear();
     }
 
 } // namespace UI::Animations

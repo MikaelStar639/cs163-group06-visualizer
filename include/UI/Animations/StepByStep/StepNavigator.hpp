@@ -58,7 +58,7 @@ namespace UI::Animations {
          * @brief Trigger the next logical step.
          * @return true if a step was started, false if no more steps remain.
          */
-        bool playNext(bool skipCurrent = true);
+        bool playNext(bool skipCurrent = true, bool disableSnapshot = false);
 
         /**
          * @brief Restore the previous state.
@@ -98,6 +98,17 @@ namespace UI::Animations {
          * @brief Skips all remaining steps and plays them instantly.
          */
         void skipAll();
+
+        /**
+         * @brief Instantly finish all remaining steps without "smooth landing".
+         */
+        void forceFinishAll();
+
+        /**
+         * @brief Restores the state to the very beginning (history[0]) and clears navigation.
+         * Useful for the Cancel operation.
+         */
+        void restoreToStart();
     };
 
 } // namespace UI::Animations

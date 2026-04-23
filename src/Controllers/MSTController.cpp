@@ -151,8 +151,10 @@ namespace Controllers {
     }
 
     void MSTController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        ctx.animManager.clearAll(); // Stop any current animation
+        ctx.stepNavigator.forceFinishAll(); // Instantly finish previous operation before starting new one
+        ctx.animManager.clearAll(); // Ensure queue is clean
         ctx.stepNavigator.clear();
+        graph.resetVisuals(); // Ensure no leftover highlights
         auto steps = b.buildSteps();
         for (auto& step : steps) {
             ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
@@ -366,6 +368,7 @@ namespace Controllers {
         auto seq = std::make_unique<UI::Animations::SequenceAnimation>();
         seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.20f));
         ctx.animManager.addAnimation(std::move(seq));
+        ctx.animManager.setPaused(false);
     }
 
     void MSTController::handleCreateRandom(int nodeCount, int edgeCount) {

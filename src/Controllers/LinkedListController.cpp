@@ -59,9 +59,11 @@ namespace Controllers {
     }
 
     void LinkedListController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        ctx.animManager.clearAll();
+        ctx.stepNavigator.forceFinishAll(); // Instantly finish previous operation before starting new one
+        ctx.animManager.clearAll(); // Ensure queue is clean
         ctx.stepNavigator.clear();
         masterNodePool.clear(); // New algorithm starts, we can clear the pool
+        graph.resetVisuals();   // Ensure no leftover highlights from interrupted operations
         auto steps = b.buildSteps();
         for (auto& step : steps) {
             ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
@@ -99,6 +101,7 @@ namespace Controllers {
         }
         syncGraphEdges();
         triggerLayout(Config::Animation::DURATION_LAYOUT);
+        ctx.animManager.setPaused(false);
     }
 
     void LinkedListController::handleCreateFromFile() {
@@ -226,6 +229,7 @@ namespace Controllers {
 
         syncGraphEdges();
         triggerLayout(Config::Animation::DURATION_LAYOUT);
+        ctx.animManager.setPaused(false);
     }
 
     void LinkedListController::handleEditDataFile() {
@@ -743,6 +747,7 @@ namespace Controllers {
             graph.removeNodeAt(0); 
         }
         model.clear();
+        ctx.animManager.setPaused(false);
     }
 
     std::any LinkedListController::saveSnapshot() {

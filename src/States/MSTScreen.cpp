@@ -146,6 +146,7 @@ void MSTScreen::update(float dt) {
     if (uiMenu.consumeCancelClicked()) {
         ctx.animManager.clearAll();
         controller.forceSnapLayout(); 
+        codeViewer.hide();
     }
 
     // Preview realtime cho Create -> Manual

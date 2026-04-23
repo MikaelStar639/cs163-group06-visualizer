@@ -105,9 +105,11 @@ namespace Controllers {
     }
 
     void TrieController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        ctx.animManager.clearAll();
+        ctx.stepNavigator.forceFinishAll(); // Instantly finish previous operation before starting new one
+        ctx.animManager.clearAll(); // Ensure queue is clean
         ctx.stepNavigator.clear();
         masterNodePool.clear();
+        graph.resetVisuals(); // Ensure no leftover highlights from interrupted operations
         auto steps = b.buildSteps();
         for (auto& step : steps) ctx.stepNavigator.addStep(std::move(step));
         ctx.stepNavigator.playNext();
@@ -157,6 +159,7 @@ namespace Controllers {
             }
         }
         syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT);
+        ctx.animManager.setPaused(false);
     }
 
     void TrieController::handleEditDataFile() {
@@ -201,6 +204,7 @@ namespace Controllers {
             }
         } catch (...) {}
         syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT);  
+        ctx.animManager.setPaused(false);
     }
 
     std::string TrieController::sanitize(const std::string& word) {
@@ -405,6 +409,7 @@ namespace Controllers {
         model.clear(); graph.clear(); poolToGraphMap.clear();
         graph.addNode("Root", {startX, startY}); poolToGraphMap[model.getRootIndex()] = 0; 
         triggerLayout(0.f); 
+        ctx.animManager.setPaused(false);
     }
 
     std::any TrieController::saveSnapshot() {

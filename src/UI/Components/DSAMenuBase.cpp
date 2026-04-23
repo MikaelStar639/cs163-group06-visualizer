@@ -11,6 +11,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
       btnPlay(context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnNext(context, "", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnSkipToEnd(context, "", {910.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnCancel(context, "", {980.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnToggleStepMode(context, "Step: ON", {480.f, context.window.getSize().y - 95.f}, {160.f, 40.f}),
       title(context.font, titleText, 24),
       speedSlider(context, 
@@ -30,7 +31,7 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 
     applyBtnColors(btnBack); 
     applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
-    applyBtnColors(btnSkipToEnd);
+    applyBtnColors(btnSkipToEnd); applyBtnColors(btnCancel);
     applyBtnColors(btnToggleStepMode);
 
     
@@ -53,6 +54,10 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
 
     sf::Vector2f skipPos = btnSkipToEnd.getPosition();
     iconFastForward.setPosition({skipPos.x + 30.f, skipPos.y + 20.f});
+
+    sf::Vector2f cancelPos = btnCancel.getPosition();
+    iconCancel.setPosition({cancelPos.x + 30.f, cancelPos.y + 20.f});
+    iconCancel.setFillColor(sf::Color::White);
 }
 
 void DSAMenuBase::handleEvent(const sf::Event& event) {
@@ -177,18 +182,22 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
                     if (ctx.stepNavigator.getCurrentIndex() >= 0) {
                         ctx.stepNavigator.stepBack();
                     } else {
-                        ctx.animManager.clearAll();
-                        ctx.stepNavigator.clear();
+                        ctx.stepNavigator.restoreToStart();
                         ctx.animManager.setPaused(false);
                         cancelClicked = true;
                     }
                 } else {
-                    ctx.animManager.clearAll();
-                    ctx.stepNavigator.clear();
+                    ctx.stepNavigator.restoreToStart();
                     ctx.animManager.setPaused(false);
                     cancelClicked = true;
                 }
             }
+        }
+
+        if (btnCancel.isClicked(event)) {
+            ctx.stepNavigator.restoreToStart();
+            ctx.animManager.setPaused(false);
+            cancelClicked = true;
         }
     } 
     else {
@@ -256,7 +265,11 @@ void DSAMenuBase::update(sf::Vector2i mousePos, float dt) {
         float currentX = stepPos.x + stepSize.x + marginToControls;
 
         if (ctx.isStepByStep) {
-            // Step ON: [Prev] [Next] [Skip]
+            // Step ON: [Cancel] [Prev] [Next] [Skip]
+            btnCancel.setSize({btnWidth, btnHeight});
+            btnCancel.setPosition({currentX, stepPos.y});
+            currentX += btnWidth + gapBetweenBtns;
+
             btnPrev.setSize({btnWidth, btnHeight});
             btnPrev.setPosition({currentX, stepPos.y});
             currentX += btnWidth + gapBetweenBtns;
@@ -269,16 +282,22 @@ void DSAMenuBase::update(sf::Vector2i mousePos, float dt) {
             btnSkipToEnd.setPosition({currentX, stepPos.y});
 
             // Update Icons
+            iconCancel.setPosition({btnCancel.getPosition().x + btnWidth/2.f, btnCancel.getPosition().y + btnHeight/2.f});
             iconPrev.setPosition({btnPrev.getPosition().x + btnWidth/2.f, btnPrev.getPosition().y + btnHeight/2.f});
             iconNext.setPosition({btnNext.getPosition().x + btnWidth/2.f, btnNext.getPosition().y + btnHeight/2.f});
             iconFastForward.setPosition({btnSkipToEnd.getPosition().x + btnWidth/2.f, btnSkipToEnd.getPosition().y + btnHeight/2.f});
 
-            applyBtnColors(btnPrev); applyBtnColors(btnNext); applyBtnColors(btnSkipToEnd);
+            applyBtnColors(btnCancel); applyBtnColors(btnPrev); applyBtnColors(btnNext); applyBtnColors(btnSkipToEnd);
+            btnCancel.update(mousePos);
             btnPrev.update(mousePos);
             btnNext.update(mousePos);
             btnSkipToEnd.update(mousePos);
         } else {
-            // Step OFF: [Play/Pause] [Skip]
+            // Step OFF: [Cancel] [Play/Pause] [Skip]
+            btnCancel.setSize({btnWidth, btnHeight});
+            btnCancel.setPosition({currentX, stepPos.y});
+            currentX += btnWidth + gapBetweenBtns;
+
             btnPlay.setSize({btnWidth, btnHeight});
             btnPlay.setPosition({currentX, stepPos.y});
             currentX += btnWidth + gapBetweenBtns;
@@ -287,11 +306,13 @@ void DSAMenuBase::update(sf::Vector2i mousePos, float dt) {
             btnSkipToEnd.setPosition({currentX, stepPos.y});
 
             // Update Icons
+            iconCancel.setPosition({btnCancel.getPosition().x + btnWidth/2.f, btnCancel.getPosition().y + btnHeight/2.f});
             iconPlay.setPosition({btnPlay.getPosition().x + btnWidth/2.f, btnPlay.getPosition().y + btnHeight/2.f});
             iconPause.setPosition({btnPlay.getPosition().x + btnWidth/2.f, btnPlay.getPosition().y + btnHeight/2.f});
             iconFastForward.setPosition({btnSkipToEnd.getPosition().x + btnWidth/2.f, btnSkipToEnd.getPosition().y + btnHeight/2.f});
 
-            applyBtnColors(btnPlay); applyBtnColors(btnSkipToEnd);
+            applyBtnColors(btnCancel); applyBtnColors(btnPlay); applyBtnColors(btnSkipToEnd);
+            btnCancel.update(mousePos);
             btnPlay.update(mousePos);
             btnSkipToEnd.update(mousePos);
         }
@@ -336,10 +357,15 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
 
     if (shouldShowControls) {
         if (ctx.isStepByStep) {
-            // Draw Step ON controls: Prev, Next, Skip
+            // Draw Step ON controls: Cancel, Prev, Next, Skip
+            btnCancel.draw();
             btnPrev.draw();
             btnNext.draw();
             btnSkipToEnd.draw();
+
+            if (btnCancel.isCurrentlyPressed()) iconCancel.move({0.f, 2.f});
+            window.draw(iconCancel);
+            if (btnCancel.isCurrentlyPressed()) iconCancel.move({0.f, -2.f});
 
             if (btnPrev.isCurrentlyPressed()) iconPrev.move({0.f, 2.f});
             window.draw(iconPrev);
@@ -353,9 +379,14 @@ void DSAMenuBase::draw(sf::RenderWindow& window) {
             window.draw(iconFastForward);
             if (btnSkipToEnd.isCurrentlyPressed()) iconFastForward.move({0.f, -2.f});
         } else {
-            // Draw Step OFF controls: Play/Pause, Skip
+            // Draw Step OFF controls: Cancel, Play/Pause, Skip
+            btnCancel.draw();
             btnPlay.draw();
             btnSkipToEnd.draw();
+
+            if (btnCancel.isCurrentlyPressed()) iconCancel.move({0.f, 2.f});
+            window.draw(iconCancel);
+            if (btnCancel.isCurrentlyPressed()) iconCancel.move({0.f, -2.f});
 
             if (btnPlay.isCurrentlyPressed()) {
                 iconPlay.move({0.f, 2.f});
