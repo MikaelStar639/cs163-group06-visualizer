@@ -609,8 +609,7 @@ namespace Controllers {
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    if (nu) b.nodeHighlight(nu, 0.16f);
-                    if (nv) b.nodeHighlight(nv, 0.16f);
+                    b.nodesHighlight({nu, nv}, 0.16f);
                 }
 
                 b.highlight("check_cycle")
@@ -640,8 +639,7 @@ namespace Controllers {
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    if (nu) b.nodeUnhighlight(nu, 0.10f);
-                    if (nv) b.nodeUnhighlight(nv, 0.10f);
+                    b.nodesUnhighlight({nu, nv}, 0.10f);
                 }
                 b.nextStep();
             }
