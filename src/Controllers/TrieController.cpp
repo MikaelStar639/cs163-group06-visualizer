@@ -50,7 +50,7 @@ namespace Controllers {
             }
             int gIdx = poolToGraphMap[pIdx];
             if (auto* n = graph.getNode(gIdx)) {
-                n->setLabelColor(Config::UI::Colors::NodeText); // CẦN THIẾT: Reset màu chữ về trắng
+                n->setLabelColor(Config::UI::Colors::NodeText); 
                 if (pool[pIdx].isEndOfWord) n->setFillColor(sf::Color(70, 160, 100)); 
                 else n->setFillColor(Config::UI::Colors::NodeFill); 
             }

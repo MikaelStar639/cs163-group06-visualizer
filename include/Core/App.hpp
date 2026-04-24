@@ -2,9 +2,7 @@
 
 #include <memory>
 #include <SFML/Graphics.hpp>
-
 #include "Core/AppContext.hpp"
-#include "Core/Constants.hpp"
 #include "States/Screen.hpp"
 
 

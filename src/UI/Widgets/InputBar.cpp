@@ -208,9 +208,6 @@ bool InputBar::validateContent() {
                     }
 
                     
-                    // cho phép 1 số = node
-                    // cho phép 2 số = đang gõ dở cạnh
-                    // cho phép 3 số = edge
                     if (nums.empty() || nums.size() > 3) {
                         isValid = false;
                         errorMessage = "Line " + std::to_string(lineNo) + ": use 'x' or 'u v w'";
@@ -758,7 +755,6 @@ std::vector<std::string> InputBar::getLines(bool skipEmpty) const {
         lines.push_back("");
     }
 
-    // nếu content kết thúc bằng '\n', cần giữ thêm 1 dòng rỗng cuối
     if (!content.empty() && content.back() == '\n' && !skipEmpty) {
         lines.push_back("");
     }
@@ -1070,11 +1066,9 @@ bool InputBar::parseAutoGraphData(std::vector<int>& nodeValues,
         if (nums.empty()) continue;
 
         if (nums.size() == 1) {
-            // tạo node mới nếu chưa có
             ensureNode(nums[0]);
         }
         else if (nums.size() == 2) {
-            // dòng đang gõ dở cạnh -> bỏ qua, KHÔNG fail
             continue;
         }
         else if (nums.size() == 3) {
@@ -1085,11 +1079,10 @@ bool InputBar::parseAutoGraphData(std::vector<int>& nodeValues,
             int u = ensureNode(uLabel);
             int v = ensureNode(vLabel);
 
-            if (u == v) continue; // bỏ self-loop
+            if (u == v) continue;
 
             auto key = std::minmax(u, v);
 
-            // nếu cạnh đã có thì cập nhật weight
             auto it = edgeIndexByPair.find(key);
             if (it != edgeIndexByPair.end()) {
                 edges[it->second] = std::make_tuple(u, v, w);

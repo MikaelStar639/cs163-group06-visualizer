@@ -5,7 +5,6 @@
 #include "UI/DSA/Graph.hpp"
 #include "UI/Widgets/PseudoCodeViewer.hpp"
 #include <any>
-#include <string>
 #include <vector>
 
 namespace UI::Animations { class AnimStepBuilder; struct HeapSnapshot; }

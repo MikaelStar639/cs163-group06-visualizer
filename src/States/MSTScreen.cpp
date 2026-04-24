@@ -2,7 +2,7 @@
 #include <iostream>
 
 MSTScreen::MSTScreen(AppContext& context)
-    : DSAScreenBase(context, false),   // MST là graph không hướng
+    : DSAScreenBase(context, false),   
       uiMenu(context),
       codeViewer(context.font),
       controller(context, myGraph, model, &codeViewer),
@@ -44,7 +44,6 @@ void MSTScreen::handleEvent(const sf::Event& event) {
 
         handleMenuAction();
 
-        // KHÔNG clear input nếu đang ở Create -> Manual
         bool shouldClearInputs = true;
         if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::MSTMenu::Action::Create) &&
             uiMenu.getDropdownSelection() == 2) {
@@ -149,7 +148,6 @@ void MSTScreen::update(float dt) {
         codeViewer.hide();
     }
 
-    // Preview realtime cho Create -> Manual
     updateManualPreview();
 
     refreshStatusText();
@@ -203,8 +201,6 @@ void MSTScreen::updateManualPreview() {
     // inputs[1] = graph data multiline
     if (!inputs[1].consumeChanged()) return;
 
-    // Nếu đang chạy animation mà user sửa graph:
-    // dừng ngay, reset visuals, hide pseudocode
     if (!ctx.animManager.empty()) {
         ctx.animManager.clearAll();
         myGraph.resetVisuals();
@@ -216,7 +212,6 @@ void MSTScreen::updateManualPreview() {
     std::string err;
 
     if (!inputs[1].parseAutoGraphData(nodeValues, rawEdges, err)) {
-        // giữ preview cũ nếu parse fail tạm thời
         if (hasPreviewCache) {
             inputs[0].setText(std::to_string(lastPreviewNodeValues.size()));
         } else {
@@ -254,7 +249,6 @@ std::string MSTScreen::buildManualTextFromModel() const {
         result += std::to_string(val) + "\n";
     }
 
-    // edges theo label node, không phải index
     for (const auto& e : edges) {
         if (e.u >= 0 && e.u < static_cast<int>(nodeValues.size()) &&
             e.v >= 0 && e.v < static_cast<int>(nodeValues.size())) {
@@ -264,7 +258,6 @@ std::string MSTScreen::buildManualTextFromModel() const {
         }
     }
 
-    // bỏ newline cuối nếu muốn
     if (!result.empty() && result.back() == '\n') {
         result.pop_back();
     }
@@ -277,8 +270,8 @@ void MSTScreen::syncGraphToManualCache() {
     int manualDropdownIndex = 2; // Random=0, File=1, Manual=2
 
     std::vector<std::string> values;
-    values.push_back(std::to_string(model.getNodeCount())); // ô node count
-    values.push_back(buildManualTextFromModel());           // ô manual multiline
+    values.push_back(std::to_string(model.getNodeCount())); 
+    values.push_back(buildManualTextFromModel());           
 
     uiMenu.setCachedInputsForState(createMenuIndex, manualDropdownIndex, values);
 }

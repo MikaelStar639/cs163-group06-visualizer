@@ -232,7 +232,6 @@ namespace UI::DSA {
     void Graph::resetVisuals(){
         for (auto& node : nodes) {
             node->setFillColor(Config::UI::Colors::NodeFill);
-            // Chỉ reset outline nếu node không bị khóa
             if (lockedNodes.find(node.get()) == lockedNodes.end()) {
                 node->setOutlineColor(Config::UI::Colors::NodeOutline);
             }
@@ -250,7 +249,7 @@ namespace UI::DSA {
     void Graph::handleEvent(const sf::Event& event, sf::Vector2f mousePos) {
         if (!isDraggable) return;
 
-        // BẮT SỰ KIỆN NHẤN CHUỘT
+        //draworder
         if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonPressed>()) {
             if (mouseEvent->button == sf::Mouse::Button::Left) {
                 for (int i = drawOrder.size() - 1; i >= 0; --i) {
@@ -259,7 +258,6 @@ namespace UI::DSA {
                         draggedNode = node;
                         dragOffset = node->getPosition() - mousePos;
                         
-                        // Lưu lại vị trí ban đầu và reset cờ Drag
                         initialClickPos = mousePos; 
                         hasDragged = false;         
                         
@@ -271,15 +269,13 @@ namespace UI::DSA {
             }
         }
 
-        // BẮT SỰ KIỆN NHẢ CHUỘT
+        //Unlock and lock nodes
         if (const auto* mouseEvent = event.getIf<sf::Event::MouseButtonReleased>()) {
             if (mouseEvent->button == sf::Mouse::Button::Left) {
                 if (draggedNode && !hasDragged) {
                     if (lockedNodes.find(draggedNode) != lockedNodes.end()) {
-                        // Mở khóa (Xóa màu đỏ ở đây đi)
                         lockedNodes.erase(draggedNode); 
                     } else {
-                        // Khóa lại (Xóa màu đỏ ở đây đi)
                         lockedNodes.insert(draggedNode); 
                         velocities[draggedNode] = {0.f, 0.f};
                     }
@@ -293,14 +289,14 @@ namespace UI::DSA {
         // ONLY run physics/interactions when allowed AND not currently animating
         // This prevents physics springs from fighting layout animations (which causes 'bunching')
         if (isDraggable && !isAnimating()) {
-            // CÁC HẰNG SỐ VẬT LÝ
+            // Some physics factors
             float safeDistance = 140.f;  
             float accelRate = 8.0f;      
             float friction = 0.85f;      
             float springLength = 250.f;   
             float springTension = 0.1f;  
 
-            // 1. Tính LỰC ĐẨY
+            // Some formula for physics lol
             std::unordered_map<Node*, sf::Vector2f> forces;
             for (auto& node1 : nodes) {
                 Node* n1 = node1.get();
@@ -318,7 +314,7 @@ namespace UI::DSA {
                 }
             }
 
-            // 2. Tính LỰC HÚT
+            // Same
             for (const auto& edge : edges) {
                 if (!edge) continue;
                 Node* u = edge->getSource();
@@ -336,7 +332,7 @@ namespace UI::DSA {
                 }
             }
 
-            // 3. TÌM NODE ĐANG HOVER
+            // Hovered node
             Node* hoveredNode = nullptr;
             if (draggedNode == nullptr) {
                 for (int i = drawOrder.size() - 1; i >= 0; --i) {
@@ -347,14 +343,13 @@ namespace UI::DSA {
                 }
             }
 
-            // 4. ÁP DỤNG VẬT LÝ & KIỂM SOÁT GIAO DIỆN
+            // Physics & physics
             for (auto& nodePtr : nodes) {
                 Node* n = nodePtr.get();
                 
                 n->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS);
                 n->setOutlineColor(Config::UI::Colors::NodeOutline);
 
-                // TRẠNG THÁI KÉO
                 if (n == draggedNode) {
                     sf::Vector2f deltaMouse = mouseWorldPos - initialClickPos;
                     if (std::sqrt(deltaMouse.x * deltaMouse.x + deltaMouse.y * deltaMouse.y) > 3.0f) {
@@ -364,12 +359,10 @@ namespace UI::DSA {
                     n->setPosition(mouseWorldPos + dragOffset);
                     n->onHover();
                 } 
-                // TRẠNG THÁI KHÓA
                 else if (lockedNodes.find(n) != lockedNodes.end()) {
                     velocities[n] = {0.f, 0.f}; 
                     n->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS * 2.5f); 
                 }
-                // TRẠNG THÁI VẬT LÝ BÌNH THƯỜNG
                 else {
                     velocities[n] += forces[n];                       
                     n->setPosition(n->getPosition() + velocities[n]); 
@@ -379,12 +372,12 @@ namespace UI::DSA {
                     if (std::abs(velocities[n].y) < 0.1f) velocities[n].y = 0.f;
                 }
 
-                // TRẠNG THÁI HOVER
                 if (n == hoveredNode) {
                     n->onHover(); 
                 }
             }
         } else{
+            //if not draggable, we still draw the outline for the hovered nodes
             Node* hoveredNode = nullptr;
             if (draggedNode == nullptr) {
                 for (int i = drawOrder.size() - 1; i >= 0; --i) {
@@ -404,8 +397,6 @@ namespace UI::DSA {
             }
         }
 
-        // 5. LUÔN CẬP NHẬT CẠNH (EDGES)
-        // Dù đang chạy thuật toán (không drag) hay chạy vật lý, cạnh vẫn phải luôn bám sát theo node
         for (auto& edge : edges) {
             edge->update();
         }
@@ -493,13 +484,15 @@ namespace UI::DSA {
 
     void Graph::setNodeLocked(Node* node, bool locked) {
         if (!node) return;
+        
+        //locked nodes outline
         if (locked) {
             lockedNodes.insert(node);
             velocities[node] = {0.f, 0.f};
-            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS * 2.5f); // Làm viền dày lên
+            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS * 2.5f); 
         } else {
             lockedNodes.erase(node);
-            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS); // Trả về bình thường
+            node->setOutlineThickness(Config::UI::NODE_OUTLINE_THICKNESS); 
         }
     }
 

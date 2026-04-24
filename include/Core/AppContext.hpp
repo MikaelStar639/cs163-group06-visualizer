@@ -1,5 +1,5 @@
 #pragma once
-#include <SFML/Audio.hpp>
+
 #include <SFML/Graphics.hpp>
 #include "UI/Animations/Core/AnimationManager.hpp"
 #include "UI/Animations/StepByStep/StepNavigator.hpp"
