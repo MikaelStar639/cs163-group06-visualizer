@@ -1,11 +1,5 @@
 #include "Core/App.hpp"
-#include "UI/Widgets/Dropdown.hpp"
-#include "States/MenuScreen.hpp"
-#include "States/LinkedListScreen.hpp"
-#include "States/HeapScreen.hpp"
-
-#include "States/MSTScreen.hpp"
-#include "States/TrieScreen.hpp"
+#include "States/Screen"
 
 
 App::App(): font("assets/fonts/SpaceMono.ttf"),

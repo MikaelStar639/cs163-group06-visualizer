@@ -1,5 +1,9 @@
 #pragma once
 
-#include "States/MenuScreen.hpp"
 #include "States/Screen.hpp"
+#include "States/MenuScreen.hpp"
+#include "States/LinkedListScreen.hpp"
+#include "States/HeapScreen.hpp"
+#include "States/TrieScreen.hpp"
+#include "States/MSTScreen.hpp"
 
