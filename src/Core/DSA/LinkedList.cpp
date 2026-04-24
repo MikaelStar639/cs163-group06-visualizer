@@ -109,7 +109,7 @@ namespace Core::DSA {
             currentPos++;
         }
 
-        if (curr == -1) return false; // Vượt quá chiều dài
+        if (curr == -1) return false;
 
         pool[prev].nextIndex = pool[curr].nextIndex;
         freeNode(curr);

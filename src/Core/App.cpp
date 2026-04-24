@@ -67,11 +67,11 @@ void App::changeScreen(ScreenState nextState) {
         case ScreenState::Heap:
             currentScreen = std::make_unique<HeapScreen>(context);
             break;
-        case ScreenState::MST:
-            currentScreen = std::make_unique<MSTScreen>(context);
-            break;
         case ScreenState::Trie:
             currentScreen = std::make_unique<TrieScreen>(context);
+            break;
+        case ScreenState::MST:
+            currentScreen = std::make_unique<MSTScreen>(context);
             break;
 
         case ScreenState::Exit:

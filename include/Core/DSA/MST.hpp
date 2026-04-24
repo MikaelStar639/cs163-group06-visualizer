@@ -36,7 +36,7 @@ namespace Core::DSA {
         std::vector<int> nodeValues;
         std::vector<WeightedEdge> edges;
 
-        // DSU cho Kruskal
+        // DSU for Kruskal
         struct DSU {
             std::vector<int> parent, rank;
             explicit DSU(int n = 0);

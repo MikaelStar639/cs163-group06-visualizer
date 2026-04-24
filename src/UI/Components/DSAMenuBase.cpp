@@ -141,7 +141,7 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
             if (ctx.isStepByStep) {
                 if (ctx.stepNavigator.hasNext()) {
                     ctx.stepNavigator.playNext();
-                    // Đảm bảo chạy ngay hiệu ứng của bước đó
+                    // Ensure to run right after the following anim
                     ctx.animManager.setPaused(false);
                 }
             }
@@ -187,15 +187,12 @@ void DSAMenuBase::handleEvent(const sf::Event& event) {
         ctx.stepNavigator.setStepMode(ctx.isStepByStep);
 
         if (ctx.isStepByStep) {
-            // Hoàn tất hiệu ứng đang chạy (nếu có) để trạng thái đứng im được sạch sẽ
             if (!ctx.animManager.empty()) {
                 ctx.animManager.skipToEnd();
             }
-            // Mặc định dừng lại để người dùng tự điều khiển
             ctx.animManager.setPaused(true);
             ctx.stepNavigator.setAutoPlay(false);
         } else {
-            // Mặc định chạy tiếp luôn cho đỡ ngợp
             ctx.animManager.setPaused(false);
         }
     }
@@ -474,7 +471,6 @@ void DSAMenuBase::setCachedInputsForState(int menuIndex, int dropdownIndex, cons
     std::string key = std::to_string(menuIndex) + ":" + std::to_string(dropdownIndex);
     inputTextCache[key] = values;
 
-    // nếu đang đứng đúng submenu đó thì update luôn input đang hiển thị
     if (activeMenuIndex == menuIndex && lastDropdownIndex == dropdownIndex) {
         for (size_t i = 0; i < activeInputs.size() && i < values.size(); ++i) {
             activeInputs[i].setText(values[i]);

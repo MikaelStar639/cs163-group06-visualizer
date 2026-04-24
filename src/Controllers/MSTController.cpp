@@ -102,7 +102,7 @@ namespace Controllers {
                     ensureNode(nums[0]);
                 }
                 else if (nums.size() == 2) {
-                    // dòng đang gõ dở / thiếu weight -> bỏ qua
+                    // lack of weight -> skip
                     continue;
                 }
                 else if (nums.size() == 3) {
@@ -263,9 +263,10 @@ namespace Controllers {
     }
 
     void MSTController::rebuildGraphFromModel() {
-        // 1. Lưu vị trí node cũ (để nếu user đang kéo thả thì không bị reset)
+        // Store old positions
         std::unordered_map<std::string, sf::Vector2f> oldPositions;
-        std::unordered_set<std::string> oldLockedLabels;
+        // Stores nodes that are fixed
+        std::unordered_set<std::string> oldLockedLabels; 
         for (const auto& nodePtr : graph.getNodes()) {
             if (nodePtr) {
                 std::string label = nodePtr->getLabel();
@@ -283,7 +284,7 @@ namespace Controllers {
         int n = static_cast<int>(nodeValues.size());
         if (n <= 0) return;
 
-        // 2. Khởi tạo vị trí nháp: Xếp vòng tròn để lò xo có đà bung ra
+        // Temporary layout (circle)
         std::vector<sf::Vector2f> positions(n);
         for (int i = 0; i < n; ++i) {
             std::string label = std::to_string(nodeValues[i]);
@@ -296,11 +297,11 @@ namespace Controllers {
             }
         }
 
-        // 3. Chạy thuật toán Lực "Ngầm" (Không Animation)
+        // Just some physics idk lol 
         if (n > 1) {
             const int ITERATIONS = 150;
-            const float L = 140.f;              // Cạnh dài hơn một chút
-            const float K_repel = L * L * 1.5f; // Lực đẩy mạnh hơn chống dính
+            const float L = 140.f;              
+            const float K_repel = L * L * 1.5f; 
             const float K_attract = 1.0f / L;
             float temperature = 100.f;
 
@@ -309,7 +310,7 @@ namespace Controllers {
             for (int step = 0; step < ITERATIONS; ++step) {
                 std::vector<sf::Vector2f> forces(n, {0.f, 0.f});
 
-                // Lực Đẩy (Repulsion)
+                // Repulsion or something like that 
                 for (int i = 0; i < n; ++i) {
                     for (int j = i + 1; j < n; ++j) {
                         sf::Vector2f delta = positions[i] - positions[j];
@@ -322,7 +323,7 @@ namespace Controllers {
                     }
                 }
 
-                // Lực Hút theo Cạnh (Attraction)
+                // And some little attraction
                 for (const auto& e : edges) {
                     sf::Vector2f delta = positions[e.v] - positions[e.u];
                     float dist = std::sqrt(delta.x * delta.x + delta.y * delta.y);
@@ -333,13 +334,13 @@ namespace Controllers {
                     forces[e.v] -= f;
                 }
 
-                // Cập nhật tọa độ
+                // Coordinate update
                 for (int i = 0; i < n; ++i) {
                     float fMag = std::sqrt(forces[i].x * forces[i].x + forces[i].y * forces[i].y);
                     if (fMag > 0) {
                         positions[i] += (forces[i] / fMag) * std::min(fMag, temperature);
                     }
-                    // Giới hạn để node không rớt ra ngoài cửa sổ
+                    // Limit
                     positions[i].x = std::max(centerX - 450.f, std::min(centerX + 450.f, positions[i].x));
                     positions[i].y = std::max(centerY - 280.f, std::min(centerY + 280.f, positions[i].y));
                 }
@@ -347,7 +348,6 @@ namespace Controllers {
             }
         }
 
-        // 4. Lắp ráp Node và Edge đã chuẩn bị sẵn vào Graph
         for (int i = 0; i < n; ++i) {
             std::string label = std::to_string(nodeValues[i]);
             graph.addNode(label, positions[i]);
@@ -360,7 +360,6 @@ namespace Controllers {
             graph.addEdge(e.u, e.v, std::to_string(e.w), false);
         }
 
-        // Ép đồ thị tự thu nhỏ lại 66% để nhìn thoáng hơn
         for (const auto& nodePtr : graph.getNodes()) {
             if (nodePtr) nodePtr->setScale(2.f / 3.f);
         }
@@ -391,7 +390,7 @@ namespace Controllers {
         std::vector<std::tuple<int,int,int>> rawEdges;
         std::set<std::pair<int,int>> used;
 
-        // tạo cây khung ngẫu nhiên trước để bảo đảm connected
+        // Create a random mst to ensure connected
         for (int v = 1; v < nodeCount; ++v) {
             int u = std::rand() % v;
             int w = 1 + std::rand() % 99;
@@ -399,7 +398,7 @@ namespace Controllers {
             used.insert(normPair(u, v));
         }
 
-        // thêm cạnh phụ
+        // More edges
         while (static_cast<int>(rawEdges.size()) < edgeCount) {
             int u = std::rand() % nodeCount;
             int v = std::rand() % nodeCount;

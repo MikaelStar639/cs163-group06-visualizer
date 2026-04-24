@@ -22,14 +22,13 @@ void TrieScreen::handleEvent(const sf::Event& event) {
 
     if (uiMenu.consumeGoClicked()) {
         if (myGraph.isAnimating()) {
-            std::cout << "[WARNING] Vui lòng đợi Animation hiện tại chạy xong!\n";
+            std::cout << "[WARNING] Wait!\n";
             return;
         }
 
         handleMenuAction();
         uiMenu.clearInputs(); 
 
-        // Kiểm tra Clean theo chuẩn Action mới
         if (uiMenu.getActiveMenuIndex() == static_cast<int>(UI::Widgets::TrieMenu::Action::Clean)) {
             uiMenu.resetMenu();
         }
@@ -45,11 +44,9 @@ void TrieScreen::handleEvent(const sf::Event& event) {
 void TrieScreen::handleMenuAction() {
     using namespace UI::Widgets;
     
-    // Lấy index thay vì ActiveMenu cục bộ
     int menuIndex = uiMenu.getActiveMenuIndex();
     if (menuIndex == -1) return;
 
-    // Ép kiểu về enum riêng của TrieMenu
     TrieMenu::Action menu = static_cast<TrieMenu::Action>(menuIndex);
     
     int sel = uiMenu.getDropdownSelection();
