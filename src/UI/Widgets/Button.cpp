@@ -129,13 +129,22 @@ void Button::draw() {
     ctx.window.draw(shape);
     
     bool shouldDrawPressed = isPressed || (isAnimated && animationClock.getElapsedTime().asSeconds() < 0.1f);
+    sf::Vector2f offset = shouldDrawPressed ? sf::Vector2f(0.f, 2.f) : sf::Vector2f(0.f, 0.f);
 
-    if (shouldDrawPressed) {
-        text.move({0.f, 2.f});
-        ctx.window.draw(text);
-        text.move({0.f, -2.f}); 
+    if (hasIcon && iconDrawFunc) {
+        sf::Vector2f shapePos = shape.getPosition();
+        sf::Vector2f shapeSize = shape.getSize();
+        sf::Vector2f center(shapePos.x + shapeSize.x / 2.f, shapePos.y + shapeSize.y / 2.f);
+        
+        iconDrawFunc(ctx.window, sf::RenderStates::Default, text.getFillColor(), center + offset);
     } else {
-        ctx.window.draw(text);
+        if (shouldDrawPressed) {
+            text.move({0.f, 2.f});
+            ctx.window.draw(text);
+            text.move({0.f, -2.f}); 
+        } else {
+            ctx.window.draw(text);
+        }
     }
 }
 }

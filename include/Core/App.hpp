@@ -10,6 +10,7 @@ class App{
 private:
     sf::RenderWindow window;
     sf::Font font;
+    sf::Image icon;
 
     //used for reference
     AppContext context;

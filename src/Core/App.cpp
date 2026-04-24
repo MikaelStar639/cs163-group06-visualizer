@@ -3,6 +3,7 @@
 
 
 App::App(): font("assets/fonts/SpaceMono.ttf"),
+            icon("assets/images/icon.png"),
             context{window, font, ScreenState::None} 
 {
     context.stepNavigator.setAnimationManager(&context.animManager);
@@ -15,6 +16,7 @@ App::App(): font("assets/fonts/SpaceMono.ttf"),
                   sf::State::Windowed, 
                   settings);
 
+    window.setIcon(icon);
     window.setFramerateLimit(60);
     currentScreen = std::make_unique<MenuScreen>(context);
 };

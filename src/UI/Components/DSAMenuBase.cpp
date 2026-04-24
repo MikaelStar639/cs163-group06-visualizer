@@ -1,4 +1,10 @@
 #include "UI/Components/DSAMenuBase.hpp"
+#include "UI/Shapes/PrevIcon.hpp"
+#include "UI/Shapes/PlayIcon.hpp"
+#include "UI/Shapes/PauseIcon.hpp"
+#include "UI/Shapes/NextIcon.hpp"
+#include "UI/Shapes/FastForwardIcon.hpp"
+#include "UI/Shapes/StopIcon.hpp"
 #include <iostream>
 
 namespace UI::Widgets {
@@ -7,11 +13,11 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     : ctx(context),
       btnBack(context, " Back ", {20.f, 20.f}, {120.f, 50.f}),
       panelBg({300.f, 150.f}, Config::UI::Radius::Xl),
-      btnPrev(context, " |< ", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
-      btnPlay(context, " > ", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
-      btnNext(context, " >| ", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
-      btnSkipToEnd(context, " >>| ", {910.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
-      btnCancel(context, " X ", {980.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnPrev     (context, "", {700.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnPlay     (context, "", {770.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnNext     (context, "", {840.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnSkipToEnd(context, "", {910.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
+      btnCancel   (context, "", {980.f, context.window.getSize().y - 95.f}, {60.f, 40.f}),
       btnToggleStepMode(context, "Step: ON", {480.f, context.window.getSize().y - 95.f}, {160.f, 40.f}),
       title(context.font, titleText, 24),
       speedSlider(context, 
@@ -30,11 +36,18 @@ DSAMenuBase::DSAMenuBase(AppContext& context, const std::string& titleText)
     };
 
     applyBtnColors(btnBack); 
-    applyBtnColors(btnPrev); applyBtnColors(btnPlay); applyBtnColors(btnNext);
-    applyBtnColors(btnSkipToEnd); applyBtnColors(btnCancel);
+    applyBtnColors(btnPrev); 
+    applyBtnColors(btnPlay); 
+    applyBtnColors(btnNext);
+    applyBtnColors(btnSkipToEnd); 
+    applyBtnColors(btnCancel);
     applyBtnColors(btnToggleStepMode);
 
-    
+    btnPrev     .setIcon(UI::Shapes::PrevIcon(10.f, 4.f, 4.f));
+    btnNext     .setIcon(UI::Shapes::NextIcon(10.f, 4.f, 4.f));
+    btnSkipToEnd.setIcon(UI::Shapes::FastForwardIcon(10.f));
+    btnCancel   .setIcon(UI::Shapes::StopIcon(16.f));
+
     sf::Color panelColor(122, 160, 142);
     panelBg.setFillColor(panelColor);
     panelBg.setOutlineThickness(2.f);
@@ -269,12 +282,12 @@ void DSAMenuBase::update(sf::Vector2i mousePos, float dt) {
         
         // Dynamic Play/Pause label
         if (ctx.isStepByStep) {
-            btnPlay.setLabel(" > ");
+            btnPlay.setIcon(UI::Shapes::PlayIcon(8.f));
         } else {
             if (ctx.animManager.isPaused()) {
-                btnPlay.setLabel(" > ");
+                btnPlay.setIcon(UI::Shapes::PlayIcon(8.f));
             } else {
-                btnPlay.setLabel(" || ");
+                btnPlay.setIcon(UI::Shapes::PauseIcon(5.f, 16.f, 5.f));
             }
         }
 

@@ -3,6 +3,7 @@
 #include <Core/AppContext.hpp>
 #include <Core/Constants.hpp>
 #include <UI/Shapes/RoundedRectangleShape.hpp>
+#include <functional>
 #include <string>
 
 namespace UI::Widgets{
@@ -23,6 +24,9 @@ private:
     bool canPressed = false;
     bool isPressed  = false;
 
+    std::function<void(sf::RenderTarget&, sf::RenderStates, sf::Color, sf::Vector2f)> iconDrawFunc;
+    bool hasIcon = false;
+
 public:
     Button(AppContext& context, const std::string& label, 
            sf::Vector2f pos, 
@@ -41,6 +45,20 @@ public:
     bool isClicked(const sf::Event& event);
     void draw();
     void animateClick();
+
+    template <typename T>
+    void setIcon(const T& iconShape) {
+        T iconCopy = iconShape; 
+        hasIcon = true;
+        
+        iconDrawFunc = [iconCopy](sf::RenderTarget& target, sf::RenderStates states, sf::Color color, sf::Vector2f pos) mutable {
+            iconCopy.setFillColor(color);  
+            iconCopy.setPosition(pos);     
+            target.draw(iconCopy, states); 
+        };
+        
+        text.setString(""); 
+    }
 
 private:
     void centerText();
