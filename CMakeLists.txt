@@ -4,9 +4,11 @@ project(main LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(SFML_STATIC_LIBRARIES TRUE)
+
 # Find SFML 
 set(SFML_DIR "${CMAKE_SOURCE_DIR}/external/SFML/lib/cmake/SFML")
-find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System Audio)
+find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System)
 
 # Include headers
 include_directories(include)
@@ -23,7 +25,6 @@ target_link_libraries(${PROJECT_NAME}
         SFML::Graphics
         SFML::Window
         SFML::System
-        SFML::Audio
 )
 
 add_custom_target(copy_assets ALL
@@ -34,10 +35,3 @@ add_custom_target(copy_assets ALL
 
 
 add_dependencies(${PROJECT_NAME} copy_assets)
-
-# Copy SFML DLLs
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/external/SFML/bin"
-        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-)
