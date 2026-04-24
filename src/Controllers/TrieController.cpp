@@ -166,7 +166,16 @@ namespace Controllers {
         std::string dirPath = "user_data";
         std::string filePath = dirPath + "/TrieData.txt";
         if (!std::filesystem::exists(dirPath)) std::filesystem::create_directories(dirPath);
-        std::string header = "# --- TRIE VISUALIZER DATA ---\n";
+        std::string header = "# --- TRIE VISUALIZER DATA ---\n"
+                             "# DETAILED INSTRUCTIONS:\n"
+                             "# 1. Type the number of words 'n' first.\n"
+                             "# 2. Then type the 'n' words separated by spaces or newlines.\n"
+                             "#    (Max n is 30. Words should only contain letters).\n"
+                             "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                             "# 4. When you are done:\n"
+                             "#    - Save this file by pressing Ctrl + S\n"
+                             "#    - Go back to the Application and click the 'Go' button.\n"
+                             "# -----------------------------------\n";
         std::ifstream inFile(filePath);
         std::string userContent = "";
         if (inFile.is_open()) {
@@ -187,22 +196,67 @@ namespace Controllers {
         std::string dirPath = "user_data";
         std::string filePath = dirPath + "/TrieData.txt";
         if (!std::filesystem::exists(dirPath)) { handleEditDataFile(); return; }
+        
         std::ifstream file(filePath);
         std::string line;
         std::vector<std::string> rawTokens;
-        while (file >> line) {
-            if (line[0] == '#') continue;
-            rawTokens.push_back(line);
+        std::string originalDataLines = "";
+
+        while (std::getline(file, line)) {
+            size_t startPos = line.find_first_not_of(" \t\r\n");
+            if (startPos != std::string::npos && line[startPos] == '#') continue;
+            if (startPos != std::string::npos) originalDataLines += line + "\n";
+
+            std::stringstream ss(line);
+            std::string token;
+            while (ss >> token) rawTokens.push_back(token);
         }
         file.close();
-        if (rawTokens.empty()) return;
-        handleClearAll(); 
-        try {
-            int n = std::stoi(rawTokens[0]);
-            for (int i = 1; i <= n && i < (int)rawTokens.size(); ++i) {
-                model.insert(sanitize(rawTokens[i]));
+
+        std::string errorMsg = "";
+        int n = -1;
+
+        if (rawTokens.empty()) {
+            errorMsg = "# [WARNING] File is empty. Please enter 'n' followed by words.\n";
+        } else {
+            try {
+                n = std::stoi(rawTokens[0]);
+                if (n < 0 || n > 30) {
+                    errorMsg = "# [WARNING] Size 'n' = " + std::to_string(n) + " is invalid (Max 30).\n";
+                } else if ((int)rawTokens.size() - 1 < n) {
+                    errorMsg = "# [WARNING] Expected " + std::to_string(n) + " words, found " + std::to_string(rawTokens.size() - 1) + ".\n";
+                }
+            } catch (...) {
+                errorMsg = "# [WARNING] First value must be an integer 'n'.\n";
             }
-        } catch (...) {}
+        }
+
+        if (!errorMsg.empty()) {
+            std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
+            std::string header = "# --- TRIE VISUALIZER DATA ---\n"
+                                 "# DETAILED INSTRUCTIONS:\n"
+                                 "# 1. Type the number of words 'n' first.\n"
+                                 "# 2. Then type the 'n' words separated by spaces or newlines.\n"
+                                 "#    (Max n is 30. Words should only contain letters).\n"
+                                 "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                                 "# 4. When you are done:\n"
+                                 "#    - Save this file by pressing Ctrl + S\n"
+                                 "#    - Go back to the Application and click the 'Go' button.\n"
+                                 "# -----------------------------------\n";
+            std::string contentWithWarning = header + errorMsg + originalDataLines;
+            std::ofstream outFileErr(filePath);
+            if (outFileErr.is_open()) {
+                outFileErr << contentWithWarning;
+                outFileErr.close();
+            }
+            Core::Platform::openTextEditor(filePath);
+            return;
+        }
+
+        handleClearAll(); 
+        for (int i = 1; i <= n && i < (int)rawTokens.size(); ++i) {
+            model.insert(sanitize(rawTokens[i]));
+        }
         syncGraph(); triggerLayout(Config::Animation::DURATION_LAYOUT);  
         ctx.animManager.setPaused(false);
     }

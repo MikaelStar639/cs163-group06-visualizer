@@ -119,12 +119,16 @@ namespace Controllers {
         std::ifstream file(filePath);
         std::string line;
         std::vector<std::string> rawTokens;
+        std::string originalDataLines = "";
 
         // Smart Parser
         while (std::getline(file, line)) {
             size_t startPos = line.find_first_not_of(" \t\r\n");
             if (startPos != std::string::npos && line[startPos] == '#') {
                 continue; // Ignore comment/instruction lines
+            }
+            if (startPos != std::string::npos) {
+                originalDataLines += line + "\n";
             }
 
             std::stringstream ss(line);
@@ -203,11 +207,7 @@ namespace Controllers {
                 }
             }
             
-            for (size_t i = 0; i < rawTokens.size(); ++i) {
-                contentWithWarning += rawTokens[i];
-                if (i < rawTokens.size() - 1) contentWithWarning += " ";
-            }
-            contentWithWarning += "\n";
+            contentWithWarning += originalDataLines;
 
             std::ofstream outFileErr(filePath);
             if (outFileErr.is_open()) {
