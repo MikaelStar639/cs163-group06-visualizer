@@ -151,8 +151,10 @@ namespace Controllers {
     }
 
     void MSTController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        ctx.animManager.clearAll(); // Stop any current animation
+        ctx.stepNavigator.forceFinishAll(); // Instantly finish previous operation before starting new one
+        ctx.animManager.clearAll(); // Ensure queue is clean
         ctx.stepNavigator.clear();
+        graph.resetVisuals(); // Ensure no leftover highlights
         auto steps = b.buildSteps();
         for (auto& step : steps) {
             ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
@@ -366,6 +368,7 @@ namespace Controllers {
         auto seq = std::make_unique<UI::Animations::SequenceAnimation>();
         seq->add(std::make_unique<UI::Animations::WaitAnimation>(0.20f));
         ctx.animManager.addAnimation(std::move(seq));
+        ctx.animManager.setPaused(false);
     }
 
     void MSTController::handleCreateRandom(int nodeCount, int edgeCount) {
@@ -430,12 +433,14 @@ namespace Controllers {
 
         std::string header =
             "# --- MST VISUALIZER DATA ---\n"
-            "# FORMAT IS THE SAME AS MANUAL MODE:\n"
-            "# - A line with 1 integer: create a node label\n"
-            "# - A line with 3 integers: u v w -> create/update an edge\n"
-            "#   If node label u or v does not exist yet, it will be created automatically.\n"
-            "# - A line with 2 integers is considered incomplete and will be ignored.\n"
-            "# - Duplicate edges update the weight.\n"
+            "# DETAILED INSTRUCTIONS:\n"
+            "# 1. To create an isolated node, type 1 integer on a line (e.g. '10').\n"
+            "# 2. To create an edge, type 3 integers: 'u v weight' (e.g. '10 20 7').\n"
+            "#    (If node u or v doesn't exist, it will be created automatically).\n"
+            "# 3. A line with 2 integers is considered incomplete and ignored.\n"
+            "# 4. When you are done:\n"
+            "#    - Save this file by pressing Ctrl + S\n"
+            "#    - Go back to the Application and click the 'Go' button.\n"
             "#\n"
             "# Example:\n"
             "#   10\n"
@@ -443,8 +448,7 @@ namespace Controllers {
             "#   10 20 7\n"
             "#   30 20 4\n"
             "#\n"
-            "# This creates nodes: 10, 20, 30\n"
-            "# and edges: (10,20,7), (30,20,4)\n"
+            "# This creates nodes: 10, 20, 30 and edges: (10,20,7), (30,20,4)\n"
             "# -----------------------------------\n";
 
         std::ifstream inFile(filePath);
@@ -487,9 +491,22 @@ namespace Controllers {
             std::ofstream outFile(filePath);
             if (outFile.is_open()) {
                 outFile << "# --- MST VISUALIZER DATA ---\n"
-                        << "# Same format as manual mode:\n"
-                        << "# x       -> node label\n"
-                        << "# u v w   -> weighted edge between labels u and v\n"
+                        << "# DETAILED INSTRUCTIONS:\n"
+                        << "# 1. To create an isolated node, type 1 integer on a line (e.g. '10').\n"
+                        << "# 2. To create an edge, type 3 integers: 'u v weight' (e.g. '10 20 7').\n"
+                        << "#    (If node u or v doesn't exist, it will be created automatically).\n"
+                        << "# 3. A line with 2 integers is considered incomplete and ignored.\n"
+                        << "# 4. When you are done:\n"
+                        << "#    - Save this file by pressing Ctrl + S\n"
+                        << "#    - Go back to the Application and click the 'Go' button.\n"
+                        << "#\n"
+                        << "# Example:\n"
+                        << "#   10\n"
+                        << "#   20\n"
+                        << "#   10 20 7\n"
+                        << "#   30 20 4\n"
+                        << "#\n"
+                        << "# This creates nodes: 10, 20, 30 and edges: (10,20,7), (30,20,4)\n"
                         << "# -----------------------------------\n";
                 outFile.close();
             }
@@ -499,7 +516,15 @@ namespace Controllers {
 
         std::vector<std::string> lines;
         std::string line;
+        std::string originalDataLines = "";
         while (std::getline(file, line)) {
+            size_t startPos = line.find_first_not_of(" \t\r\n");
+            if (startPos != std::string::npos && line[startPos] == '#') {
+                continue;
+            }
+            if (startPos != std::string::npos) {
+                originalDataLines += line + "\n";
+            }
             lines.push_back(line);
         }
         file.close();
@@ -507,14 +532,42 @@ namespace Controllers {
         std::vector<int> nodeValues;
         std::vector<std::tuple<int,int,int>> rawEdges;
         std::string err;
+        std::string errorMsg = "";
 
         if (!parseAutoGraphLines(lines, nodeValues, rawEdges, err)) {
-            std::cout << "[UI LOG] MST file parse failed: " << err << '\n';
-            return;
+            errorMsg = "# [WARNING] " + err + "\n";
+        } else if (nodeValues.empty()) {
+            errorMsg = "# [WARNING] File has no valid nodes.\n";
         }
 
-        if (nodeValues.empty()) {
-            std::cout << "[UI LOG] MST file has no valid nodes.\n";
+        if (!errorMsg.empty()) {
+            std::cout << "[UI LOG] MST file parse failed: " << err << '\n';
+            std::string header =
+                "# --- MST VISUALIZER DATA ---\n"
+                "# DETAILED INSTRUCTIONS:\n"
+                "# 1. To create an isolated node, type 1 integer on a line (e.g. '10').\n"
+                "# 2. To create an edge, type 3 integers: 'u v weight' (e.g. '10 20 7').\n"
+                "#    (If node u or v doesn't exist, it will be created automatically).\n"
+                "# 3. A line with 2 integers is considered incomplete and ignored.\n"
+                "# 4. When you are done:\n"
+                "#    - Save this file by pressing Ctrl + S\n"
+                "#    - Go back to the Application and click the 'Go' button.\n"
+                "#\n"
+                "# Example:\n"
+                "#   10\n"
+                "#   20\n"
+                "#   10 20 7\n"
+                "#   30 20 4\n"
+                "#\n"
+                "# This creates nodes: 10, 20, 30 and edges: (10,20,7), (30,20,4)\n"
+                "# -----------------------------------\n";
+            std::string contentWithWarning = header + errorMsg + originalDataLines;
+            std::ofstream outFileErr(filePath);
+            if (outFileErr.is_open()) {
+                outFileErr << contentWithWarning;
+                outFileErr.close();
+            }
+            Core::Platform::openTextEditor(filePath);
             return;
         }
 
@@ -609,8 +662,7 @@ namespace Controllers {
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    if (nu) b.nodeHighlight(nu, 0.16f);
-                    if (nv) b.nodeHighlight(nv, 0.16f);
+                    b.nodesHighlight({nu, nv}, 0.16f);
                 }
 
                 b.highlight("check_cycle")
@@ -640,8 +692,7 @@ namespace Controllers {
                 auto* nu = graph.getNode(st.u);
                 auto* nv = graph.getNode(st.v);
                 if (nu || nv) {
-                    if (nu) b.nodeUnhighlight(nu, 0.10f);
-                    if (nv) b.nodeUnhighlight(nv, 0.10f);
+                    b.nodesUnhighlight({nu, nv}, 0.10f);
                 }
                 b.nextStep();
             }

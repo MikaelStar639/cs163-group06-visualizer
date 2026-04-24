@@ -50,9 +50,11 @@ namespace Controllers {
     }
 
     void HeapController::submitAnimation(UI::Animations::AnimStepBuilder& b) {
-        ctx.animManager.clearAll();
+        ctx.stepNavigator.forceFinishAll(); // Instantly finish previous operation before starting new one
+        ctx.animManager.clearAll(); // Ensure queue is clean
         ctx.stepNavigator.clear();
         masterNodePool.clear(); // Clear cemetery for new algorithm
+        graph.resetVisuals();   // Ensure no leftover highlights from interrupted operations
         auto steps = b.buildSteps();
         for (auto& step : steps) {
             ctx.stepNavigator.addStep(std::shared_ptr<UI::Animations::AnimationBase>(std::move(step)));
@@ -145,6 +147,7 @@ namespace Controllers {
         
         // Smoothly transition all nodes from the center to their heap positions
         triggerLayout(0.6f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handlePreHeapifiedRandom(int size) {
@@ -179,6 +182,7 @@ namespace Controllers {
         
         // Use a slightly longer layout time to make the "pop-in" feel intentional
         triggerLayout(0.8f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handleCreateFromFile() {
@@ -212,10 +216,14 @@ namespace Controllers {
         // Smart Parser (matches your teammate's logic)
         std::string line;
         std::vector<int> allNumbers;
+        std::string originalDataLines = "";
         while (std::getline(file, line)) {
             size_t startPos = line.find_first_not_of(" \t\r\n");
             if (startPos != std::string::npos && line[startPos] == '#') {
                 continue; 
+            }
+            if (startPos != std::string::npos) {
+                originalDataLines += line + "\n";
             }
 
             std::stringstream ss(line);
@@ -256,8 +264,23 @@ namespace Controllers {
         }
 
         if (!errorMsg.empty()) {
-            // Re-inject warning into file (logic same as LL)
-            // [System Note: Logic for contentWithWarning injection omitted for brevity but identical to your LL code]
+            std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
+            std::string header = "# --- HEAP VISUALIZER DATA ---\n"
+                                 "# DETAILED INSTRUCTIONS:\n"
+                                 "# 1. Type the number of elements 'n' first.\n"
+                                 "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
+                                 "#    (Max n is 100. Values must be between -999 and 999).\n"
+                                 "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                                 "# 4. When you are done:\n"
+                                 "#    - Save this file by pressing Ctrl + S\n"
+                                 "#    - Go back to the Application and click the 'Go' button.\n"
+                                 "# -----------------------------------\n";
+            std::string contentWithWarning = header + errorMsg + originalDataLines;
+            std::ofstream outFileErr(filePath);
+            if (outFileErr.is_open()) {
+                outFileErr << contentWithWarning;
+                outFileErr.close();
+            }
             Core::Platform::openTextEditor(filePath);
             return;
         }
@@ -282,6 +305,7 @@ namespace Controllers {
 
         // Glide everything from {startX, startY} into the correct Binary Tree layout
         triggerLayout(0.6f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handlePreHeapifiedFromFile() {
@@ -312,9 +336,11 @@ namespace Controllers {
         // 2. Parse the numbers
         std::string line;
         std::vector<int> allNumbers;
+        std::string originalDataLines = "";
         while (std::getline(file, line)) {
             size_t startPos = line.find_first_not_of(" \t\r\n");
             if (startPos != std::string::npos && line[startPos] == '#') continue; 
+            if (startPos != std::string::npos) originalDataLines += line + "\n";
 
             std::stringstream ss(line);
             std::string token;
@@ -347,6 +373,23 @@ namespace Controllers {
         }
 
         if (!errorMsg.empty()) {
+            std::cout << "[UI LOG] Data error. Opening Notepad to fix.\n";
+            std::string header = "# --- HEAP VISUALIZER DATA ---\n"
+                                 "# DETAILED INSTRUCTIONS:\n"
+                                 "# 1. Type the number of elements 'n' first.\n"
+                                 "# 2. Then type the 'n' integer values separated by spaces or newlines.\n"
+                                 "#    (Max n is 100. Values must be between -999 and 999).\n"
+                                 "# 3. Do NOT use commas (,) or other punctuation marks.\n"
+                                 "# 4. When you are done:\n"
+                                 "#    - Save this file by pressing Ctrl + S\n"
+                                 "#    - Go back to the Application and click the 'Go' button.\n"
+                                 "# -----------------------------------\n";
+            std::string contentWithWarning = header + errorMsg + originalDataLines;
+            std::ofstream outFileErr(filePath);
+            if (outFileErr.is_open()) {
+                outFileErr << contentWithWarning;
+                outFileErr.close();
+            }
             Core::Platform::openTextEditor(filePath);
             return;
         }
@@ -371,6 +414,7 @@ namespace Controllers {
         // 7. Finalize layout
         syncGraphEdges();
         triggerLayout(0.8f);
+        ctx.animManager.setPaused(false);
     }
 
     void HeapController::handleEditDataFile() {

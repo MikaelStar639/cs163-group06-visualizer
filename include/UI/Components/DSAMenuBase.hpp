@@ -7,10 +7,6 @@
 #include <UI/Widgets/Dropdown.hpp>
 #include <UI/Widgets/Slider.hpp>
 #include <UI/Shapes/RoundedRectangleShape.hpp>
-#include <UI/Shapes/PauseIcon.hpp>
-#include <UI/Shapes/PlayIcon.hpp>
-#include <UI/Shapes/NextIcon.hpp>
-#include <UI/Shapes/PrevIcon.hpp>
 #include <vector>
 #include <string>
 #include <optional>
@@ -32,12 +28,9 @@ namespace UI::Widgets {
         Button btnPrev;
         Button btnPlay;
         Button btnNext;
+        Button btnSkipToEnd;
+        Button btnCancel;
         Button btnToggleStepMode;
-        UI::Shapes::PlayIcon iconPlay;
-        UI::Shapes::PauseIcon iconPause;
-        UI::Shapes::NextIcon iconNext;
-        UI::Shapes::PrevIcon iconPrev;
-
         // Menu State
         int activeMenuIndex = -1;
         int lastDropdownIndex = -1;

@@ -81,13 +81,13 @@ namespace Config {
     }
 
     namespace Animation {
-        inline constexpr float DURATION_QUICK     = 0.18f; 
-        inline constexpr float DURATION_COLOR     = 0.30f; 
-        inline constexpr float DURATION_MOVE      = 0.50f; 
-        inline constexpr float DURATION_LAYOUT    = 0.65f; 
+        inline constexpr float DURATION_QUICK     = 0.25f; 
+        inline constexpr float DURATION_COLOR     = 0.45f; 
+        inline constexpr float DURATION_MOVE      = 0.80f; 
+        inline constexpr float DURATION_LAYOUT    = 1.00f; 
         
-        inline constexpr float STEP_WAIT_TRAVERSAL = 0.25f; 
-        inline constexpr float STEP_WAIT_ACTION    = 0.45f; 
-        inline constexpr float STEP_WAIT_LAYOUT    = 0.75f; 
+        inline constexpr float STEP_WAIT_TRAVERSAL = 0.45f; 
+        inline constexpr float STEP_WAIT_ACTION    = 0.70f; 
+        inline constexpr float STEP_WAIT_LAYOUT    = 1.00f; 
     }
 }
